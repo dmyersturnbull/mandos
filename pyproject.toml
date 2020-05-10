@@ -7,50 +7,24 @@ build-backend = "poetry.masonry.api"
 
 
 #########################################################################################
-# Tyrannosaurus
-#########################################################################################
-
-[tool.tyrannosaurus.options]
-align = true
-
-[tool.tyrannosaurus.sources]
-status     = "'Development'"
-date       = "${today}"
-copyright  = "'Copyright ${today.year}'"
-version    = "tool.poetry.version"
-release    = "tool.poetry.version"
-pyversions = "tool.poetry.python"
-devdeps    = "tool.poetry.dev-dependencies"
-linelength = "tool.black.line-length"
-
-[tool.tyrannosaurus.targets]
-tox          = true
-docs         = true
-license      = false
-contributors = false
-
-
-#########################################################################################
 # Poetry metadata
 #########################################################################################
 
 [tool.poetry]
-name = "filterchembl"
+name = "chembler"
 version = "0.0.1"
 description = "Boil down ChEMBL annotations."
 include = [
-    "README.md",
-    "LICENSE.txt",
-    "CHANGES.md"
+	"README.md",
+	"CHANGELOG.md",
+	"LICENSE.txt"
 ]
 authors = ["Douglas Myers-Turnbull"]
-maintainers = ["Douglas Myers-Turnbull"]
-license = "Apache-2.0"
-readme = "README.md"
+maintainers = ["dmyersturnbull"]
 keywords = ["chembl", "targets", "activity", "pipeline", "cheminformatics"]
-homepage = "https://github.com/dmyersturnbull/filter-chembl"
-repository = "https://github.com/dmyersturnbull/filter-chembl"
-documentation = "https://filter-chembl.readthedocs.io"
+homepage = "https://github.com/dmyersturnbull/chembler"
+repository = "https://github.com/dmyersturnbull/chembler"
+documentation = "https://chembler.readthedocs.io"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Natural Language :: English",
@@ -65,9 +39,51 @@ classifiers = [
 ]
 
 [tool.poetry.urls]
-build = "https://travis-ci.org/dmyersturnbull/filter-chembl"
-issues = "https://github.com/dmyersturnbull/filter-chembl/issues"
-source = "https://github.com/dmyersturnbull/filter-chembl"
+build = "https://github.com/dmyersturnbull/chembler/actions"
+issues = "https://github.com/dmyersturnbull/chembler/issues"
+source = "https://github.com/dmyersturnbull/chembler"
+
+
+#########################################################################################
+# Tyrannosaurus
+#########################################################################################
+
+[tool.tyrannosaurus.options]
+align = true
+
+[tool.tyrannosaurus.sources]
+# use a literal value ('') or refer to a pyproject setting
+# ${today} is the date you run it at, and ${now} is the datetime
+status             = "'Development'"
+date               = "'${today}'"
+copyright          = "'Copyright ${today.year}'"
+version            = "tool.poetry.version"
+release            = "tool.poetry.version"
+pyversions         = "tool.poetry.dependencies"
+devdeps            = "tool.poetry.dev-dependencies"
+linelength         = "tool.black.line-length"
+# comma-separated
+maintainers        = "'dmyersturnbull'"
+
+[tool.tyrannosuarus.paths]
+recipe             = "'recipes/${name}/meta.yml'"
+environment        = "'environment.yml'"
+
+[tool.tyrannosaurus.targets]
+# these are file and directory names, without filename extensions
+pyproject    = true
+init         = true
+tox          = true
+docs         = true
+recipes      = true
+environment  = true
+license      = true
+authors      = true
+github       = true
+travis       = true
+dockerfile   = true
+readme       = true
+changelog    = true
 
 
 #########################################################################################
@@ -75,18 +91,18 @@ source = "https://github.com/dmyersturnbull/filter-chembl"
 #########################################################################################
 
 [tool.poetry.scripts]
-filter-chembl = "filterchembl.cli:cli"
+chembler = "chembler.cli:cli"
 
 [tool.poetry.dependencies]
-python                   = "^3.7"
-tomlkit                  = "^0.6"
-importlib-metadata       = "^1.6"
-typer                    = "^0.2"
-requests                 = "^2.23"
-requests-cache           = "^0.5"
-
+python                     = "^3.8"
+tomlkit                    = "^0.6"
+importlib-metadata         = "^1.6"
+typer                      = "^0.2"
+requests                   = "^2.23"
+chembl-webresource-client  = "^0.10"
 
 [tool.poetry.dev-dependencies]
+tyrannosaurus            = ">=0.4,<1.0"
 pre-commit               = "^2.3"
 pytest                   = "^5.4"
 coverage                 = {extras = ["toml"], version = "^5.1"}
@@ -100,49 +116,34 @@ flake8-docstrings        = "^1.5"
 black                    = "=19.10b0"
 isort                    = "^4.3"
 sphinx-autodoc-typehints = "^1.10"
+xdoctest                 = "^0.12"
+hypothesis               = "^5.10"
+flake8-bandit            = "^2.1"
+flake8-bugbear           = "^20.1"
 
 
 [tool.poetry.extras]
-docs    = ["sphinx", "sphinx-rtd-theme", "sphinx-autoapi"]
+# auto-filled from dev-deps
 dev     = [
-        "pre-commit", "pytest", "coverage",
-        "sphinx", "sphinx-autodoc-typehints", "sphinx-autoapi",
-        "mypy",
-        "flake8", "flake8-docstrings",
-        "black", "isort"
+        "tyrannosaurus"
 ]
-
-
-#########################################################################################
-# DepHell
-#########################################################################################
-
-[tool.dephell.main]
-from = {format = "poetry", path = "pyproject.toml"}
-to = {format = "setuppy", path = "setup.py"}
-versioning = "semver"
-
-[tool.dephell.lock]
-from = {format = "poetry", path = "pyproject.toml"}
-to = {format = "poetrylock", path = "poetry.lock"}
-
 
 #########################################################################################
 # Style checking
 #########################################################################################
 
 [tool.coverage.paths]
-source = ["filter-chembl"]
+source = ["chembler"]
 
 [tool.coverage.run]
-source = ["filter-chembl"]
+source = ["chembler"]
 
 [tool.coverage.report]
 show_missing = true
 
 [tool.black]
 line-length = 100
-target-version = ["py38"]
+target-version = ["py36", "py37", "py38"]
 
 [tool.isort]
 line_length = 100

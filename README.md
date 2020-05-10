@@ -1,10 +1,13 @@
-# Filter-chembl
+# chembler
 
-[![Build status](https://img.shields.io/pypi/status/filter-chembl)](https://pypi.org/project/filter-chembl/)
-[![Latest version on PyPi](https://badge.fury.io/py/filter-chembl.svg)](https://pypi.org/project/filter-chembl/)
-[![Documentation status](https://readthedocs.org/projects/filter-chembl/badge/?version=latest&style=flat-square)](https://readthedocs.org/projects/filter-chembl/)
-[![Travis](https://travis-ci.org/dmyersturnbull/filter-chembl.svg?branch=master)](https://travis-ci.org/dmyersturnbull/filter-chembl)
+[![Build status](https://img.shields.io/pypi/status/chembler)](https://pypi.org/project/chembler/)
+[![Latest version on PyPi](https://badge.fury.io/py/chembler.svg)](https://pypi.org/project/chembler/)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/chembler.svg)](https://pypi.org/project/chembler/)
+[![Documentation status](https://readthedocs.org/projects/chembler/badge/?version=latest&style=flat-square)](https://readthedocs.org/projects/chembler)
+[![Build & test](https://github.com/<<user.email>>/chembler/workflows/Build%20&%20test/badge.svg)](https://github.com/<<user.email>>/chembler/actions)
+[![Travis](https://travis-ci.org/<<user.email>>/chembler.svg?branch=master)](https://travis-ci.org/<<user.email>>/chembler)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 
 Filter and merge ChEMBL activity and mechanism of action records into simple, concrete lists.
 

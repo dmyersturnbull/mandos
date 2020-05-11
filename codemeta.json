@@ -1,0 +1,38 @@
+{
+    "@context":"https://doi.org/10.5063/schema/codemeta-2.0",
+    "@type":"SoftwareSourceCode",
+    "identifier":"chembler",
+    "name":"Chembler",
+    "description":"Boil down ChEMBL annotations.",
+    "codeRepository":"https://github.com/dmyersturnbull/chembler",
+    "issueTracker":"https://github.com/dmyersturnbull/chembler/issues",
+    "license":"https://www.apache.org/licenses/LICENSE-2.0",
+    "version":"2.0",
+    "author":[
+        {
+            "@type":"Person",
+            "givenName":"Douglas",
+            "familyName":"Myers-Turnbull",
+            "@id":"https://orcid.org/0000-0003-3610-4808"
+        }
+    ],
+    "maintainer":{
+        "@type":"Person",
+        "givenName":"Douglas",
+        "familyName":"Myers-Turnbull",
+        "@id":"https://orcid.org/0000-0003-3610-4808"
+    },
+    "contIntegration":"https://github.com/dmyersturnbull/chembler/actions",
+    "developmentStatus":"active",
+    "downloadUrl":"https://pypi.org/project/chembler/",
+    "keywords":[
+        "chembl",
+        "targets",
+        "activity",
+        "cheminformatic",
+        "pipeline"
+    ],
+    "dateCreated":"2020-04-20",
+    "datePublished":"2020-05-11",
+    "programmingLanguage":"Python"
+}

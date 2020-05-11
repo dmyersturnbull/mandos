@@ -1,0 +1,16 @@
+cff-version: 1.1.0
+message: Software reference
+title: Chembler
+version: 0.0.1
+abstract: Boil down ChEMBL annotations.
+authors:
+    -
+        family-names: Myers-Turnbull
+        given-names: Douglas
+keywords:
+    - chembl
+    - targets
+    - activity
+    - cheminformatics
+    - pipeline
+date-released: 2020-05-11T18:35:00.000Z

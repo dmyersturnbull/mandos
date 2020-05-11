@@ -5,7 +5,6 @@ channels:
 dependencies:
     - python=3.8
     - tomlkit>=0.6,<1.0
-    - importlib-metadata>=1.6,<2.0
     - typer>=0.2,<1.0
     - requests>=2.23,<3.0
     - pip>=20

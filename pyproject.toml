@@ -91,7 +91,6 @@ readme       = true
 changelog    = true
 citation     = true
 codemeta     = true
-license      = false
 
 
 #########################################################################################

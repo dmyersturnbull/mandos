@@ -1,10 +1,11 @@
-# Changelog for chembler
+# Changelog for mandos
 
-Adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
-and [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Adheres to [Semantic Versioning 2.0](https://semver.org/spec/v2.0.0.html),
+[Keep a Changelog 1.0](https://keepachangelog.com/en/1.0.0/),
+and [Conventional Commits 1.0](https://www.conventionalcommits.org/en/v1.0.0/).
 
 
-## [0.0.1] - 2020-05-09
+## [0.1.0] - 2020-08-18
 
 ### Added:
 - Stub files.

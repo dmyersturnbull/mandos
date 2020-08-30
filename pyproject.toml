@@ -2,7 +2,7 @@
 description-file = "README.md"
 
 [build-system]
-requires = ["poetry>=1.0", "coverage[toml]"]
+requires = ["poetry>=1,<2", "coverage[toml]>=5,<6"]
 build-backend = "poetry.masonry.api"
 
 
@@ -76,10 +76,10 @@ documentation = "https://mandos.readthedocs.io"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Natural Language :: English",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",
 	"Intended Audience :: Science/Research",
+	"Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Cheminformatics",
@@ -100,41 +100,39 @@ mandos = "mandos.cli:cli"
 
 
 [tool.poetry.dependencies]
-python                         = ">=3.7, <4"
+python                         = ">=3.8, <4"
 typer                          = ">=0.3, <1.0"
 requests                       = "^2"
-typeddfs                       = ">=0.2, <1.0"
-natsort                        = "^7"
-numpy                          = "^1.18"
 pandas                         = ">=1.1, <2.0"
 chembl-webresource-client      = "^0.10"
 
 
 [tool.poetry.dev-dependencies]
-pre-commit               = "^2"
+pre-commit               = ">=2.7, <3.0"
+pre-commit-hooks         = ">=3.2, <4.0"
 pytest                   = "^6"
 coverage                 = {extras = ["toml"], version = "^5"}
 pytest-cov               = "^2"
 sphinx                   = "^3"
 sphinx-autoapi           = "^1"
-sphinx-rtd-theme         = "^0"
-flake8                   = "^3"
-flake8-docstrings        = "^1"
+sphinx-rtd-theme         = ">=0.5, <1.0"
+flake8                   = ">=3.8, <4.0"
+flake8-docstrings        = ">=1.5, <2.0"
 black                    = "=19.10b0"
 isort                    = "^5"
-sphinx-autodoc-typehints = "^1"
-hypothesis               = "^5"
 flake8-bugbear           = "^20"
-coveralls                = "^2"
 tomlkit                  = ">=0.5, <1.0"
 
 
 [tool.poetry.extras]
-dev     = [
-        "pre-commit", "pytest", "coverage", "pytest-cov", "hypothesis",
-        "sphinx", "sphinx-autodoc-typehints", "sphinx-autoapi",
+dev = [
+        "toml",
+        "pre-commit", "pre-commit-hooks",
+        "pytest", "coverage", "pytest-cov",
+        "sphinx", "sphinx-autoapi",
         "flake8", "flake8-docstrings",
-        "black", "isort", "flake8-bugbear"
+        "black", "isort",
+        "flake8-bandit", "flake8-bugbear"
 ]
 
 

@@ -3,37 +3,32 @@ Metadata for this project.
 """
 
 import logging
-
-# If you need Python < 3.8, change to importlib_metadata and add it as a dependency
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import metadata as __load
 from pathlib import Path
 
-logger = logging.getLogger(Path(__file__).parent.name)
-
-metadata = None
+pkg = Path(__file__).absolute().parent.name
+logger = logging.getLogger(pkg)
+__metadata = None
 try:
-    metadata = __load(Path(__file__).absolute().parent.name)
+    __metadata = __load(Path(__file__).absolute().parent.name)
     __status__ = "Development"
-    __copyright__ = "Copyright 2020"
-    __date__ = "2020-06-14"
-    __uri__ = metadata["home-page"]
-    __title__ = metadata["name"]
-    __summary__ = metadata["summary"]
-    __license__ = metadata["license"]
-    __version__ = metadata["version"]
-    __author__ = metadata["author"]
-    __maintainer__ = metadata["maintainer"]
-    __contact__ = metadata["maintainer"]
-except PackageNotFoundError:
-    logger.error(
-        "Could not load package metadata for {}. Is it installed?".format(
-            Path(__file__).absolute().parent.name
-        )
-    )
+    __copyright__ = "Copyright 2016–2020"
+    __date__ = "2020-08-14"
+    __uri__ = __metadata["home-page"]
+    __title__ = __metadata["name"]
+    __summary__ = __metadata["summary"]
+    __license__ = __metadata["license"]
+    __version__ = __metadata["version"]
+    __author__ = __metadata["author"]
+    __maintainer__ = __metadata["maintainer"]
+    __contact__ = __metadata["maintainer"]
+except PackageNotFoundError:  # pragma: no cover
+    logger.error(f"Could not load package metadata for {pkg}. Is it installed?")
 
-if __name__ == "__main__":
-    if metadata is not None:
-        print("{} (v{})".format(metadata["name"], metadata["version"]))
+
+if __name__ == "__main__":  # pragma: no cover
+    if __metadata is not None:
+        print(f"{pkg} (v{__metadata['version']})")
     else:
         print("Unknown project info")

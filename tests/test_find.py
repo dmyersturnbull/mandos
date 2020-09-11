@@ -3,8 +3,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from mandos.find import BindingSearch
-from mandos.model import Taxonomy
+from mandos.activity import ActivitySearch
+from mandos.taxonomy import Taxonomy
 
 
 class TestFind:
@@ -14,10 +14,10 @@ class TestFind:
             sep="\t",
         )
         tax = Taxonomy.from_df(df)
-        finder = BindingSearch(tax)
+        finder = ActivitySearch(tax)
         # CHEMBL370805, cocaine, ZPUCINDJVBIVPJ-LJISPDSOSA-N
         # alprazolam, VREFGVBLTWBCJP-UHFFFAOYSA-N, CHEMBL661
-        found = list(finder.find("CHEMBL661"))
+        #found = list(finder.find("CHEMBL661"))
         pass
 
 

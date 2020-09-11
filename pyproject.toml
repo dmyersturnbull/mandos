@@ -26,15 +26,12 @@ authors = [
     "Douglas Myers-Turnbull <github:dmyersturnbull,orcid:0000-0003-3610-4808>",
 ]
 maintainers = "tool.tyrannosaurus.sources.authors"
-contributors = [
-]
 
 [tool.tyrannosuarus.paths]
 recipe             = "'recipes/${name}/meta.yml'"
 environment        = "'environment.yml'"
 
 [tool.tyrannosaurus.targets]
-# these are file and directory names, without filename extensions
 pyproject    = true
 init         = true
 tox          = true
@@ -58,7 +55,7 @@ codemeta     = true
 
 [tool.poetry]
 name = "mandos"
-version = "0.1.0"
+version = "0.0.1"
 description = "Get the biological targets of compounds."
 include = [
     "README.md",
@@ -72,9 +69,9 @@ readme = "README.md"
 keywords = ["cheminformatics", "chembl"]
 homepage = "https://github.com/dmyersturnbull/mandos"
 repository = "https://github.com/dmyersturnbull/mandos"
-documentation = "https://mandos.readthedocs.io"
+documentation = "https://mandos-chem.readthedocs.io"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 2 - Pre-Alpha",
     "Natural Language :: English",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",
@@ -101,38 +98,34 @@ mandos = "mandos.cli:cli"
 
 [tool.poetry.dependencies]
 python                         = ">=3.8, <4"
-typer                          = ">=0.3, <1.0"
-requests                       = "^2"
-pandas                         = ">=1.1, <2.0"
 chembl-webresource-client      = "^0.10"
+pandas                         = ">=1.1, <2.0"
+requests                       = ">=2.24, <3.0"
+tomlkit                        = ">=0.7, <1.0"
+tqdm                           = ">=4.48, <5.0"
+typer                          = ">=0.3, <1.0"
+pocketutils                    = ">=0.3.1, <0.4"
 
 
 [tool.poetry.dev-dependencies]
-pre-commit               = ">=2.7, <3.0"
-pre-commit-hooks         = ">=3.2, <4.0"
+#pre-commit               = ">=2.7, <3.0"
+#pre-commit-hooks         = ">=3.2, <4.0"
 pytest                   = "^6"
 coverage                 = {extras = ["toml"], version = "^5"}
 pytest-cov               = "^2"
-sphinx                   = "^3"
-sphinx-autoapi           = "^1"
-sphinx-rtd-theme         = ">=0.5, <1.0"
-flake8                   = ">=3.8, <4.0"
-flake8-docstrings        = ">=1.5, <2.0"
-black                    = "=19.10b0"
-isort                    = "^5"
-flake8-bugbear           = "^20"
-tomlkit                  = ">=0.5, <1.0"
+#black                    = "=19.10b0"
+#isort                    = "^5"
+#sphinx                   = "^3"
+#sphinx-autoapi           = "^1"
+#sphinx-rtd-theme         = ">=0.5, <1.0"
+#flake8                   = ">=3.8, <4.0"
+#flake8-docstrings        = ">=1.5, <2.0"
+#flake8-bugbear           = "^20"
 
 
 [tool.poetry.extras]
 dev = [
-        "toml",
-        "pre-commit", "pre-commit-hooks",
-        "pytest", "coverage", "pytest-cov",
-        "sphinx", "sphinx-autoapi",
-        "flake8", "flake8-docstrings",
-        "black", "isort",
-        "flake8-bandit", "flake8-bugbear"
+        "toml", "pytest", "coverage", "pytest-cov"
 ]
 
 

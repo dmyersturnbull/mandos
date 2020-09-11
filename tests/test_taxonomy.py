@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from mandos.model import Taxonomy
+from mandos.taxonomy import Taxonomy
 
 
 class TestFind:

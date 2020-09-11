@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from chembl_webresource_client.settings import Settings as ChemblSettings
-
-from mandos.utils import NestedDotDict
+from pocketutils.core.dot_dict import NestedDotDict
 
 instance = ChemblSettings.Instance()
 
@@ -14,10 +13,10 @@ class Settings:
     def load(cls, path: Path):
         data = NestedDotDict.read_toml(path)
         return Settings(
-            data.path("chembl.cache_path", Path.home() / ".mandos"),
-            data.int("chembl.n_retries", 1),
-            data.get("chembl.fast_save", 1),
-            data.get("chembl.timeout_sec", 1),
+            data.get_as("chembl.cache_path", Path, Path.home() / ".mandos"),
+            data.get_as("chembl.n_retries", int, 1),
+            data.get_as("chembl.fast_save", str, 1),
+            data.get_as("chembl.timeout_sec", str, 1),
         )
 
     def __init__(self, cache_path: Path, n_retries: int, fast_save: bool, timeout_sec: int):

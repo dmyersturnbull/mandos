@@ -108,19 +108,19 @@ pocketutils                    = ">=0.3.1, <0.4"
 
 
 [tool.poetry.dev-dependencies]
-#pre-commit               = ">=2.7, <3.0"
-#pre-commit-hooks         = ">=3.2, <4.0"
+pre-commit               = ">=2.7, <3.0"
+pre-commit-hooks         = ">=3.2, <4.0"
 pytest                   = "^6"
 coverage                 = {extras = ["toml"], version = "^5"}
 pytest-cov               = "^2"
-#black                    = "=19.10b0"
-#isort                    = "^5"
-#sphinx                   = "^3"
-#sphinx-autoapi           = "^1"
-#sphinx-rtd-theme         = ">=0.5, <1.0"
-#flake8                   = ">=3.8, <4.0"
-#flake8-docstrings        = ">=1.5, <2.0"
-#flake8-bugbear           = "^20"
+black                    = "=19.10b0"
+isort                    = "^5"
+sphinx                   = "^3"
+sphinx-autoapi           = "^1"
+sphinx-rtd-theme         = ">=0.5, <1.0"
+flake8                   = ">=3.8, <4.0"
+flake8-docstrings        = ">=1.5, <2.0"
+flake8-bugbear           = "^20"
 
 
 [tool.poetry.extras]

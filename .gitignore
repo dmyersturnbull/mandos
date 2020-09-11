@@ -47,6 +47,7 @@ cython_debug/
 
 # Files from other languages
 *.o
+*.stackdump
 hs_err_pid*
 *.class
 *.jl.cov
@@ -67,3 +68,6 @@ deps/deps.jl
 !/.pre-commit-config.yaml
 !/.yarn
 !.yarnrc.yml
+
+# And these resource files
+!/mandos/resources/*.gz

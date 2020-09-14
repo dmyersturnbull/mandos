@@ -2,9 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from chembl_webresource_client.new_client import new_client as Chembl
 
 from mandos.activity import ActivitySearch
-from mandos.taxonomy import Taxonomy
+from mandos.model import ChemblApi
+from mandos.model.taxonomy import Taxonomy
 
 
 class TestFind:
@@ -14,10 +16,10 @@ class TestFind:
             sep="\t",
         )
         tax = Taxonomy.from_df(df)
-        finder = ActivitySearch(tax)
+        finder = ActivitySearch(ChemblApi.wrap(Chembl), tax)
         # CHEMBL370805, cocaine, ZPUCINDJVBIVPJ-LJISPDSOSA-N
         # alprazolam, VREFGVBLTWBCJP-UHFFFAOYSA-N, CHEMBL661
-        #found = list(finder.find("CHEMBL661"))
+        found = list(finder.find("CHEMBL661"))
         pass
 
 

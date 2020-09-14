@@ -1,26 +1,27 @@
 import logging
 from dataclasses import dataclass
-from typing import Sequence, Set
+from typing import Sequence
 
-from chembl_webresource_client.new_client import new_client as Chembl
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit
-from mandos.targets import Target, TargetType
-from mandos.taxonomy import Taxon, Taxonomy
-from mandos.utils import Utils
+from mandos.model import AbstractHit, Search
+from mandos.model.targets import Target, TargetType
+from mandos.model.taxonomy import Taxon, Taxonomy
+from mandos.model.utils import ChemblCompound, Utils
 
 logger = logging.getLogger("mandos")
 
 
-@dataclass(frozen=True, order=True)
+@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
 class BindingHit(AbstractHit):
     target_id: int
     target_name: str
-    taxon: Taxon
+    taxon_id: int
+    taxon_name: str
     pchembl: float
     std_type: str
     src_id: int
+    exact_target_id: str
 
     @property
     def predicate(self) -> str:
@@ -30,44 +31,49 @@ class BindingHit(AbstractHit):
         return self.pchembl >= float(pchembl)
 
 
-class ActivitySearch:
-    def __init__(self, tax: Taxonomy):
-        self._tax = tax
-
-    def find(self, compound: str) -> Sequence[BindingHit]:
-        c = Utils.get_compound(compound)
-        results = Chembl.activity.filter(molecule_chembl_id=c.chid)
+class ActivitySearch(Search[BindingHit]):
+    def find(self, lookup: str) -> Sequence[BindingHit]:
+        form = Utils.get_compound(lookup)
+        results = self.api.activity.filter(parent_molecule_chembl_id=form.chid)
         hits = []
         for result in results:
             result = NestedDotDict(result)
-            hits.extend(self.process(compound, result))
+            hits.extend(self.process(lookup, form, result))
         return hits
 
-    def process(self, compound: str, activity: NestedDotDict) -> Sequence[BindingHit]:
+    def process(
+        self, lookup: str, compound: ChemblCompound, activity: NestedDotDict
+    ) -> Sequence[BindingHit]:
         if (
             activity.get("data_validity_comment") is not None
             or activity["standard_relation"] not in ["=", "<", "<="]
             or activity["assay_type"] != "B"
             or activity.get("pchembl_value") is None
             or activity.get("target_organism") is None
-            or activity["target_organism"] not in self._tax
+            or activity["target_organism"] not in self.tax
         ):
             return []
-        return self._traverse(compound, activity)
+        return self._traverse(lookup, compound, activity)
 
-    def _traverse(self, compound: str, activity: NestedDotDict) -> Sequence[BindingHit]:
+    def _traverse(
+        self, lookup: str, compound: ChemblCompound, activity: NestedDotDict
+    ) -> Sequence[BindingHit]:
         data = dict(
-            activity_id=activity["activity_id"],
-            compound_id=int(activity["molecule_chembl_id"].replace("CHEMBL", "")),
-            compound_name=activity.get(
-                "molecule_pref_name", "CHEMBL" + activity["molecule_chembl_id"]
-            ),
-            compound_lookup=compound,
-            taxon=self._tax[activity["target_organism"]],
+            record_id=activity["activity_id"],
+            compound_id=compound.chid_int,
+            inchikey=compound.inchikey,
+            compound_name=compound.name,
+            compound_lookup=lookup,
+            taxon_id=self.tax[activity["target_organism"]].id,
+            taxon_name=self.tax[activity["target_organism"]].name,
             pchembl=float(activity["pchembl_value"]),
             std_type=activity["standard_type"],
             src_id=int(activity["src_id"]),
+            exact_target_id=activity["target_chembl_id"],
         )
-        target_obj = Target.find(activity["molecule_chembl_id"])
-        links = target_obj.traverse_smart()
-        return [BindingHit(**data, target_id=link.id, target_name=link.name) for link in links]
+        target_obj = Target.find(activity["target_chembl_id"])
+        if target_obj.type == TargetType.unknown:
+            logger.error(f"Target {target_obj} has type UNKNOWN")
+            return []
+        ancestor = target_obj.traverse_smart()
+        return [BindingHit(**data, target_id=ancestor.id, target_name=ancestor.name)]

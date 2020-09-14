@@ -2,19 +2,82 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Mapping, Optional, Sequence, Set, Union
+from functools import total_ordering
+from typing import List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
 
 logger = logging.getLogger(__package__)
 
 
-@dataclass(order=True)
+@total_ordering
+@dataclass()
 class Taxon:
-    id: int
-    name: str
-    parent: Optional[Taxon]
-    children: Set[Taxon]
+    """"""
+
+    # we can't use frozen=True because we have both parents and children
+    # instead, just use properties
+    __id: int
+    __name: str
+    __parent: Optional[Taxon]
+    __children: Set[Taxon]
+
+    @property
+    def id(self) -> int:
+        return self.__id
+
+    @property
+    def name(self) -> str:
+        return self.__name
+
+    @property
+    def parent(self) -> Taxon:
+        return self.__parent
+
+    @property
+    def children(self) -> Set[Taxon]:
+        return set(self.__children)
+
+    @property
+    def ancestors(self) -> Sequence[Taxon]:
+        return self._ancestors([])
+
+    @property
+    def descendents(self) -> Sequence[Taxon]:
+        return self._descendents([])
+
+    def _ancestors(self, values: List[Taxon]) -> List[Taxon]:
+        values.append(self.parent)
+        values += self._ancestors(values)
+        return values
+
+    def _descendents(self, values: List[Taxon]) -> List[Taxon]:
+        values += self.children
+        values += self._descendents(values)
+        return values
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __lt__(self, other):
+        return self.id < other.id
+
+
+@dataclass(order=True)
+class _Taxon(Taxon):
+    """"""
+
+    def set_name(self, name: str):
+        self.__name = name
+
+    def set_parent(self, parent: _Taxon):
+        self.__parent = parent
+
+    def add_child(self, child: _Taxon):
+        self.__children.add(child)
 
     def __hash__(self):
         return hash(self.id)
@@ -31,7 +94,7 @@ class Taxonomy:
         self._by_name = by_name
 
     @classmethod
-    def from_list(cls, taxa: Sequence[Taxon]) -> Taxonomy:
+    def from_list(cls, taxa: Sequence[_Taxon]) -> Taxonomy:
         return Taxonomy({x.id: x for x in taxa}, {x.name: x for x in taxa})
 
     @classmethod
@@ -53,15 +116,20 @@ class Taxonomy:
         # just build up a tree, sticking the elements in by_id
         tax._by_id = {}
         for row in df.itertuples():
-            child = tax._by_id.setdefault(row.id, Taxon(row.id, row.name, None, set()))
-            parent = tax._by_id.setdefault(row.parent, Taxon(row.parent, "", None, set()))
-            child.name, child.parent = row.name, parent
-            parent.children.add(child)
+            child = tax._by_id.setdefault(row.id, _Taxon(row.id, row.name, None, set()))
+            parent = tax._by_id.setdefault(row.parent, _Taxon(row.parent, "", None, set()))
+            child.set_name(row.name)
+            child.set_parent(parent)
+            # noinspection PyProtectedMember
+            parent.add_child(child)
         bad = [t for t in tax._by_id.values() if t.name == ""]
         if len(bad) > 0:
             logger.error(f"Removing taxa with missing or empty names: {bad}.")
         # completely remove the taxa with missing names
         tax._by_id = {k: v for k, v in tax._by_id.items() if v.name != ""}
+        # fix classes
+        for v in tax._by_id.values():
+            v.__class__ = Taxon
         # build the name dict
         # use lowercase and trim for lookup (but not value)
         tax._by_name = {t.name.strip().lower(): t for t in tax._by_id.values()}
@@ -79,7 +147,12 @@ class Taxonomy:
     def leaves(self) -> Sequence[Taxon]:
         return [k for k in self.taxa if len(k.children) == 0]
 
-    def get(self, item: Union[int, str]) -> Optional[Taxon]:
+    def under(self, item: Union[int, str]) -> Taxonomy:
+        item = self[item]
+        descendents = item.descendents
+        return Taxonomy({d.id: d for d in descendents}, {d.name: d for d in descendents})
+
+    def get(self, item: Union[int, str]) -> Optional[_Taxon]:
         """
         Corresponds to ``dict.get``.
 
@@ -96,7 +169,7 @@ class Taxonomy:
         else:
             raise TypeError(f"Type {type(item)} of {item} not applicable")
 
-    def __getitem__(self, item: Union[int, str]) -> Taxon:
+    def __getitem__(self, item: Union[int, str]) -> _Taxon:
         """
         Corresponds to ``dict[_]``.
 

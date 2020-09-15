@@ -4,15 +4,18 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, ChemblApi, Search
-from mandos.model.targets import Target, TargetType
-from mandos.model.utils import ChemblCompound, Utils
+from mandos.model import AbstractHit, ChemblCompound, Search
+from mandos.model.targets import TargetFactory, TargetType
 
 logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
 class MechanismHit(AbstractHit):
+    """
+    A mechanism entry for a compound.
+    """
+
     target_id: int
     target_name: str
     action_type: str
@@ -27,8 +30,20 @@ class MechanismHit(AbstractHit):
 
 
 class MechanismSearch(Search[MechanismHit]):
+    """
+    Search for ``mechanisms``.
+    """
+
     def find(self, lookup: str) -> Sequence[MechanismHit]:
-        form = Utils.get_compound(lookup)
+        """
+
+        Args:
+            lookup:
+
+        Returns:
+
+        """
+        form = self.get_compound(lookup)
         results = self.api.mechanism.filter(parent_molecule_chembl_id=form.chid)
         hits = []
         for result in results:
@@ -39,6 +54,16 @@ class MechanismSearch(Search[MechanismHit]):
     def process(
         self, lookup: str, compound: ChemblCompound, mechanism: NestedDotDict
     ) -> Sequence[MechanismHit]:
+        """
+
+        Args:
+            lookup:
+            compound:
+            mechanism:
+
+        Returns:
+
+        """
         data = dict(
             record_id=mechanism["mec_id"],
             compound_id=compound.chid_int,
@@ -51,7 +76,7 @@ class MechanismSearch(Search[MechanismHit]):
             comment=mechanism["mechanism_comment"],
             exact_target_id=mechanism["target_chembl_id"],
         )
-        target_obj = Target.find(mechanism["target_chembl_id"])
+        target_obj = TargetFactory.find(mechanism["target_chembl_id"], self.api)
         if target_obj.type == TargetType.unknown:
             logger.error(f"Target {target_obj} has type UNKNOWN")
             return []

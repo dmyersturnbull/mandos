@@ -9,8 +9,18 @@ instance = ChemblSettings.Instance()
 
 
 class Settings:
+    """"""
+
     @classmethod
-    def load(cls, path: Path):
+    def load(cls, path: Path) -> Settings:
+        """
+
+        Args:
+            path:
+
+        Returns:
+
+        """
         data = NestedDotDict.read_toml(path)
         return Settings(
             data.get_as("chembl.cache_path", Path, Path.home() / ".mandos"),
@@ -20,12 +30,25 @@ class Settings:
         )
 
     def __init__(self, cache_path: Path, n_retries: int, fast_save: bool, timeout_sec: int):
+        """
+
+        Args:
+            cache_path:
+            n_retries:
+            fast_save:
+            timeout_sec:
+        """
         self.cache_path = cache_path
         self.n_retries = n_retries
         self.fast_save = fast_save
         self.timeout_sec = timeout_sec
 
     def set(self):
+        """
+
+        Returns:
+
+        """
         instance.CACHING = True
         instance.CACHE_NAME = str(self.cache_path)
         instance.TOTAL_RETRIES = self.n_retries

@@ -24,26 +24,56 @@ class Taxon:
 
     @property
     def id(self) -> int:
+        """
+
+        Returns:
+
+        """
         return self.__id
 
     @property
     def name(self) -> str:
+        """
+
+        Returns:
+
+        """
         return self.__name
 
     @property
     def parent(self) -> Taxon:
+        """
+
+        Returns:
+
+        """
         return self.__parent
 
     @property
     def children(self) -> Set[Taxon]:
+        """
+
+        Returns:
+
+        """
         return set(self.__children)
 
     @property
     def ancestors(self) -> Sequence[Taxon]:
+        """
+
+        Returns:
+
+        """
         return self._ancestors([])
 
     @property
     def descendents(self) -> Sequence[Taxon]:
+        """
+
+        Returns:
+
+        """
         return self._descendents([])
 
     def _ancestors(self, values: List[Taxon]) -> List[Taxon]:
@@ -68,7 +98,9 @@ class Taxon:
 
 @dataclass(order=True)
 class _Taxon(Taxon):
-    """"""
+    """
+    An internal, modifiable taxon for building the tree.
+    """
 
     def set_name(self, name: str):
         self.__name = name
@@ -90,6 +122,12 @@ class Taxonomy:
     """
 
     def __init__(self, by_id: Mapping[int, Taxon], by_name: Mapping[str, Taxon]):
+        """
+
+        Args:
+            by_id:
+            by_name:
+        """
         self._by_id = by_id
         self._by_name = by_name
 
@@ -137,17 +175,40 @@ class Taxonomy:
 
     @property
     def taxa(self) -> Sequence[Taxon]:
+        """
+
+        Returns:
+
+        """
         return list(self._by_id.values())
 
     @property
     def roots(self) -> Sequence[Taxon]:
+        """
+
+        Returns:
+
+        """
         return [k for k in self.taxa if k.parent is None]
 
     @property
     def leaves(self) -> Sequence[Taxon]:
+        """
+
+        Returns:
+
+        """
         return [k for k in self.taxa if len(k.children) == 0]
 
     def under(self, item: Union[int, str]) -> Taxonomy:
+        """
+
+        Args:
+            item:
+
+        Returns:
+
+        """
         item = self[item]
         descendents = item.descendents
         return Taxonomy({d.id: d for d in descendents}, {d.name: d for d in descendents})
@@ -188,9 +249,22 @@ class Taxonomy:
         return got
 
     def __contains__(self, item):
+        """
+
+        Args:
+            item:
+
+        Returns:
+
+        """
         return self.get(item) is not None
 
     def __len__(self) -> int:
+        """
+
+        Returns:
+
+        """
         return len(self._by_id)
 
     def __repr__(self) -> str:

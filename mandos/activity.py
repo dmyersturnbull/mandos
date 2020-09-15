@@ -4,16 +4,18 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, Search
-from mandos.model.targets import Target, TargetType
-from mandos.model.taxonomy import Taxon, Taxonomy
-from mandos.model.utils import ChemblCompound, Utils
+from mandos.model import AbstractHit, ChemblCompound, Search
+from mandos.model.targets import TargetFactory, TargetType
 
 logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
-class BindingHit(AbstractHit):
+class ActivityHit(AbstractHit):
+    """
+    An ``activity`` hit for a compound.
+    """
+
     target_id: int
     target_name: str
     taxon_id: int
@@ -28,13 +30,39 @@ class BindingHit(AbstractHit):
         return "activity"
 
     def over(self, pchembl: float) -> bool:
+        """
+
+        Args:
+            pchembl:
+
+        Returns:
+
+        """
         return self.pchembl >= float(pchembl)
 
 
-class ActivitySearch(Search[BindingHit]):
-    def find(self, lookup: str) -> Sequence[BindingHit]:
-        form = Utils.get_compound(lookup)
-        results = self.api.activity.filter(parent_molecule_chembl_id=form.chid)
+class ActivitySearch(Search[ActivityHit]):
+    """
+    Search under ChEMBL ``activity``.
+    """
+
+    def find(self, lookup: str) -> Sequence[ActivityHit]:
+        """
+
+        Args:
+            lookup:
+
+        Returns:
+
+        """
+        form = self.get_compound(lookup)
+        results = self.api.activity.filter(
+            parent_molecule_chembl_id=form.chid,
+            assay_type="B",
+            standard_relation__iregex="(=|<|(?:<=))",
+            pchembl_value__isnull=False,
+            target_organism__isnull=False,
+        )
         hits = []
         for result in results:
             result = NestedDotDict(result)
@@ -43,7 +71,17 @@ class ActivitySearch(Search[BindingHit]):
 
     def process(
         self, lookup: str, compound: ChemblCompound, activity: NestedDotDict
-    ) -> Sequence[BindingHit]:
+    ) -> Sequence[ActivityHit]:
+        """
+
+        Args:
+            lookup:
+            compound:
+            activity:
+
+        Returns:
+
+        """
         if (
             activity.get("data_validity_comment") is not None
             or activity["standard_relation"] not in ["=", "<", "<="]
@@ -57,7 +95,17 @@ class ActivitySearch(Search[BindingHit]):
 
     def _traverse(
         self, lookup: str, compound: ChemblCompound, activity: NestedDotDict
-    ) -> Sequence[BindingHit]:
+    ) -> Sequence[ActivityHit]:
+        """
+
+        Args:
+            lookup:
+            compound:
+            activity:
+
+        Returns:
+
+        """
         data = dict(
             record_id=activity["activity_id"],
             compound_id=compound.chid_int,
@@ -71,9 +119,9 @@ class ActivitySearch(Search[BindingHit]):
             src_id=int(activity["src_id"]),
             exact_target_id=activity["target_chembl_id"],
         )
-        target_obj = Target.find(activity["target_chembl_id"])
+        target_obj = TargetFactory.find(activity["target_chembl_id"], self.api)
         if target_obj.type == TargetType.unknown:
             logger.error(f"Target {target_obj} has type UNKNOWN")
             return []
         ancestor = target_obj.traverse_smart()
-        return [BindingHit(**data, target_id=ancestor.id, target_name=ancestor.name)]
+        return [ActivityHit(**data, target_id=ancestor.id, target_name=ancestor.name)]

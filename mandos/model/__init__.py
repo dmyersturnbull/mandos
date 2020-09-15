@@ -3,79 +3,36 @@ from __future__ import annotations
 import abc
 import dataclasses
 import logging
+import re
 import typing
 from dataclasses import dataclass
 from typing import Generic, Optional, Sequence, TypeVar
 
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos.model.api import ChemblApi
 from mandos.model.taxonomy import Taxonomy
-from mandos.model.utils import Utils
 
 logger = logging.getLogger("mandos")
 
 
-class ChemblEntrypoint:
-    """
-    Wraps just part of a node in the ChEMBL REST API.
-    Ex ``Chembl.target``.
-    """
+@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+class ChemblCompound:
+    """"""
 
-    def filter(self, **kwargs) -> Sequence[NestedDotDict]:
-        raise NotImplementedError()
+    chid: str
+    inchikey: str
+    name: str
 
-    def get(self, arg) -> Optional[NestedDotDict]:
-        raise NotImplementedError()
-
-    @classmethod
-    def wrap(cls, obj) -> ChemblEntrypoint:
-        """
-
-        Args:
-            obj:
-
-        Returns:
-
-        """
-
-        class X(ChemblEntrypoint):
-            def filter(self, **kwargs) -> Sequence[NestedDotDict]:
-                return getattr(obj, "filter")(**kwargs)
-
-            def get(self, arg) -> Optional[NestedDotDict]:
-                return getattr(obj, "get")(arg)
-
-        return X()
-
-
-class ChemblApi(metaclass=abc.ABCMeta):
-    """
-    Wraps the whole ChEMBL API.
-    """
-
-    def __getattribute__(self, item: str) -> ChemblEntrypoint:
-        raise NotImplementedError()
-
-    @classmethod
-    def wrap(cls, obj) -> ChemblApi:
-        """
-
-        Args:
-            obj:
-
-        Returns:
-
-        """
-
-        class X(ChemblApi):
-            def __getattribute__(self, item: str) -> ChemblEntrypoint:
-                return ChemblEntrypoint.wrap(getattr(obj, item))
-
-        return X()
+    @property
+    def chid_int(self) -> int:
+        return int(self.chid.replace("CHEMBL", ""))
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class AbstractHit:
+    """"""
+
     record_id: int
     compound_id: int
     inchikey: str
@@ -84,6 +41,11 @@ class AbstractHit:
 
     @property
     def predicate(self) -> str:
+        """
+
+        Returns:
+
+        """
         raise NotImplementedError()
 
     def __hash__(self):
@@ -91,6 +53,11 @@ class AbstractHit:
 
     @classmethod
     def fields(cls) -> Sequence[str]:
+        """
+
+        Returns:
+
+        """
         return [f.name for f in dataclasses.fields(cls)]
 
 
@@ -100,17 +67,39 @@ H = TypeVar("H", bound=AbstractHit, covariant=True)
 class Search(Generic[H], metaclass=abc.ABCMeta):
     """"""
 
-    def __init__(self, api: ChemblApi, tax: Taxonomy):
-        self.api = api
+    def __init__(self, chembl_api: ChemblApi, tax: Taxonomy):
+        """
+
+        Args:
+            chembl_api:
+            tax:
+        """
+        self.api = chembl_api
         self.tax = tax
 
     def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
+        """
+
+        Args:
+            compounds:
+
+        Returns:
+
+        """
         lst = []
         for compound in compounds:
             lst.extend(self.find(compound))
         return lst
 
     def find(self, compound: str) -> Sequence[H]:
+        """
+
+        Args:
+            compound:
+
+        Returns:
+
+        """
         raise NotImplementedError()
 
     @classmethod
@@ -131,3 +120,69 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # noinspection PyUnresolvedReferences
         actual_h = typing.get_args(cls.__orig_bases__[0])[0]
         return [f.name for f in dataclasses.fields(actual_h)]
+
+    def get_target(self, chembl: str) -> NestedDotDict:
+        """
+
+        Args:
+            chembl:
+
+        Returns:
+
+        """
+        targets = self.api.target.filter(target_chembl_id=chembl)
+        assert len(targets) == 1
+        return NestedDotDict(targets[0])
+
+    def get_compound(self, inchikey: str) -> ChemblCompound:
+        """
+
+        Args:
+            inchikey:
+
+        Returns:
+
+        """
+        ch = self.get_compound_dot_dict(inchikey)
+        return self.compound_dot_dict_to_obj(ch)
+
+    def compound_dot_dict_to_obj(self, ch: NestedDotDict) -> ChemblCompound:
+        """
+
+        Args:
+            ch:
+
+        Returns:
+
+        """
+        chid = ch["molecule_chembl_id"]
+        inchikey = ch["molecule_structures"]["standard_inchi_key"]
+        name = ch["pref_name"]
+        return ChemblCompound(chid, inchikey, name)
+
+    def get_compound_dot_dict(self, inchikey: str) -> NestedDotDict:
+        """
+
+        Args:
+            inchikey:
+
+        Returns:
+            **Only ``molecule_chembl_id``, ``pref_name``, "and ``molecule_structures`` are guaranteed to exist
+        """
+        if inchikey.startswith("InChI=") or re.compile(r"[A-Z]{14}-[A-Z]{10}-[A-Z]").fullmatch(
+            inchikey
+        ):
+            result = self.api.molecule.get(inchikey)
+        else:
+            results = list(
+                self.api.molecule.filter(
+                    molecule_structures__canonical_smiles__flexmatch=inchikey
+                ).only(["molecule_chembl_id", "pref_name", "molecule_structures"])
+            )
+            assert len(results) == 1, f"{len(results)} matches for {inchikey}"
+            result = results[0]
+        ch = NestedDotDict(result)
+        parent = ch["molecule_hierarchy"]["parent_chembl_id"]
+        if parent != ch["molecule_chembl_id"]:
+            ch = NestedDotDict(self.api.molecule.get(parent))
+        return ch

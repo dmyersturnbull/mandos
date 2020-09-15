@@ -1,15 +1,18 @@
+"""
+Model of ChEMBL targets and a hierarchy between them as a directed acyclic graph (DAG).
+"""
 from __future__ import annotations
 
+import abc
 import enum
 import logging
 from dataclasses import dataclass
 from typing import Optional, Sequence, Set
 from typing import Tuple as Tup
 
-from chembl_webresource_client.new_client import new_client as Chembl
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import ChemblApi
+from mandos.model.api import ChemblApi
 
 logger = logging.getLogger(__package__)
 
@@ -28,7 +31,7 @@ class TargetType(enum.Enum):
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
-class Target:
+class Target(metaclass=abc.ABCMeta):
     """
     A target from ChEMBL, from the ``target`` table.
     ChEMBL targets form a DAG via the ``target_relation`` table using links of type "SUPERSET OF" and "SUBSET OF".
@@ -37,37 +40,53 @@ class Target:
     To fetch a target, use the ``find`` factory method.
 
     Attributes:
-        id: The CHEMBL ID without the 'CHEMBL' prefix; use ``chembl`` to get the string value (with the prefix)
+        chembl: The CHEMBL ID, starting with 'CHEMBL'
         name: The preferred name (``pref_target_name``)
         type: From the ``target_type`` ChEMBL field
     """
 
-    id: int
+    chembl: str
     name: Optional[str]
     type: TargetType
 
     @classmethod
-    def api(cls):
-        # TODO use injection and/or TypeVar
-        return ChemblApi.wrap(Chembl)
+    def api(cls) -> ChemblApi:
+        """
+
+        Returns:
+
+        """
+        raise NotImplementedError()
 
     @classmethod
-    def find(cls, chembl: str) -> Target:
+    def find(cls, chembl: str) -> __qualname__:
+        """
+
+        Args:
+            chembl:
+
+        Returns:
+
+        """
         targets = cls.api().target.filter(target_chembl_id=chembl)
-        assert len(targets) == 1, f"Found {len(targets)} targets"
+        assert len(targets) == 1, f"Found {len(targets)} targets for {chembl}"
         target = NestedDotDict(targets[0])
-        return Target(
-            id=int(target["target_chembl_id"].replace("CHEMBL", "")),
+        return cls(
+            chembl=target["target_chembl_id"],
             name=target.get("pref_name"),
             type=TargetType[target["target_type"].replace(" ", "_").lower()],
         )
 
     @property
-    def chembl(self) -> str:
-        """The ChEMBL ID with the 'CHEMBL' prefix."""
-        return "CHEMBL" + str(self.id)
+    def id(self) -> int:
+        """
 
-    def parents(self) -> Sequence[Target]:
+        Returns:
+
+        """
+        return int(self.chembl.replace("CHEMBL", ""))
+
+    def parents(self) -> Sequence[__qualname__]:
         """
         Gets adjacent targets in the DAG.
 
@@ -80,7 +99,12 @@ class Target:
             links.append(linked_target)
         return sorted(links)
 
-    def traverse_smart(self) -> Target:
+    def traverse_smart(self) -> __qualname__:
+        """
+
+        Returns:
+
+        """
         ok = {
             TargetType.single_protein,
             TargetType.protein_complex,
@@ -105,7 +129,7 @@ class Target:
         else:
             raise ValueError(f"No matches found for target {self}")
 
-    def ancestors(self, permitting: Set[TargetType]) -> Set[Tup[int, Target]]:
+    def ancestors(self, permitting: Set[TargetType]) -> Set[Tup[int, __qualname__]]:
         """
         Traverses the DAG from this node, hopping only to targets with type in the given set.
 
@@ -120,10 +144,40 @@ class Target:
         return results
 
     def _traverse(
-        self, depth: int, permitting: Set[TargetType], results: Set[Tup[int, Target]]
+        self, depth: int, permitting: Set[TargetType], results: Set[Tup[int, __qualname__]]
     ) -> None:
         if self in results or self.type not in permitting:
             return
         for parent in self.parents():
             parent._traverse(depth + 1, permitting, results)
         results.add((depth, self))
+
+
+class TargetFactory:
+    """
+    Factory for ``Target`` that injects a ``ChemblApi``.
+    """
+
+    @classmethod
+    def find(cls, chembl: str, api: ChemblApi) -> Target:
+        """
+
+        Args:
+            chembl:
+            api:
+
+        Returns:
+            A ``Target`` instance from a newly created subclass of that class
+        """
+
+        @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+        class _Target(Target):
+            @classmethod
+            def api(cls) -> ChemblApi:
+                return api
+
+        _Target.__name__ = "Target:" + chembl
+        return _Target.find(chembl)
+
+
+__all__ = ["TargetType", "Target", "TargetFactory"]

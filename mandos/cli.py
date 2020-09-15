@@ -26,6 +26,10 @@ cli = typer.Typer()
 
 
 class What(enum.Enum):
+    """
+    List of search items
+    """
+
     activity = enum.auto(), ActivitySearch
     mechanism = enum.auto(), MechanismSearch
     atc = enum.auto(), AtcSearch
@@ -45,6 +49,10 @@ class What(enum.Enum):
 
 
 class Commands:
+    """
+    Entry points for mandos.
+    """
+
     @staticmethod
     @cli.command()
     def search(
@@ -67,7 +75,19 @@ class Commands:
         df.to_csv(write_path)
 
     @staticmethod
-    def search_for(what: What, compounds: Sequence[str], tax_parent: Optional[str] = None):
+    def search_for(
+        what: What, compounds: Sequence[str], tax_parent: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+
+        Args:
+            what:
+            compounds:
+            tax_parent:
+
+        Returns:
+
+        """
         tax = Commands._tax(tax_parent)
         compounds = list(compounds)
         api = ChemblApi.wrap(Chembl)
@@ -79,6 +99,7 @@ class Commands:
 
     @staticmethod
     def _tax(lookup: Optional[str] = None) -> Taxonomy:
+        # Read the vertebrate (7742) tab-delimited resource file
         df = pd.read_csv(
             Path(__file__).parent.parent / "mandos" / "resources" / "taxonomy-ancestor_7742.tab.gz",
             sep="\t",

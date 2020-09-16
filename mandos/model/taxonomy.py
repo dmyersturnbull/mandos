@@ -3,9 +3,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from functools import total_ordering
+from pathlib import Path
 from typing import List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
+
+from mandos import get_cache_resource, get_resource
 
 logger = logging.getLogger(__package__)
 
@@ -86,6 +89,12 @@ class Taxon:
         values += self._descendents(values)
         return values
 
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.id}: {self.name} (parent={self.parent.id if self.parent else 'none'}))"
+
     def __hash__(self):
         return hash(self.id)
 
@@ -93,10 +102,10 @@ class Taxon:
         return self.id == other.id
 
     def __lt__(self, other):
-        return self.id < other.id
+        return other.id < self.id
 
 
-@dataclass(order=True)
+@dataclass()
 class _Taxon(Taxon):
     """
     An internal, modifiable taxon for building the tree.
@@ -111,8 +120,22 @@ class _Taxon(Taxon):
     def add_child(self, child: _Taxon):
         self.__children.add(child)
 
+    # weirdly these are required again -- probably an issue with dataclass
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.id}: {self.name} (parent={self.parent.id if self.parent else 'none'}))"
+
     def __hash__(self):
         return hash(self.id)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __lt__(self, other):
+        return other.id < self.id
 
 
 class Taxonomy:
@@ -128,38 +151,55 @@ class Taxonomy:
             by_id:
             by_name:
         """
+        # provided for consistency
+        assert list(by_id.values()) == list(
+            by_name.values()
+        ), f"[{by_id.values()}] != [{by_name.values()}]"
         self._by_id = by_id
         self._by_name = by_name
 
     @classmethod
-    def from_list(cls, taxa: Sequence[_Taxon]) -> Taxonomy:
-        return Taxonomy({x.id: x for x in taxa}, {x.name: x for x in taxa})
+    def from_list(cls, taxa: Sequence[Taxon]) -> Taxonomy:
+        tax = Taxonomy({x.id: x for x in taxa}, {x.name: x for x in taxa})
+        # catch duplicate values
+        assert len(tax._by_id) == len(taxa), f"{len(tax._by_id)} != {len(taxa)}"
+        assert len(tax._by_name) == len(taxa), f"{len(tax._by_name)} != {len(taxa)}"
+        return tax
 
     @classmethod
-    def from_df(cls, df: pd.DataFrame) -> Taxonomy:
+    def load_vertebrates(cls) -> Taxonomy:
+        df = pd.read_csv(get_resource("7742.tab"), sep="\t", header=0)
+        return cls.from_df(df)
+
+    @classmethod
+    def from_df(cls, df: Union[pd.DataFrame, str, Path]) -> Taxonomy:
         """
         Reads from a DataFrame from a CSV file provided by a UniProt download.
         Strips any entries with missing or empty-string scientific names.
 
         Args:
-            df: A dataframe with columns (at least) "Taxon", "Scientific name", and "Parent" (case-insensitive)
+            df: A dataframe with columns (at least) "taxon", "scientific_name", and "parent"
 
         Returns:
             The corresponding taxonomic tree
         """
-        df.columns = [c.lower() for c in df.columns]
-        df = df[["taxon", "scientific name", "parent"]]
-        df.columns = ["id", "name", "parent"]
+        if isinstance(df, (str, Path)):
+            df = pd.read_csv(get_resource(df), sep="\t", header=0).reset_index()
+        df["taxon"] = df["taxon"].astype(int)
+        df["parent"] = df["parent"].astype(int)
         tax = Taxonomy({}, {})
         # just build up a tree, sticking the elements in by_id
         tax._by_id = {}
         for row in df.itertuples():
-            child = tax._by_id.setdefault(row.id, _Taxon(row.id, row.name, None, set()))
-            parent = tax._by_id.setdefault(row.parent, _Taxon(row.parent, "", None, set()))
-            child.set_name(row.name)
-            child.set_parent(parent)
-            # noinspection PyProtectedMember
-            parent.add_child(child)
+            print(row.scientific_name)
+            child = tax._by_id.setdefault(
+                row.taxon, _Taxon(row.taxon, row.scientific_name, None, set())
+            )
+            child.set_name(row.scientific_name)
+            if row.parent != 0:
+                parent = tax._by_id.setdefault(row.parent, _Taxon(row.parent, "", None, set()))
+                child.set_parent(parent)
+                parent.add_child(child)
         bad = [t for t in tax._by_id.values() if t.name == ""]
         if len(bad) > 0:
             logger.error(f"Removing taxa with missing or empty names: {bad}.")

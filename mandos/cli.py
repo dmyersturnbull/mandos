@@ -5,6 +5,7 @@ Command-line interface for mandos.
 from __future__ import annotations
 
 import enum
+import hashlib
 import logging
 import shutil
 from pathlib import Path
@@ -16,9 +17,9 @@ import typer
 from chembl_webresource_client.new_client import new_client as Chembl
 
 from mandos import get_resource
-from mandos.activity import ActivitySearch
-from mandos.atcs import AtcSearch
-from mandos.mechanisms import MechanismSearch
+from mandos.activity_search import ActivitySearch
+from mandos.atc_search import AtcSearch
+from mandos.mechanism_search import MechanismSearch
 from mandos.model import ChemblApi, Search
 from mandos.model.taxonomy import Taxonomy
 
@@ -51,6 +52,11 @@ class What(enum.Enum):
         return self._clazz_
 
 
+class Format(enum.Enum):
+    csv = enum.auto()
+    text = enum.auto()
+
+
 def get_cache_resource(*nodes: Union[Path, str]) -> Path:
     """"""
     cache = Path.home() / ".mandos"
@@ -67,26 +73,41 @@ class Commands:
     @cli.command()
     def search(
         what: What,
-        inchis_path: Optional[Path] = None,
-        write_path: Optional[Path] = None,
+        path: Path = typer.Option(
+            None, "in", exists=True, file_okay=True, dir_okay=True, resolve_path=True
+        ),
+        out: Optional[Path] = None,
         tax: int = 117571,
+        pchembl: float = 7,
+        fmt: Format = typer.Option(Format.csv, "format"),
     ) -> None:
         """
         Process data.
 
         Args:
             what: Activity / ATCs / mechanisms / etc.
-            inchis_path: Path to file containing one InChI per line
-            write_path: Path of a CSV file to write
+            path: Path to file containing one InChI per line
+            out: Path of a CSV file to write
             tax: Restrict to organisms under this UniProt tax ID or scientific name.
                         UniProt uses a cladastic tree.
                         117571 (Euteleostomi, 430 Mya) is a good choice.
                         If the taxon is outside of 7742 (Vertebrata, 525 Mya),
                         a new file will be downloaded from UniProt and cached.
+            pchembl: Minimum pchembl value (>=)
+            fmt: How to write results
         """
-        compounds = inchis_path.read_text(encoding="utf8").splitlines()
+        from pocketutils.core.hasher import FileHasher
+
+        data = path.read_bytes()
+        alg = hashlib.sha256()
+        alg.update(data)
+        hex_val = alg.hexdigest()
+        # TODO detect cached results
+        compounds = data.decode(encoding="utf8").splitlines()
         df = Commands.search_for(what, compounds, tax=tax)
-        df.to_csv(write_path)
+        if out is None:
+            out = Path(str(path.with_suffix("")) + "-" + what.name.lower() + ".csv")
+        df.to_csv(out)
 
     @staticmethod
     def search_for(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+import enum
 import logging
 import re
 import typing
@@ -33,8 +34,8 @@ class ChemblCompound:
 class AbstractHit:
     """"""
 
-    record_id: int
-    compound_id: int
+    record_id: Optional[int]
+    compound_id: str
     inchikey: str
     compound_lookup: str
     compound_name: str
@@ -59,6 +60,17 @@ class AbstractHit:
 
         """
         return [f.name for f in dataclasses.fields(cls)]
+
+
+class QueryType(enum.Enum):
+    """
+    X
+    """
+
+    inchi = enum.auto()
+    inchikey = enum.auto()
+    chembl = enum.auto()
+    smiles = enum.auto()
 
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
@@ -160,6 +172,16 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         name = ch["pref_name"]
         return ChemblCompound(chid, inchikey, name)
 
+    def get_query_type(self, inchikey: str) -> QueryType:
+        if inchikey.startswith("InChI="):
+            return QueryType.inchi
+        elif re.compile(r"[A-Z]{14}-[A-Z]{10}-[A-Z]").fullmatch(inchikey):
+            return QueryType.inchikey
+        elif re.compile(r"CHEMBL[0-9]+").fullmatch(inchikey):
+            return QueryType.chembl
+        else:
+            return QueryType.smiles
+
     def get_compound_dot_dict(self, inchikey: str) -> NestedDotDict:
         """
 
@@ -169,11 +191,9 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         Returns:
             **Only ``molecule_chembl_id``, ``pref_name``, "and ``molecule_structures`` are guaranteed to exist
         """
-        if inchikey.startswith("InChI=") or re.compile(r"[A-Z]{14}-[A-Z]{10}-[A-Z]").fullmatch(
-            inchikey
-        ):
-            result = self.api.molecule.get(inchikey)
-        else:
+        # CHEMBL
+        kind = self.get_query_type(inchikey)
+        if kind == QueryType.smiles:
             results = list(
                 self.api.molecule.filter(
                     molecule_structures__canonical_smiles__flexmatch=inchikey
@@ -181,6 +201,8 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             )
             assert len(results) == 1, f"{len(results)} matches for {inchikey}"
             result = results[0]
+        else:
+            result = self.api.molecule.get(inchikey)
         ch = NestedDotDict(result)
         parent = ch["molecule_hierarchy"]["parent_chembl_id"]
         if parent != ch["molecule_chembl_id"]:

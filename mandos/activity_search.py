@@ -16,7 +16,7 @@ class ActivityHit(AbstractHit):
     An ``activity`` hit for a compound.
     """
 
-    target_id: int
+    target_id: str
     target_name: str
     taxon_id: int
     taxon_name: str
@@ -62,6 +62,7 @@ class ActivitySearch(Search[ActivityHit]):
             standard_relation__iregex="(=|<|(?:<=))",
             pchembl_value__isnull=False,
             target_organism__isnull=False,
+            assay_organism__isnull=False,
         )
         hits = []
         for result in results:
@@ -82,13 +83,18 @@ class ActivitySearch(Search[ActivityHit]):
         Returns:
 
         """
+        # The target organism doesn't always match the assay organism
+        # Ex: see assay CHEMBL823141 / document CHEMBL1135642 for homo sapiens in xenopus laevis
         if (
             activity.get("data_validity_comment") is not None
             or activity["standard_relation"] not in ["=", "<", "<="]
             or activity["assay_type"] != "B"
             or activity.get("pchembl_value") is None
             or activity.get("target_organism") is None
+            or activity.get("assay_organism") is None
             or activity["target_organism"] not in self.tax
+            or activity["assay_organism"] not in self.tax
+            or float(activity.get("pchembl_value")) < 7
         ):
             return []
         return self._traverse(lookup, compound, activity)
@@ -108,7 +114,7 @@ class ActivitySearch(Search[ActivityHit]):
         """
         data = dict(
             record_id=activity["activity_id"],
-            compound_id=compound.chid_int,
+            compound_id=compound.chid,
             inchikey=compound.inchikey,
             compound_name=compound.name,
             compound_lookup=lookup,
@@ -124,4 +130,4 @@ class ActivitySearch(Search[ActivityHit]):
             logger.error(f"Target {target_obj} has type UNKNOWN")
             return []
         ancestor = target_obj.traverse_smart()
-        return [ActivityHit(**data, target_id=ancestor.id, target_name=ancestor.name)]
+        return [ActivityHit(**data, target_id=ancestor.chembl, target_name=ancestor.name)]

@@ -18,8 +18,7 @@ class AtcCode:
     record: str
     description: str
     level: int
-    parent: AtcCode
-    children: Set[AtcCode]
+    parent: Optional[AtcCode]
 
     def traverse_to(self, level: int) -> Optional[AtcCode]:
         """
@@ -38,6 +37,9 @@ class AtcCode:
             return self.parent.traverse_to(level)
         else:
             return None
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.record})"
 
     def __hash__(self):
         return hash(self.record)

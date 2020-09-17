@@ -11,7 +11,7 @@ from mandos.model.taxonomy import Taxon, Taxonomy, _Taxon
 
 class TestFind:
     def test_find(self):
-        tax = Taxonomy.load_vertebrates()
+        tax = Taxonomy.load(7742)
         assert tax.roots == [Taxon(7742, "Vertebrata", None, set())]
         assert tax[7742] is not None
         assert tax[7742].name == "Vertebrata"

@@ -103,7 +103,7 @@ pandas                         = ">=1.1, <2.0"
 requests                       = ">=2.24, <3.0"
 tomlkit                        = ">=0.7, <1.0"
 tqdm                           = ">=4.48, <5.0"
-typer                          = ">=0.3, <1.0"
+typer                          = {version=">=0.3, <1.0", extras=["colorama", "shellingham"]}
 pocketutils                    = ">=0.3.1, <0.4"
 
 

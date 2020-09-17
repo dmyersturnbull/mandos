@@ -8,7 +8,7 @@ from typing import List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
 
-from mandos import get_cache_resource, get_resource
+from mandos import get_resource
 
 logger = logging.getLogger(__package__)
 
@@ -167,8 +167,8 @@ class Taxonomy:
         return tax
 
     @classmethod
-    def load_vertebrates(cls) -> Taxonomy:
-        df = pd.read_csv(get_resource("7742.tab"), sep="\t", header=0)
+    def load(cls, tax: int) -> Taxonomy:
+        df = pd.read_csv(get_resource(f"{tax}.tab.gz"), sep="\t", header=0)
         return cls.from_df(df)
 
     @classmethod

@@ -4,6 +4,8 @@ import logging
 from dataclasses import dataclass
 from typing import Sequence
 
+from pocketutils.core.dot_dict import NestedDotDict
+
 from mandos.model import AbstractHit, ChemblCompound, Search
 from mandos.model.atc_codes import AtcCode
 
@@ -16,8 +18,8 @@ class AtcHit(AbstractHit):
     An ATC code found for a compound.
     """
 
-    atc: AtcCode
-    src_id: int
+    atc_level_3: AtcCode
+    atc_level_4: AtcCode
 
     @property
     def predicate(self) -> str:
@@ -39,17 +41,14 @@ class AtcSearch(Search[AtcHit]):
         # 'atc_classifications': ['S01HA01', 'N01BC01', 'R02AD03', 'S02DA02']
         # 'indication_class': 'Anesthetic (topical)'
         ch = self.get_compound_dot_dict(lookup)
-        # TODO duplicated
-        chid = ch["molecule_chembl_id"]
-        inchikey = ch["molecule_structures"]["standard_inchi_key"]
-        name = ch["pref_name"]
-        compound = ChemblCompound(chid, inchikey, name)
+        compound = self.compound_dot_dict_to_obj(ch)
         hits = []
-        for atc in ch["atc_classifications"]:
-            hits.extend(self.process(lookup, compound, atc))
+        if "atc_classifications" in ch:
+            for atc in ch["atc_classifications"]:
+                hits.append(self.process(lookup, compound, atc))
         return hits
 
-    def process(self, lookup: str, compound: ChemblCompound, atc: str) -> Sequence[AtcHit]:
+    def process(self, lookup: str, compound: ChemblCompound, atc: str) -> AtcHit:
         """
 
         Args:
@@ -60,5 +59,14 @@ class AtcSearch(Search[AtcHit]):
         Returns:
 
         """
-        # TODO get from file
-        return []
+        dots = NestedDotDict(self.api.atc_class.get(atc))
+        code = None
+        for level in [1, 2, 3, 4]:
+            if f"level{level}" not in dots:
+                break
+            code = AtcCode(dots[f"level{level}"], dots[f"level{level}_description"], level, code)
+        hit = AtcHit(
+            None, compound.chid, compound.inchikey, lookup, compound.name, code.parent, code
+        )
+        # 'level1': 'N', 'level1_description': 'NERVOUS SYSTEM', 'level2': 'N05', ...
+        return hit

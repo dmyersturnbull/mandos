@@ -66,7 +66,7 @@ class MechanismSearch(Search[MechanismHit]):
         """
         data = dict(
             record_id=mechanism["mec_id"],
-            compound_id=compound.chid_int,
+            compound_id=compound.chid,
             inchikey=compound.inchikey,
             compound_name=compound.name,
             compound_lookup=lookup,
@@ -81,4 +81,4 @@ class MechanismSearch(Search[MechanismHit]):
             logger.error(f"Target {target_obj} has type UNKNOWN")
             return []
         ancestor = target_obj.traverse_smart()
-        return [MechanismHit(**data, target_id=ancestor.id, target_name=ancestor.name)]
+        return [MechanismHit(**data, target_id=ancestor.chembl, target_name=ancestor.name)]

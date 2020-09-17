@@ -73,6 +73,60 @@ class TestTargets:
         assert parent.name == "monoamine transporter"
         assert parent.chembl == "CHEMBL1111"
 
+    def test_traverse_gabaa(self):
+        x = dict(
+            target_chembl_id="CHEMBL5112",
+            pref_name="GABA receptor alpha-5 subunit",
+            target_type="SINGLE PROTEIN",
+        )
+        x_row1 = dict(
+            target_chembl_id="CHEMBL2093872",
+            pref_name="GABA-A receptor; anion channel",
+            target_type="PROTEIN COMPLEX GROUP",
+        )
+        x_row1_superset = dict(
+            target_chembl_id="CHEMBL1111", pref_name="supergroup", target_type="SELECTIVITY FILTER"
+        )
+        x_row2 = dict(
+            target_chembl_id="CHEMBL2094122",
+            pref_name="GABA-A receptor; alpha-5/beta-3/gamma-2",
+            target_type="PROTEIN COMPLEX",
+        )
+        x_row3 = dict(
+            target_chembl_id="CHEMBL2109243",
+            pref_name="GABA-A receptor; benzodiazepine site",
+            target_type="PROTEIN COMPLEX GROUP",
+        )
+        x_row4 = dict(
+            target_chembl_id="CHEMBL2109244",
+            pref_name="GABA-A receptor; agonist GABA site",
+            target_type="PROTEIN COMPLEX GROUP",
+        )
+        x_row5 = dict(
+            target_chembl_id="CHEMBL3885576",
+            pref_name="Gamma-aminobutyric acid receptor subunit alpha-5/beta-2",
+            target_type="PROTEIN COMPLEX",
+        )
+        x_row6 = dict(
+            target_chembl_id="CHEMBL3885577",
+            pref_name="Gamma-aminobutyric acid receptor subunit alpha-5/beta-3/gamma-3",
+            target_type="PROTEIN COMPLEX",
+        )
+        x_row7 = dict(
+            target_chembl_id="CHEMBL4296057",
+            pref_name="Gamma-aminobutyric acid receptor subunit alpha-5/beta-3",
+            target_type="PROTEIN COMPLEX",
+        )
+        xrow2_row2 = x_row1
+        xrow3_row3 = x_row1
+        xrow4_row5 = x_row1
+        xrow5_row3 = x_row1
+        xrow5_row7 = x_row4
+        relations = [
+            dict(relationship="SUPERSET OF", related_target_chembl_id="CHEMBL1111"),
+            dict(relationship="SUPERSET OF", related_target_chembl_id="CHEMBL0000"),
+        ]
+
 
 if __name__ == "__main__":
     pytest.main()

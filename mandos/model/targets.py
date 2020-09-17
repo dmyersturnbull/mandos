@@ -27,7 +27,25 @@ class TargetType(enum.Enum):
     protein_complex = enum.auto()
     protein_complex_group = enum.auto()
     selectivity_group = enum.auto()
+    protein_protein_interaction = enum.auto()
     unknown = enum.auto()
+
+    def priority(self) -> int:
+        """
+        Higher is better.
+
+        Returns:
+
+        """
+        return {
+            TargetType.selectivity_group: 0,
+            TargetType.protein_protein_interaction: 0,
+            TargetType.unknown: 0,
+            TargetType.protein_family: 1,
+            TargetType.single_protein: 2,
+            TargetType.protein_complex: 3,
+            TargetType.protein_complex_group: 4,
+        }[self]
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
@@ -105,27 +123,28 @@ class Target(metaclass=abc.ABCMeta):
         Returns:
 
         """
-        ok = {
+        traversable_types = {
             TargetType.single_protein,
             TargetType.protein_complex,
             TargetType.protein_complex_group,
             TargetType.protein_family,
             TargetType.unknown,
         }
-        # TODO depth-first only works if all branches join up within the set `ok`
-        found = [
-            (i, t)
-            for i, t in sorted(self.ancestors(ok), reverse=True)
-            if t.type != TargetType.unknown
+        acceptable_types = {
+            TargetType.single_protein,
+            TargetType.protein_complex,
+            TargetType.protein_complex_group,
+            TargetType.protein_family,
+        }
+        # TODO depth-first only works if all branches join up within the set `traversable_types`
+        accepted = [
+            (i, t) for i, t in self.ancestors(traversable_types) if t.type in acceptable_types
         ]
-        found_preferred = [(i, t) for i, t in found if t.type != TargetType.protein_family]
-        if len(found_preferred) > 0:
-            return found_preferred[0][1]
-        elif len(found) > 0:
-            # `len(found_preferred) == 0` implies `self.type not in ok`
-            assert self.type not in ok, f"Target {self} is ok but no ok ancestors were found!"
-            logger.warning(f"Target {self} has type {self.type}")
-            return found[0][1]
+        accepted = sorted(
+            accepted, key=lambda it: (it[1].type.priority, it[0], it[1]), reverse=True
+        )
+        if len(accepted) > 0:
+            return accepted[0][1]
         else:
             raise ValueError(f"No matches found for target {self}")
 

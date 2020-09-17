@@ -194,6 +194,10 @@ class ChemblApi(metaclass=abc.ABCMeta):
         return self.__dict__["mechanism"]
 
     @property
+    def go_slim(self) -> ChemblEntrypoint:
+        return self.__dict__["go_slim"]
+
+    @property
     def target(self) -> ChemblEntrypoint:
         return self.__dict__["target"]
 

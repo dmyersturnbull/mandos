@@ -1,7 +1,7 @@
 cff-version: 1.1.0
 message: Software reference
 title: mandos
-version: 0.0.1
+version: 0.1.0
 abstract: Get the biological targets of compounds.
 authors:
     -

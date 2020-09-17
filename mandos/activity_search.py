@@ -94,7 +94,6 @@ class ActivitySearch(Search[ActivityHit]):
             or activity.get("assay_organism") is None
             or activity["target_organism"] not in self.tax
             or activity["assay_organism"] not in self.tax
-            or float(activity.get("pchembl_value")) < 7
         ):
             return []
         return self._traverse(lookup, compound, activity)

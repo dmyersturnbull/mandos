@@ -34,62 +34,7 @@ CHEMBL661 (alprazolam)   has ATC L3 code                 N05B          (ANXIOLYT
 CHEMBL661 (alprazolam)   has ATC L4 code                 N05BA         (Benzodiazepine derivatives)
 ```
 
-[See the docs](https://mandos.readthedocs.io/en/stable/) for more info.
-
-
-## How does this work?
-
-Annotations are derived from ChEMBL.
-First, the compound and its de-salted _parent_ molecule are matched.
-ATC codes and MESH indications are taken as-is.
-
-### Target annotation processing
-
-Mechanisms, target activity, and target predictions are handled in a more complex manner.
-
-
-#### Taxonomic filtration
-
-
-First, targets are restricted to the specified UniProt taxon.
-By default, this is euteleostomi (430 Mya), which is a good choice if you want to approximate humans.
-You can choose another taxon by passing `-tax <id>` (or `-tax <name>`, for subsets of vertebrata).
-If you enter something outside of vertebrata, a new set will be downloaded from UniProt and cached.
-
-#### Target DAG traversal
-
-Then a directed acyclic graph (DAG) of target supersets is traversed upward, following _SUPERSET_ links
-to targets of type _SINGLE PROTEIN_, _PROTEIN FAMILY_, _PROTEIN COMPLEX_, and _PROTEIN COMPLEX GROUP_.
-
-A final target is chosen, preferring _PROTEIN COMPLEX GROUP_, then _PROTEIN COMPLEX_, then _SINGLE PROTEIN_.
-This means that _PROTEIN FAMILY_ targets are ignored unless the annotation is actually against one, or
-there is a chain `SINGLE PROTEIN ⟶ PROTEIN FAMILY ⟶ PROTEIN COMPLEX`. Both cases are rare at most.
-
-If there are two PROTEIN COMPLEX GROUPs in a chain:
-- `SINGLE PROTEIN ⟶ PROTEIN COMPLEX ⟶ PROTEIN COMPLEX GROUP (a) ⟶ PROTEIN COMPLEX GROUP (b)`
-
-Then the higher one (a) will be used. This is similar for branched chains.
-For example, (b) will be chosen given these two chains:
-
-- `SINGLE PROTEIN ⟶ PROTEIN COMPLEX ⟶ PROTEIN COMPLEX GROUP (a1) ⟶ PROTEIN COMPLEX GROUP (b)`
-- `                                  ⟶ PROTEIN COMPLEX GROUP (a2) ⟶ PROTEIN COMPLEX GROUP (b)`
-
-Occasionally, two or more branched chains will fail to join up. In this case, one annotation will be emitted for each.
-For example, both (b1) and (b2) will be used for these:
-
-- `SINGLE PROTEIN ⟶ PROTEIN COMPLEX ⟶ PROTEIN COMPLEX GROUP (a1) ⟶ PROTEIN COMPLEX GROUP (b1)`
-- `                                     PROTEIN COMPLEX GROUP (a2) ⟶ PROTEIN COMPLEX GROUP (b2)`
-
-#### Additional filtration
-
-Predicted activity annotations are restricted to Confidence 90% = "active".
-
-Activity annotations are filtered according to:
-- no DATA VALIDITY COMMENT
-- STANDARD RELATION is `=`, `<`, or `<=`
-- ASSAY TYPE is binding
-- PCHEMBL is non-null and PCHEMBL >= 7 (or a value from `-pchembl`)
-- ASSAY ORGANISM is under the specified taxon (different from the target organism)
+**[See the docs](https://mandos.readthedocs.io/en/stable/)** for more info.
 
 
 [New issues](https://github.com/dmyersturnbull/mandos/issues) and pull requests are welcome.

@@ -18,12 +18,11 @@ class AtcHit(AbstractHit):
     An ATC code found for a compound.
     """
 
-    atc_level_3: AtcCode
-    atc_level_4: AtcCode
+    level: int
 
     @property
     def predicate(self) -> str:
-        return "has ATC code"
+        return f"has ATC L-{self.level} code"
 
 
 class AtcSearch(Search[AtcHit]):
@@ -45,10 +44,10 @@ class AtcSearch(Search[AtcHit]):
         hits = []
         if "atc_classifications" in ch:
             for atc in ch["atc_classifications"]:
-                hits.append(self.process(lookup, compound, atc))
+                hits.extend(self.process(lookup, compound, atc))
         return hits
 
-    def process(self, lookup: str, compound: ChemblCompound, atc: str) -> AtcHit:
+    def process(self, lookup: str, compound: ChemblCompound, atc: str) -> Sequence[AtcHit]:
         """
 
         Args:
@@ -60,13 +59,21 @@ class AtcSearch(Search[AtcHit]):
 
         """
         dots = NestedDotDict(self.api.atc_class.get(atc))
+        # 'level1': 'N', 'level1_description': 'NERVOUS SYSTEM', 'level2': 'N05', ...
         code = None
         for level in [1, 2, 3, 4]:
             if f"level{level}" not in dots:
                 break
             code = AtcCode(dots[f"level{level}"], dots[f"level{level}_description"], level, code)
-        hit = AtcHit(
-            None, compound.chid, compound.inchikey, lookup, compound.name, code.parent, code
+        hit1 = AtcHit(
+            None, compound.chid, compound.inchikey, lookup, compound.name, object_id=code.record, object_name=code.description,
+            level=code.level
         )
-        # 'level1': 'N', 'level1_description': 'NERVOUS SYSTEM', 'level2': 'N05', ...
-        return hit
+        hit2 = AtcHit(
+            None, compound.chid, compound.inchikey, lookup, compound.name, object_id=code.parent.record, object_name=code.parent.description,
+            level=code.parent.level
+        )
+        return [hit1, hit2]
+
+
+__all__ = ["AtcHit", "AtcSearch"]

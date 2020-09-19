@@ -164,4 +164,4 @@ The pCHEMBL used in the summary file is just the product over annotations:
 
 .. math::
 
-    \sigma(E) = \prod{a \in A} \text{pchembl}(a) / |A|
+    \sigma(E) = \prod_{a \in A} \text{pchembl}(a) / |A|

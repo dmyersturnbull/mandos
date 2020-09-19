@@ -12,7 +12,7 @@ from typing import Tuple as Tup
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.api import ChemblApi
+from mandos.api import ChemblApi
 
 logger = logging.getLogger(__package__)
 

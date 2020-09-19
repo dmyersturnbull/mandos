@@ -5,23 +5,23 @@ Command-line interface for mandos.
 from __future__ import annotations
 
 import enum
-import hashlib
 import logging
-import shutil
 from pathlib import Path
-from typing import Optional, Sequence, Type, Union
+from typing import Optional, Sequence, Type
+from typing import Tuple as Tup
 
 import pandas as pd
-import requests
 import typer
+from pocketutils.core.dot_dict import NestedDotDict
 from chembl_webresource_client.new_client import new_client as Chembl
 
-from mandos import get_resource
-from mandos.activity_search import ActivitySearch
-from mandos.atc_search import AtcSearch
-from mandos.mechanism_search import MechanismSearch
-from mandos.model import ChemblApi, Search
-from mandos.model.taxonomy import Taxonomy
+from mandos.search.activity_search import ActivitySearch
+from mandos.model.settings import Settings
+from mandos.search.atc_search import AtcSearch
+from mandos.search.mechanism_search import MechanismSearch
+from mandos.api import ChemblApi
+from mandos.model import Search, Triple
+from mandos.model.caches import TaxonomyCache
 
 logger = logging.getLogger(__package__)
 
@@ -57,13 +57,6 @@ class Format(enum.Enum):
     text = enum.auto()
 
 
-def get_cache_resource(*nodes: Union[Path, str]) -> Path:
-    """"""
-    cache = Path.home() / ".mandos"
-    cache.mkdir(parents=True, exist_ok=True)
-    return Path(cache, *nodes)
-
-
 class Commands:
     """
     Entry points for mandos.
@@ -76,10 +69,7 @@ class Commands:
         path: Path = typer.Option(
             None, "in", exists=True, file_okay=True, dir_okay=True, resolve_path=True
         ),
-        out: Optional[Path] = None,
-        tax: int = 117571,
-        pchembl: float = 7,
-        fmt: Format = typer.Option(Format.csv, "format"),
+        config: Optional[Path] = None,
     ) -> None:
         """
         Process data.
@@ -87,54 +77,19 @@ class Commands:
         Args:
             what: Activity / ATCs / mechanisms / etc.
             path: Path to file containing one InChI per line
-            out: Path of a CSV file to write
-            tax: Restrict to organisms under this UniProt tax ID or scientific name.
-                        UniProt uses a cladastic tree.
-                        117571 (Euteleostomi, 430 Mya) is a good choice.
-                        If the taxon is outside of 7742 (Vertebrata, 525 Mya),
-                        a new file will be downloaded from UniProt and cached.
-            pchembl: Minimum pchembl value (>=)
-            fmt: How to write results
+            config: Path to a TOML config file
         """
-        from pocketutils.core.hasher import FileHasher
-
         data = path.read_bytes()
-        alg = hashlib.sha256()
-        alg.update(data)
-        hex_val = alg.hexdigest()
-        # TODO detect cached results
         compounds = data.decode(encoding="utf8").splitlines()
-        df = Commands.search_for(what, compounds, tax=tax)
-        if out is None:
-            out = Path(str(path.with_suffix("")) + "-" + what.name.lower() + ".csv")
-        df.to_csv(out)
+        df, triples = Commands.search_for(what, compounds, config=config)
+        df_out = Path(str(path.with_suffix("")) + "-" + what.name.lower() + ".csv")
+        df.to_csv(df_out)
+        triples_out = df_out.with_suffix(".triples.txt")
+        triples_out.write_text("\n".join([t.statement for t in triples]), encoding="utf8")
 
     @staticmethod
-    def search_for(
-        what: What, compounds: Sequence[str], tax: Union[int, str] = None
-    ) -> pd.DataFrame:
-        """
-
-        Args:
-            what:
-            compounds:
-            tax:
-
-        Returns:
-
-        """
-        tax = Taxonomy.from_df(Commands.process_tax(tax))
-        compounds = list(compounds)
-        api = ChemblApi.wrap(Chembl)
-        hits = what.clazz(api, tax).find_all(compounds)
-        df = pd.DataFrame(
-            [pd.Series({f: getattr(h, f) for f in what.clazz.hit_fields()}) for h in hits]
-        )
-        return df
-
-    @staticmethod
-    @cli.command()
-    def process_tax(taxon: int) -> Path:
+    @cli.command(hidden=True)
+    def process_tax(taxon: int) -> None:
         """
         Preps a new taxonomy file for use in mandos.
         Just returns if a corresponding file already exists in the resources dir or mandos cache (``~/.mandos``).
@@ -145,59 +100,38 @@ class Commands:
 
         Args:
             taxon: The **ID** of the UniProt taxon
+        """
+        TaxonomyCache(taxon).load()
+
+    @staticmethod
+    def search_for(
+        what: What, compounds: Sequence[str], config: Optional[Path]
+    ) -> Tup[pd.DataFrame, Sequence[Triple]]:
+        """
+
+        Args:
+            what:
+            compounds:
+            config:
 
         Returns:
-            The final path to the csv.gz file
 
         """
-        # check whether it exists
-        if Commands._find_tax_file(taxon):
-            # man, this would be a great use of the new Python 3.9 guard statement
-            return Commands._find_tax_file(taxon)
-        # download it
-        raw_path = get_cache_resource(f"taxonomy-ancestor_{taxon}.tab.gz")
-        output_path = get_cache_resource("taxonomy", f"{taxon}.tab.gz")
-        Commands._download_tax_file(taxon, raw_path)
-        # now process it!
-        # unfortunately it won't include an entry for the root ancestor (`taxon`)
-        # so, we'll add it in
-        df = pd.read_csv(raw_path, sep="\t")
-        # find the scientific name of the parent
-        got = df[df["Parent"] == taxon]
-        if len(got) == 0:
-            raise ValueError(f"Could not infer scientific name for {taxon}")
-        scientific_name = got["Lineage"][0].split("; ")[-1].strip()
-        # now fix the columns
-        df = df[["Taxon", "Scientific name", "Parent"]]
-        df.columns = ["taxon", "scientific_name", "parent"]
-        # now add the ancestor back in
-        df = df.append(
-            pd.Series(dict(taxon=taxon, scientific_name=scientific_name, parent=None)),
-            ignore_index=True,
+        settings = Settings.load({} if config is None else NestedDotDict.read_toml(config))
+        settings.set()
+        compounds = list(compounds)
+        api = ChemblApi.wrap(Chembl)
+        hits = what.clazz(api, settings).find_all(compounds)
+        # collapse over and sort the triples
+        triples = sorted(list({hit.to_triple() for hit in hits}))
+        df = pd.DataFrame(
+            [pd.Series({f: getattr(h, f) for f in what.clazz.hit_fields()}) for h in hits]
         )
-        # write it to a csv.gz
-        df["parent"] = df["parent"].astype(str).str.rstrip(".0")
-        df.to_csv(output_path, index=False, sep="\t")
-        return output_path
-
-    @staticmethod
-    def _find_tax_file(taxon: int) -> Optional[Path]:
-        path = get_resource(f"{taxon}.tab")
-        if not path.exists():
-            path = get_cache_resource("taxonomy", f"{taxon}.tab")
-        if path.exists():
-            logger.info(f"Found {taxon} at {path}")
-            return get_resource(path)
-        return None
-
-    @staticmethod
-    def _download_tax_file(taxon: int, path: Path) -> None:
-        # https://uniprot.org/taxonomy/?query=ancestor:7742&format=tab&force=true&columns=id&compress=yes
-        url = f"https://uniprot.org/taxonomy/?query=ancestor:{taxon}&format=tab&force=true&columns=id&compress=yes"
-        with requests.get(url, stream=True) as r:
-            with open(str(path), "wb") as f:
-                shutil.copyfileobj(r.raw, f)
+        return df, triples
 
 
 if __name__ == "__main__":
     cli()
+
+
+__all__ = ["Commands", "What"]

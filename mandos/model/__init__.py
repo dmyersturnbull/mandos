@@ -7,12 +7,14 @@ import logging
 import re
 import typing
 from dataclasses import dataclass
-from typing import Generic, Optional, Sequence, TypeVar
+from typing import Generic, Optional, Sequence, TypeVar, Mapping
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.api import ChemblApi
+from mandos.api import ChemblApi
+from mandos.model.caches import TaxonomyCache
 from mandos.model.taxonomy import Taxonomy
+from mandos.model.settings import Settings
 
 logger = logging.getLogger("mandos")
 
@@ -39,6 +41,18 @@ class AbstractHit:
     inchikey: str
     compound_lookup: str
     compound_name: str
+    object_id: str
+    object_name: str
+
+    def to_triple(self) -> Triple:
+        return Triple(
+            compound_lookup=self.compound_lookup,
+            compound_id=self.compound_id,
+            compound_name=self.compound_name,
+            predicate=self.predicate,
+            object_id=self.object_id,
+            object_name=self.object_name,
+        )
 
     @property
     def predicate(self) -> str:
@@ -79,7 +93,7 @@ H = TypeVar("H", bound=AbstractHit, covariant=True)
 class Search(Generic[H], metaclass=abc.ABCMeta):
     """"""
 
-    def __init__(self, chembl_api: ChemblApi, tax: Taxonomy):
+    def __init__(self, chembl_api: ChemblApi, config: Settings):
         """
 
         Args:
@@ -87,7 +101,8 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             tax:
         """
         self.api = chembl_api
-        self.tax = tax
+        self.config = config
+        self.tax = TaxonomyCache(config.taxon).load()
 
     def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
         """
@@ -208,3 +223,23 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         if parent != ch["molecule_chembl_id"]:
             ch = NestedDotDict(self.api.molecule.get(parent))
         return ch
+
+
+@dataclass(frozen=True, repr=True, order=True, unsafe_hash=True)
+class Triple:
+    compound_id: str
+    compound_lookup: str
+    compound_name: str
+    predicate: str
+    object_name: str
+    object_id: str
+
+    @property
+    def statement(self) -> str:
+        sub = f"{self.compound_lookup} [{self.compound_id}] [{self.compound_name}]>"
+        pred = f"<{self.predicate}>"
+        obj = f"<{self.object_name} [{self.object_id}]>"
+        return "\t".join([sub, pred, obj])
+
+
+__all__ = ["ChemblCompound", "AbstractHit", "QueryType", "Search", "Triple"]

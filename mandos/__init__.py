@@ -38,3 +38,6 @@ if __name__ == "__main__":  # pragma: no cover
         print(f"{pkg} (v{__metadata['version']})")
     else:
         print("Unknown project info")
+
+
+__all__ = ["get_resource"]

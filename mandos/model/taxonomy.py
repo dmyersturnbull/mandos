@@ -3,12 +3,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from functools import total_ordering
-from pathlib import Path
 from typing import List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
-
-from mandos import get_resource
 
 logger = logging.getLogger(__package__)
 
@@ -167,12 +164,7 @@ class Taxonomy:
         return tax
 
     @classmethod
-    def load(cls, tax: int) -> Taxonomy:
-        df = pd.read_csv(get_resource(f"{tax}.tab.gz"), sep="\t", header=0)
-        return cls.from_df(df)
-
-    @classmethod
-    def from_df(cls, df: Union[pd.DataFrame, str, Path]) -> Taxonomy:
+    def from_df(cls, df: pd.DataFrame) -> Taxonomy:
         """
         Reads from a DataFrame from a CSV file provided by a UniProt download.
         Strips any entries with missing or empty-string scientific names.
@@ -183,8 +175,6 @@ class Taxonomy:
         Returns:
             The corresponding taxonomic tree
         """
-        if isinstance(df, (str, Path)):
-            df = pd.read_csv(get_resource(df), sep="\t", header=0).reset_index()
         df["taxon"] = df["taxon"].astype(int)
         df["parent"] = df["parent"].astype(int)
         tax = Taxonomy({}, {})
@@ -312,3 +302,6 @@ class Taxonomy:
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}({len(self._by_id)} @ {hex(id(self))})"
+
+
+__all__ = ["Taxon", "Taxonomy"]

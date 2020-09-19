@@ -16,8 +16,6 @@ class ActivityHit(AbstractHit):
     An ``activity`` hit for a compound.
     """
 
-    target_id: str
-    target_name: str
     taxon_id: int
     taxon_name: str
     pchembl: float
@@ -94,6 +92,7 @@ class ActivitySearch(Search[ActivityHit]):
             or activity.get("assay_organism") is None
             or activity["target_organism"] not in self.tax
             or activity["assay_organism"] not in self.tax
+            or activity["pchembl_value"] < self.config.pchembl
         ):
             return []
         return self._traverse(lookup, compound, activity)
@@ -129,4 +128,7 @@ class ActivitySearch(Search[ActivityHit]):
             logger.error(f"Target {target_obj} has type UNKNOWN")
             return []
         ancestor = target_obj.traverse_smart()
-        return [ActivityHit(**data, target_id=ancestor.chembl, target_name=ancestor.name)]
+        return [ActivityHit(**data, object_id=ancestor.chembl, object_name=ancestor.name)]
+
+
+__all__ = ["ActivityHit", "ActivitySearch"]

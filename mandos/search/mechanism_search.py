@@ -16,8 +16,6 @@ class MechanismHit(AbstractHit):
     A mechanism entry for a compound.
     """
 
-    target_id: int
-    target_name: str
     action_type: str
     direct_interaction: bool
     description: str
@@ -26,7 +24,7 @@ class MechanismHit(AbstractHit):
 
     @property
     def predicate(self) -> str:
-        return self.action_type
+        return self.action_type.lower()
 
 
 class MechanismSearch(Search[MechanismHit]):
@@ -81,4 +79,7 @@ class MechanismSearch(Search[MechanismHit]):
             logger.error(f"Target {target_obj} has type UNKNOWN")
             return []
         ancestor = target_obj.traverse_smart()
-        return [MechanismHit(**data, target_id=ancestor.chembl, target_name=ancestor.name)]
+        return [MechanismHit(**data, object_id=ancestor.chembl, object_name=ancestor.name)]
+
+
+__all__ = ["MechanismHit", "MechanismSearch"]

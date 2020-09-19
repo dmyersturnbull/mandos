@@ -245,3 +245,6 @@ class ChemblApi(metaclass=abc.ABCMeta):
                 return ChemblEntrypoint.wrap(getattr(obj, item))
 
         return X()
+
+
+__all__ = ["ChemblApi", "ChemblEntrypoint", "ChemblFilterQuery"]

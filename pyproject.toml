@@ -104,7 +104,7 @@ requests                       = ">=2.24, <3.0"
 tomlkit                        = ">=0.7, <1.0"
 tqdm                           = ">=4.48, <5.0"
 typer                          = {version=">=0.3, <1.0", extras=["colorama"]}
-pocketutils                    = ">=0.3.1, <0.4"
+pocketutils                    = ">=0.3.2, <0.4"
 
 
 [tool.poetry.dev-dependencies]

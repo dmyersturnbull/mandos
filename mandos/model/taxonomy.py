@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from functools import total_ordering
+from pathlib import Path
 from typing import List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
@@ -65,7 +66,9 @@ class Taxon:
         Returns:
 
         """
-        return self._ancestors([])
+        lst = []
+        self._ancestors(lst)
+        return lst
 
     @property
     def descendents(self) -> Sequence[Taxon]:
@@ -74,17 +77,18 @@ class Taxon:
         Returns:
 
         """
-        return self._descendents([])
+        lst = []
+        self._descendents(lst)
+        return lst
 
-    def _ancestors(self, values: List[Taxon]) -> List[Taxon]:
+    def _ancestors(self, values: List[Taxon]) -> None:
         values.append(self.parent)
-        values += self._ancestors(values)
-        return values
+        self.parent._ancestors(values)
 
-    def _descendents(self, values: List[Taxon]) -> List[Taxon]:
-        values += self.children
-        values += self._descendents(values)
-        return values
+    def _descendents(self, values: List[Taxon]) -> None:
+        values.extend(self.children)
+        for child in self.children:
+            child._descendents(values)
 
     def __str__(self):
         return repr(self)
@@ -99,7 +103,7 @@ class Taxon:
         return self.id == other.id
 
     def __lt__(self, other):
-        return other.id < self.id
+        return self.id < other.id
 
 
 @dataclass()
@@ -132,7 +136,7 @@ class _Taxon(Taxon):
         return self.id == other.id
 
     def __lt__(self, other):
-        return other.id < self.id
+        return self.id < other.id
 
 
 class Taxonomy:
@@ -141,27 +145,27 @@ class Taxonomy:
     Elements in the tree can be looked up by name or ID using ``__getitem__`` and ``get``.
     """
 
-    def __init__(self, by_id: Mapping[int, Taxon], by_name: Mapping[str, Taxon]):
+    def __init__(self, by_id: Mapping[int, Taxon]):
         """
 
         Args:
             by_id:
             by_name:
         """
-        # provided for consistency
-        assert list(by_id.values()) == list(
-            by_name.values()
-        ), f"[{by_id.values()}] != [{by_name.values()}]"
-        self._by_id = by_id
-        self._by_name = by_name
+        # constructor provided for consistency with the members
+        self._by_id = dict(by_id)
 
     @classmethod
     def from_list(cls, taxa: Sequence[Taxon]) -> Taxonomy:
-        tax = Taxonomy({x.id: x for x in taxa}, {x.name: x for x in taxa})
+        tax = Taxonomy({x.id: x for x in taxa})
         # catch duplicate values
         assert len(tax._by_id) == len(taxa), f"{len(tax._by_id)} != {len(taxa)}"
-        assert len(tax._by_name) == len(taxa), f"{len(tax._by_name)} != {len(taxa)}"
         return tax
+
+    @classmethod
+    def from_path(cls, path: Path) -> Taxonomy:
+        df = pd.read_csv(path, sep="\t", header=0)
+        return cls.from_df(df)
 
     @classmethod
     def from_df(cls, df: pd.DataFrame) -> Taxonomy:
@@ -176,32 +180,23 @@ class Taxonomy:
             The corresponding taxonomic tree
         """
         df["taxon"] = df["taxon"].astype(int)
-        df["parent"] = df["parent"].astype(int)
-        tax = Taxonomy({}, {})
+        # TODO fillna(0) should not be needed
+        df["parent"] = df["parent"].fillna(0).astype(int)
         # just build up a tree, sticking the elements in by_id
-        tax._by_id = {}
+        tax = {}
         for row in df.itertuples():
-            print(row.scientific_name)
-            child = tax._by_id.setdefault(
-                row.taxon, _Taxon(row.taxon, row.scientific_name, None, set())
-            )
+            child = tax.setdefault(row.taxon, _Taxon(row.taxon, row.scientific_name, None, set()))
             child.set_name(row.scientific_name)
             if row.parent != 0:
-                parent = tax._by_id.setdefault(row.parent, _Taxon(row.parent, "", None, set()))
+                parent = tax.setdefault(row.parent, _Taxon(row.parent, "", None, set()))
                 child.set_parent(parent)
                 parent.add_child(child)
-        bad = [t for t in tax._by_id.values() if t.name == ""]
+        bad = [t for t in tax.values() if t.name.strip() == ""]
         if len(bad) > 0:
-            logger.error(f"Removing taxa with missing or empty names: {bad}.")
-        # completely remove the taxa with missing names
-        tax._by_id = {k: v for k, v in tax._by_id.items() if v.name != ""}
-        # fix classes
-        for v in tax._by_id.values():
+            raise ValueError(f"There are taxa with missing or empty names: {bad}.")
+        for v in tax.values():
             v.__class__ = Taxon
-        # build the name dict
-        # use lowercase and trim for lookup (but not value)
-        tax._by_name = {t.name.strip().lower(): t for t in tax._by_id.values()}
-        return tax
+        return Taxonomy(tax)
 
     @property
     def taxa(self) -> Sequence[Taxon]:
@@ -219,7 +214,7 @@ class Taxonomy:
         Returns:
 
         """
-        return [k for k in self.taxa if k.parent is None]
+        return [k for k in self.taxa if k.parent is None or k.parent not in self]
 
     @property
     def leaves(self) -> Sequence[Taxon]:
@@ -230,7 +225,7 @@ class Taxonomy:
         """
         return [k for k in self.taxa if len(k.children) == 0]
 
-    def under(self, item: Union[int, str]) -> Taxonomy:
+    def subtree(self, item: int) -> Taxonomy:
         """
 
         Args:
@@ -240,10 +235,15 @@ class Taxonomy:
 
         """
         item = self[item]
-        descendents = item.descendents
-        return Taxonomy({d.id: d for d in descendents}, {d.name: d for d in descendents})
+        descendents = {item, *item.descendents}
+        return Taxonomy({d.id: d for d in descendents})
 
-    def get(self, item: Union[int, str]) -> Optional[_Taxon]:
+    def req(self, item: int) -> Taxon:
+        if isinstance(item, Taxon):
+            item = item.id
+        return self[item]
+
+    def get(self, item: int) -> Optional[Taxon]:
         """
         Corresponds to ``dict.get``.
 
@@ -253,19 +253,19 @@ class Taxonomy:
         Returns:
             The taxon, or None if it was not found
         """
+        if isinstance(item, Taxon):
+            item = item.id
         if isinstance(item, int):
             return self._by_id.get(item)
-        elif isinstance(item, str):
-            return self._by_name.get(item.strip().lower())
         else:
             raise TypeError(f"Type {type(item)} of {item} not applicable")
 
-    def __getitem__(self, item: Union[int, str]) -> _Taxon:
+    def __getitem__(self, item: int) -> Taxon:
         """
         Corresponds to ``dict[_]``.
 
         Args:
-            item: The scientific name or UniProt ID
+            item: The UniProt ID
 
         Returns:
             The taxon
@@ -297,11 +297,12 @@ class Taxonomy:
         """
         return len(self._by_id)
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({len(self._by_id)} @ {hex(id(self))})"
-
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}({len(self._by_id)} @ {hex(id(self))})"
+        return repr(self)
+
+    def __repr__(self) -> str:
+        roots = ", ".join(r.name for r in self.roots)
+        return f"{self.__class__.__name__}(n={len(self._by_id)} (roots={roots}) @ {hex(id(self))})"
 
 
 __all__ = ["Taxon", "Taxonomy"]

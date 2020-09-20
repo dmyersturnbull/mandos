@@ -7,21 +7,23 @@ from __future__ import annotations
 import enum
 import logging
 from pathlib import Path
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence
 from typing import Tuple as Tup
+from typing import Type
 
 import pandas as pd
 import typer
-from pocketutils.core.dot_dict import NestedDotDict
 from chembl_webresource_client.new_client import new_client as Chembl
+from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.search.activity_search import ActivitySearch
-from mandos.model.settings import Settings
-from mandos.search.atc_search import AtcSearch
-from mandos.search.mechanism_search import MechanismSearch
 from mandos.api import ChemblApi
 from mandos.model import Search, Triple
 from mandos.model.caches import TaxonomyCache
+from mandos.model.settings import Settings
+from mandos.search.activity_search import ActivitySearch
+from mandos.search.atc_search import AtcSearch
+from mandos.search.indication_search import IndicationSearch
+from mandos.search.mechanism_search import MechanismSearch
 
 logger = logging.getLogger(__package__)
 
@@ -37,6 +39,7 @@ class What(enum.Enum):
     activity = enum.auto(), ActivitySearch
     mechanism = enum.auto(), MechanismSearch
     atc = enum.auto(), AtcSearch
+    indication = enum.auto(), IndicationSearch
 
     def __new__(cls, *args, **kwargs):
         obj = object.__new__(cls)
@@ -52,11 +55,6 @@ class What(enum.Enum):
         return self._clazz_
 
 
-class Format(enum.Enum):
-    csv = enum.auto()
-    text = enum.auto()
-
-
 class Commands:
     """
     Entry points for mandos.
@@ -65,27 +63,25 @@ class Commands:
     @staticmethod
     @cli.command()
     def search(
-        what: What,
-        path: Path = typer.Option(
-            None, "in", exists=True, file_okay=True, dir_okay=True, resolve_path=True
-        ),
+        what: str,
+        path: Path,
         config: Optional[Path] = None,
     ) -> None:
         """
         Process data.
 
         Args:
-            what: Activity / ATCs / mechanisms / etc.
+            what: Comma-separated list of ``activity``, ``mechanism``, ``atc``, and ``indication``.
             path: Path to file containing one InChI per line
             config: Path to a TOML config file
         """
-        data = path.read_bytes()
-        compounds = data.decode(encoding="utf8").splitlines()
-        df, triples = Commands.search_for(what, compounds, config=config)
-        df_out = Path(str(path.with_suffix("")) + "-" + what.name.lower() + ".csv")
-        df.to_csv(df_out)
-        triples_out = df_out.with_suffix(".triples.txt")
-        triples_out.write_text("\n".join([t.statement for t in triples]), encoding="utf8")
+        for w in what.split(","):
+            w = What[w.lower()]
+            df, triples = Commands.search_for(w, path, config=config)
+            df_out = Path(str(path.with_suffix("")) + "-" + w.name.lower() + ".csv")
+            df.to_csv(df_out)
+            triples_out = df_out.with_suffix(".triples.txt")
+            triples_out.write_text("\n".join([t.statement for t in triples]), encoding="utf8")
 
     @staticmethod
     @cli.command(hidden=True)
@@ -105,23 +101,28 @@ class Commands:
 
     @staticmethod
     def search_for(
-        what: What, compounds: Sequence[str], config: Optional[Path]
+        what: What, path: Path, config: Optional[Path]
     ) -> Tup[pd.DataFrame, Sequence[Triple]]:
         """
 
         Args:
             what:
-            compounds:
+            path:
             config:
 
         Returns:
 
         """
-        settings = Settings.load({} if config is None else NestedDotDict.read_toml(config))
+        compounds = path.read_text(encoding="utf8").splitlines()
+        compounds = [c.strip() for c in compounds if len(c.strip()) > 0]
+        settings = Settings.load(
+            NestedDotDict({}) if config is None else NestedDotDict.read_toml(config)
+        )
         settings.set()
         compounds = list(compounds)
         api = ChemblApi.wrap(Chembl)
-        hits = what.clazz(api, settings).find_all(compounds)
+        taxonomy = TaxonomyCache.get(settings.taxon)
+        hits = what.clazz(api, settings, taxonomy).find_all(compounds)
         # collapse over and sort the triples
         triples = sorted(list({hit.to_triple() for hit in hits}))
         df = pd.DataFrame(

@@ -30,6 +30,7 @@ class TargetType(enum.Enum):
     protein_protein_interaction = enum.auto()
     unknown = enum.auto()
 
+    @property
     def priority(self) -> int:
         """
         Higher is better.

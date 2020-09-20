@@ -166,6 +166,10 @@ class ChemblApi(metaclass=abc.ABCMeta):
         return self.__dict__["activity"]
 
     @property
+    def assay(self) -> ChemblEntrypoint:
+        return self.__dict__["assay"]
+
+    @property
     def atc_class(self) -> ChemblEntrypoint:
         return self.__dict__["atc_class"]
 

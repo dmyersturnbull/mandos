@@ -13,7 +13,7 @@ logger = logging.getLogger("mandos")
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
 class ActivityHit(AbstractHit):
     """
-    An ``activity`` hit for a compound.
+    An "activity" hit for a compound.
     """
 
     taxon_id: int
@@ -41,7 +41,7 @@ class ActivityHit(AbstractHit):
 
 class ActivitySearch(Search[ActivityHit]):
     """
-    Search under ChEMBL ``activity``.
+    Search under ChEMBL "activity".
     """
 
     def find(self, lookup: str) -> Sequence[ActivityHit]:
@@ -81,24 +81,33 @@ class ActivitySearch(Search[ActivityHit]):
         Returns:
 
         """
-        # The target organism doesn't always match the assay organism
-        # Ex: see assay CHEMBL823141 / document CHEMBL1135642 for homo sapiens in xenopus laevis
+        bad_flags = {
+            "potential missing data",
+            "potential transcription error",
+            "outside typical range",
+        }
         if (
-            activity.get("data_validity_comment") is not None
-            or activity["standard_relation"] not in ["=", "<", "<="]
-            or activity["assay_type"] != "B"
-            or activity.get("pchembl_value") is None
-            or activity.get("target_organism") is None
-            or activity.get("assay_organism") is None
-            or activity["target_organism"] not in self.tax
-            or activity["assay_organism"] not in self.tax
-            or activity["pchembl_value"] < self.config.pchembl
+            activity.get_as("data_validity_comment", lambda s: s.lower()) in bad_flags
+            or activity.req_as("standard_relation", str) not in ["=", "<", "<="]
+            or activity.req_as("assay_type", str) != "B"
+            or activity.get_as("pchembl_value", float) is None
+            or activity.get_as("target_tax_id", int) is None
+            or activity.get_as("target_tax_id", int) not in self.tax
+            or activity.req_as("pchembl_value", float) < self.config.min_pchembl
         ):
             return []
-        return self._traverse(lookup, compound, activity)
+        # The `target_organism` doesn't always match the `assay_organism`
+        # Ex: see assay CHEMBL823141 / document CHEMBL1135642 for homo sapiens in xenopus laevis
+        # However, it's often something like yeast expressing a human / mouse / etc receptor
+        # So there's no need to filter by it
+        assay = self.api.assay.get(activity.req_as("assay_chembl_id", str))
+        confidence_score = assay.req_as("confidence_score", int)
+        if confidence_score < self.config.min_confidence_score:
+            return []
+        return self._traverse(lookup, compound, activity, assay)
 
     def _traverse(
-        self, lookup: str, compound: ChemblCompound, activity: NestedDotDict
+        self, lookup: str, compound: ChemblCompound, activity: NestedDotDict, assay: NestedDotDict
     ) -> Sequence[ActivityHit]:
         """
 
@@ -110,20 +119,25 @@ class ActivitySearch(Search[ActivityHit]):
         Returns:
 
         """
+        organism = activity.req_as("target_organism", str)
+        tax_id = activity.req_as("target_tax_id", int)
+        tax = self.tax.req(tax_id)
+        if organism != tax.name:
+            logger.error(f"Target organism {organism} is not {tax.name}")
         data = dict(
-            record_id=activity["activity_id"],
+            record_id=activity.req_as("activity_id", str),
             compound_id=compound.chid,
             inchikey=compound.inchikey,
             compound_name=compound.name,
             compound_lookup=lookup,
-            taxon_id=self.tax[activity["target_organism"]].id,
-            taxon_name=self.tax[activity["target_organism"]].name,
-            pchembl=float(activity["pchembl_value"]),
-            std_type=activity["standard_type"],
-            src_id=int(activity["src_id"]),
-            exact_target_id=activity["target_chembl_id"],
+            taxon_id=tax.id,
+            taxon_name=tax.name,
+            pchembl=activity.req_as("pchembl_value", float),
+            std_type=activity.req_as("standard_type", str),
+            src_id=activity.req_as("src_id", int),
+            exact_target_id=activity.req_as("target_chembl_id", str),
         )
-        target_obj = TargetFactory.find(activity["target_chembl_id"], self.api)
+        target_obj = TargetFactory.find(activity.req_as("target_chembl_id", str), self.api)
         if target_obj.type == TargetType.unknown:
             logger.error(f"Target {target_obj} has type UNKNOWN")
             return []

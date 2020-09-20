@@ -31,12 +31,20 @@ def get_cache_resource(*nodes: Union[Path, str]) -> Path:
 
 
 class TaxonomyCache:
+    @classmethod
+    def get(cls, taxon: int) -> Taxonomy:
+        vertebrata = Taxonomy.from_path(get_resource("7742.tab.gz"))
+        if taxon in vertebrata:
+            return TaxonomyCache(7742).load().subtree(taxon)
+        else:
+            return TaxonomyCache(taxon).load()
+
     def __init__(self, taxon: int):
         self.taxon = taxon
 
     @property
     def exists(self) -> bool:
-        return self.path.exists() and self.raw_path.exists()
+        return self.path.exists()
 
     @property
     def path(self) -> Path:
@@ -60,8 +68,7 @@ class TaxonomyCache:
             if not self.raw_path.exists():
                 self._download()
             self._fix()
-        df = pd.read_csv(self.path, sep="\t", header=0)
-        return Taxonomy.from_df(df)
+        return Taxonomy.from_path(self.path)
 
     def _fix(self):
         # now process it!
@@ -70,21 +77,25 @@ class TaxonomyCache:
         raw_path = self.raw_path
         df = pd.read_csv(raw_path, sep="\t")
         # find the scientific name of the parent
-        got = df[df["Parent"] == self.taxon]
-        if len(got) == 0:
-            raise ValueError(f"Could not infer scientific name for {self.taxon}")
-        scientific_name = got["Lineage"][0].split("; ")[-1].strip()
+        scientific_name = self._determine_name(df)
         # now fix the columns
         df = df[["Taxon", "Scientific name", "Parent"]]
         df.columns = ["taxon", "scientific_name", "parent"]
         # now add the ancestor back in
         df = df.append(
-            pd.Series(dict(taxon=self.taxon, scientific_name=scientific_name, parent=None)),
+            pd.Series(dict(taxon=self.taxon, scientific_name=scientific_name, parent=0)),
             ignore_index=True,
         )
         # write it to a csv.gz
-        df["parent"] = df["parent"].astype(str).str.rstrip(".0")
+        df["parent"] = df["parent"].astype(int)
         df.to_csv(self.path, index=False, sep="\t")
+
+    def _determine_name(self, df: pd.DataFrame) -> str:
+        got = df[df["Parent"] == self.taxon]
+        if len(got) == 0:
+            raise ValueError(f"Could not infer scientific name for {self.taxon}")
+        z = str(list(got["Lineage"])[0])
+        return z.split("; ")[-1].strip()
 
     def _download(self) -> None:
         raw_path = self.raw_path

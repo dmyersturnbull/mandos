@@ -133,7 +133,7 @@ Here are the full rules used to filter activity annotations:
 - ASSAY ORGANISM is under the specified taxon
 - Assay-to-target relationship
   `confidence score <https://chembl.gitbook.io/chembl-interface-documentation/frequently-asked-questions/chembl-data-questions#what-is-the-confidence-score>`_
-  ≥ 3 (only applies to the summary; modify with ``target-confidence``)
+  ≥ 4 (only applies to the summary; modify with ``target-confidence``)
 
 .. tip::
 
@@ -143,12 +143,6 @@ Here are the full rules used to filter activity annotations:
     ``--tax 1437010`` (Boreoeutheria, 85 Ma),
     or ``--tax 314146`` (Euarchontoglires, 75 Ma)
     might be useful.
-
-.. note::
-
-    Strangely, the ASSAY ORGANISM is different from the organism of the target.
-    For example, see assay CHEMBL823141 / document CHEMBL1135642, found in alprazolam.
-    This was tested in xenopus laevis, but the target is for human.
 
 
 pCHEMBL values

@@ -66,12 +66,24 @@ class AtcSearch(Search[AtcHit]):
                 break
             code = AtcCode(dots[f"level{level}"], dots[f"level{level}_description"], level, code)
         hit1 = AtcHit(
-            None, compound.chid, compound.inchikey, lookup, compound.name, object_id=code.record, object_name=code.description,
-            level=code.level
+            None,
+            compound.chid,
+            compound.inchikey,
+            lookup,
+            compound.name,
+            object_id=code.record,
+            object_name=code.description,
+            level=code.level,
         )
         hit2 = AtcHit(
-            None, compound.chid, compound.inchikey, lookup, compound.name, object_id=code.parent.record, object_name=code.parent.description,
-            level=code.parent.level
+            None,
+            compound.chid,
+            compound.inchikey,
+            lookup,
+            compound.name,
+            object_id=code.parent.record,
+            object_name=code.parent.description,
+            level=code.parent.level,
         )
         return [hit1, hit2]
 

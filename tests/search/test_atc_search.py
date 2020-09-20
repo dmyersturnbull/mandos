@@ -1,9 +1,9 @@
 import pytest
 from chembl_webresource_client.new_client import new_client as Chembl
 
-from mandos.search.atc_search import AtcSearch
 from mandos.model import ChemblApi
 from mandos.model.taxonomy import Taxonomy
+from mandos.search.atc_search import AtcSearch
 
 
 class TestAtcs:

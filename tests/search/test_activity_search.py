@@ -1,19 +1,17 @@
 import pytest
-from chembl_webresource_client.new_client import new_client as Chembl
 
-from mandos.search.activity_search import ActivitySearch
-from mandos.model import ChemblApi
-from mandos.model.taxonomy import Taxonomy
+from mandos.cli import Commands, What
+
+from . import get_test_resource
 
 
-class TestFind:
+class TestActivitySearch:
     def test_find(self):
-        tax = Taxonomy.load(7742)
-        finder = ActivitySearch(ChemblApi.wrap(Chembl), tax)
-        # CHEMBL370805, cocaine, ZPUCINDJVBIVPJ-LJISPDSOSA-N
-        # alprazolam, VREFGVBLTWBCJP-UHFFFAOYSA-N, CHEMBL661
-        found = list(finder.find("CHEMBL661"))
-        pass
+        df, triples = Commands.search_for(What.activity, get_test_resource("inchis.txt"), None)
+        # TODO double-check
+        assert len(df) == 4
+        assert len(triples) == 4
+        assert triples[0].compound_name.lower() == "alprazolam"
 
 
 if __name__ == "__main__":

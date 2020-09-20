@@ -7,14 +7,14 @@ import logging
 import re
 import typing
 from dataclasses import dataclass
-from typing import Generic, Optional, Sequence, TypeVar, Mapping
+from typing import Generic, Mapping, Optional, Sequence, TypeVar
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.api import ChemblApi
 from mandos.model.caches import TaxonomyCache
-from mandos.model.taxonomy import Taxonomy
 from mandos.model.settings import Settings
+from mandos.model.taxonomy import Taxonomy
 
 logger = logging.getLogger("mandos")
 
@@ -36,7 +36,7 @@ class ChemblCompound:
 class AbstractHit:
     """"""
 
-    record_id: Optional[int]
+    record_id: Optional[str]
     compound_id: str
     inchikey: str
     compound_lookup: str
@@ -93,7 +93,7 @@ H = TypeVar("H", bound=AbstractHit, covariant=True)
 class Search(Generic[H], metaclass=abc.ABCMeta):
     """"""
 
-    def __init__(self, chembl_api: ChemblApi, config: Settings):
+    def __init__(self, chembl_api: ChemblApi, config: Settings, tax: Taxonomy):
         """
 
         Args:
@@ -102,7 +102,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         """
         self.api = chembl_api
         self.config = config
-        self.tax = TaxonomyCache(config.taxon).load()
+        self.tax = tax
 
     def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
         """

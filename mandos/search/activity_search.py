@@ -123,7 +123,7 @@ class ActivitySearch(Search[ActivityHit]):
         tax_id = activity.req_as("target_tax_id", int)
         tax = self.tax.req(tax_id)
         if organism != tax.name:
-            logger.error(f"Target organism {organism} is not {tax.name}")
+            logger.warning(f"Target organism {organism} is not {tax.name}")
         data = dict(
             record_id=activity.req_as("activity_id", str),
             compound_id=compound.chid,
@@ -137,11 +137,26 @@ class ActivitySearch(Search[ActivityHit]):
             src_id=activity.req_as("src_id", int),
             exact_target_id=activity.req_as("target_chembl_id", str),
         )
-        target_obj = TargetFactory.find(activity.req_as("target_chembl_id", str), self.api)
-        if target_obj.type == TargetType.unknown:
-            logger.error(f"Target {target_obj} has type UNKNOWN")
+        chembl_id = activity.req_as("target_chembl_id", str)
+        if chembl_id is None:
+            raise ValueError(f"target_chembl_id is None for activity {activity}")
+        target_obj = TargetFactory.find(chembl_id, self.api)
+        is_non_protein = target_obj.type in [
+            TargetType.protein_protein_interaction,
+            TargetType.nucleic_acid,
+            TargetType.selectivity_group,
+        ]
+        if (
+            target_obj.type == TargetType.unknown
+            or is_non_protein
+            and self.config.min_confidence_score < 4
+        ):
+            logger.warning(f"Target {target_obj} has type {target_obj.type}")
             return []
-        ancestor = target_obj.traverse_smart()
+        elif is_non_protein:
+            ancestor = target_obj
+        else:
+            ancestor = target_obj.traverse_smart()
         return [ActivityHit(**data, object_id=ancestor.chembl, object_name=ancestor.name)]
 
 

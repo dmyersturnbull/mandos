@@ -28,7 +28,12 @@ class TargetType(enum.Enum):
     protein_complex_group = enum.auto()
     selectivity_group = enum.auto()
     protein_protein_interaction = enum.auto()
+    nucleic_acid = enum.auto()
     unknown = enum.auto()
+
+    @classmethod
+    def of(cls, s: str) -> TargetType:
+        return TargetType[s.replace(" ", "_").replace("-", "_").lower()]
 
     @property
     def priority(self) -> int:
@@ -41,6 +46,7 @@ class TargetType(enum.Enum):
         return {
             TargetType.selectivity_group: 0,
             TargetType.protein_protein_interaction: 0,
+            TargetType.nucleic_acid: 0,
             TargetType.unknown: 0,
             TargetType.protein_family: 1,
             TargetType.single_protein: 2,
@@ -93,7 +99,7 @@ class Target(metaclass=abc.ABCMeta):
         return cls(
             chembl=target["target_chembl_id"],
             name=target.get("pref_name"),
-            type=TargetType[target["target_type"].replace(" ", "_").lower()],
+            type=TargetType.of(target["target_type"]),
         )
 
     @property
@@ -124,23 +130,20 @@ class Target(metaclass=abc.ABCMeta):
         Returns:
 
         """
+        if self.type in [
+            TargetType.nucleic_acid,
+            TargetType.protein_protein_interaction,
+            TargetType.selectivity_group,
+        ]:
+            return self
         traversable_types = {
-            TargetType.single_protein,
-            TargetType.protein_complex,
-            TargetType.protein_complex_group,
-            TargetType.protein_family,
-            TargetType.unknown,
-        }
-        acceptable_types = {
             TargetType.single_protein,
             TargetType.protein_complex,
             TargetType.protein_complex_group,
             TargetType.protein_family,
         }
         # TODO depth-first only works if all branches join up within the set `traversable_types`
-        accepted = [
-            (i, t) for i, t in self.ancestors(traversable_types) if t.type in acceptable_types
-        ]
+        accepted = self.ancestors(traversable_types)
         accepted = sorted(
             accepted, key=lambda it: (it[1].type.priority, it[0], it[1]), reverse=True
         )

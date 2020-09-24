@@ -19,7 +19,6 @@ class MechanismHit(AbstractHit):
     action_type: str
     direct_interaction: bool
     description: str
-    comment: str
     exact_target_id: str
 
     @property
@@ -71,14 +70,31 @@ class MechanismSearch(Search[MechanismHit]):
             action_type=mechanism["action_type"],
             direct_interaction=mechanism["direct_interaction"],
             description=mechanism["mechanism_of_action"],
-            comment=mechanism["mechanism_comment"],
             exact_target_id=mechanism["target_chembl_id"],
         )
-        target_obj = TargetFactory.find(mechanism["target_chembl_id"], self.api)
-        if target_obj.type == TargetType.unknown:
-            logger.error(f"Target {target_obj} has type UNKNOWN")
+        if mechanism.get("target_chembl_id") is None:
+            logger.debug(
+                f"target_chembl_id missing from mechanism '{mechanism}' for compound {lookup}"
+            )
             return []
-        ancestor = target_obj.traverse_smart()
+        chembl_id = mechanism["target_chembl_id"]
+        target_obj = TargetFactory.find(chembl_id, self.api)
+        is_non_protein = target_obj.type in [
+            TargetType.protein_protein_interaction,
+            TargetType.nucleic_acid,
+            TargetType.selectivity_group,
+        ]
+        if (
+            target_obj.type == TargetType.unknown
+            or is_non_protein
+            and self.config.min_confidence_score < 4
+        ):
+            logger.warning(f"Target {target_obj} has type {target_obj.type}")
+            return []
+        elif is_non_protein:
+            ancestor = target_obj
+        else:
+            ancestor = target_obj.traverse_smart()
         return [MechanismHit(**data, object_id=ancestor.chembl, object_name=ancestor.name)]
 
 

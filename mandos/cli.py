@@ -82,6 +82,9 @@ class Commands:
             df.to_csv(df_out)
             triples_out = df_out.with_suffix(".triples.txt")
             triples_out.write_text("\n".join([t.statement for t in triples]), encoding="utf8")
+            triples_out.write_text(
+                "\n".join([Triple.tab_header(), *[t.tabs for t in triples]]), encoding="utf8"
+            )
 
     @staticmethod
     @cli.command(hidden=True)

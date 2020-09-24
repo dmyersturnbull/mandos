@@ -7,7 +7,7 @@ import logging
 import re
 import typing
 from dataclasses import dataclass
-from typing import Generic, Mapping, Optional, Sequence, TypeVar
+from typing import Generic, Optional, Sequence, TypeVar
 
 from pocketutils.core.dot_dict import NestedDotDict
 
@@ -17,6 +17,16 @@ from mandos.model.settings import Settings
 from mandos.model.taxonomy import Taxonomy
 
 logger = logging.getLogger("mandos")
+
+
+class MolStructureType(enum.Enum):
+    mol = enum.auto()
+    both = enum.auto()
+    none = enum.auto()
+
+    @classmethod
+    def of(cls, s: str) -> MolStructureType:
+        return MolStructureType[s.lower()]
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
@@ -104,6 +114,10 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         self.config = config
         self.tax = tax
 
+    @property
+    def search_name(self) -> str:
+        return self.__class__.__name__.lower().replace("search", "")
+
     def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
         """
 
@@ -114,8 +128,14 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
         """
         lst = []
-        for compound in compounds:
-            lst.extend(self.find(compound))
+        for i, compound in enumerate(compounds):
+            x = self.find(compound)
+            lst.extend(x)
+            logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
+            if i % 20 == 0 or i == len(compounds) - 1:
+                logger.info(
+                    f"Found {len(lst)} {self.search_name} annotations for {i} of {len(compounds)} compounds"
+                )
         return lst
 
     def find(self, compound: str) -> Sequence[H]:
@@ -183,7 +203,13 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
         """
         chid = ch["molecule_chembl_id"]
-        inchikey = ch["molecule_structures"]["standard_inchi_key"]
+        mol_type = MolStructureType.of(ch["structure_type"])
+        if mol_type == MolStructureType.none:
+            logger.info(f"No structure found for compound {chid} of type {mol_type.name}.")
+            logger.debug(f"No structure found for compound {ch}.")
+            inchikey = "N/A"
+        else:
+            inchikey = ch["molecule_structures"]["standard_inchi_key"]
         name = ch["pref_name"]
         return ChemblCompound(chid, inchikey, name)
 
@@ -218,10 +244,14 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             result = results[0]
         else:
             result = self.api.molecule.get(inchikey)
+        if result is None:
+            raise ValueError(f"Result for compound {inchikey} is null!")
         ch = NestedDotDict(result)
-        parent = ch["molecule_hierarchy"]["parent_chembl_id"]
-        if parent != ch["molecule_chembl_id"]:
-            ch = NestedDotDict(self.api.molecule.get(parent))
+        # molecule_hierarchy can have the actual value None
+        if ch.get("molecule_hierarchy") is not None:
+            parent = ch["molecule_hierarchy"]["parent_chembl_id"]
+            if parent != ch["molecule_chembl_id"]:
+                ch = NestedDotDict(self.api.molecule.get(parent))
         return ch
 
 
@@ -233,6 +263,32 @@ class Triple:
     predicate: str
     object_name: str
     object_id: str
+
+    @classmethod
+    def tab_header(cls) -> str:
+        return "\t".join(
+            [
+                "compound_id",
+                "compound_lookup",
+                "compound_name",
+                "predicate",
+                "object_name",
+                "object_id",
+            ]
+        )
+
+    @property
+    def tabs(self) -> str:
+        return "\t".join(
+            [
+                self.compound_lookup,
+                self.compound_id,
+                self.compound_name,
+                self.predicate,
+                self.object_name,
+                self.object_id,
+            ]
+        )
 
     @property
     def statement(self) -> str:

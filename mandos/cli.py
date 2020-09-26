@@ -7,7 +7,7 @@ from __future__ import annotations
 import enum
 import logging
 from pathlib import Path, PurePath
-from typing import Optional, Sequence
+from typing import Any, Mapping, Optional, Sequence
 from typing import Tuple as Tup
 from typing import Type, Union
 
@@ -104,7 +104,9 @@ class Commands:
 
     @staticmethod
     def search_for(
-        what: What, compounds: Union[Sequence[str], PurePath], config: Optional[Path]
+        what: What,
+        compounds: Union[Sequence[str], PurePath],
+        config: Union[None, Mapping[str, Any], Path],
     ) -> Tup[pd.DataFrame, Sequence[Triple]]:
         """
 
@@ -119,9 +121,14 @@ class Commands:
         if isinstance(compounds, (PurePath, str)):
             compounds = Path(compounds).read_text(encoding="utf8").splitlines()
         compounds = [c.strip() for c in compounds if len(c.strip()) > 0]
-        settings = Settings.load(
-            NestedDotDict({}) if config is None else NestedDotDict.read_toml(config)
-        )
+        if config is None:
+            settings = Settings.load(NestedDotDict({}))
+        elif isinstance(config, PurePath):
+            settings = Settings.load(NestedDotDict.read_toml(config))
+        elif isinstance(config, NestedDotDict):
+            settings = config
+        else:
+            settings = Settings.load(NestedDotDict(config))
         settings.set()
         compounds = list(compounds)
         api = ChemblApi.wrap(Chembl)

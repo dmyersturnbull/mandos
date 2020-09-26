@@ -79,7 +79,7 @@ classifiers = [
 	"Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
-    "Topic :: Scientific/Engineering :: Cheminformatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
 	'Typing :: Typed'
 ]
 

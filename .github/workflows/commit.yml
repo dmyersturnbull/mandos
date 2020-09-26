@@ -1,19 +1,17 @@
-name: Build & test
+name: Build & test on master
 on:
     push:
         branches:
             - master
-    pull_request:
-        branches:
-            - master
 jobs:
     build:
-        runs-on: ubuntu-latest
         strategy:
             max-parallel: 1
             matrix:
+                os: [ "ubuntu-latest", "windows-latest", "macos-latest" ]
                 python-version:
                     - 3.8
+        runs-on: "${{ matrix.os }}"
         steps:
             -
                 name: Checkout
@@ -38,6 +36,9 @@ jobs:
                     docker build .
             -
                 name: Run coveralls
-                # the || true is because coveralls returns a nonzero exit code on warnings, etc.
+                env:
+                    COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
                 run: |
+                    pip install coveralls codecov
                     coveralls || true
+                    codecov || true

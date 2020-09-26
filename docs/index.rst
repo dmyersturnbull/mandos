@@ -51,6 +51,7 @@ You need a `DrugBank API key <https://docs.drugbank.com/v1/#token-authentication
 for DrugBank searches.
 
 
+==========   =====================================================================================
 search       description
 ==========   =====================================================================================
 mechanism    All ChEMBL molecular mechanism annotations for proteins under the specified taxon.

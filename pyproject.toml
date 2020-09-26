@@ -55,7 +55,7 @@ codemeta     = true
 
 [tool.poetry]
 name = "mandos"
-version = "0.1.0"
+version = "0.1.1"
 description = "Get the biological targets of compounds."
 include = [
     "README.md",
@@ -71,7 +71,7 @@ homepage = "https://github.com/dmyersturnbull/mandos"
 repository = "https://github.com/dmyersturnbull/mandos"
 documentation = "https://mandos-chem.readthedocs.io"
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Natural Language :: English",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",

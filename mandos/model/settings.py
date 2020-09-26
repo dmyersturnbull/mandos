@@ -68,8 +68,5 @@ class Settings:
         instance.FAST_SAVE = self.fast_save
         instance.TIMEOUT = self.timeout_sec
 
-    def write(self, path: Path) -> None:
-        path.write_text(str(self.__dict__), encoding="utf8")
-
 
 __all__ = ["Settings"]

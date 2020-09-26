@@ -21,6 +21,7 @@ class ChemblFilterQuery(metaclass=abc.ABCMeta):
 
     def only(self, items: Sequence[str]) -> ChemblFilterQuery:
         """
+        Turns this into a query for a single record.
 
         Args:
             items:
@@ -42,6 +43,7 @@ class ChemblFilterQuery(metaclass=abc.ABCMeta):
     @classmethod
     def mock(cls, items: Sequence[dict]):
         """
+        Mocks.
 
         Args:
             items:
@@ -68,6 +70,7 @@ class ChemblFilterQuery(metaclass=abc.ABCMeta):
     @classmethod
     def wrap(cls, query):
         """
+        Wraps.
 
         Args:
             query:
@@ -219,6 +222,7 @@ class ChemblApi(metaclass=abc.ABCMeta):
     @classmethod
     def mock(cls, entrypoints: Mapping[str, ChemblEntrypoint]) -> ChemblApi:
         """
+        Mocks.
 
         Args:
             entrypoints:
@@ -236,6 +240,7 @@ class ChemblApi(metaclass=abc.ABCMeta):
     @classmethod
     def wrap(cls, obj) -> ChemblApi:
         """
+        Wraps.
 
         Args:
             obj:

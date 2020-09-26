@@ -7,7 +7,6 @@ from typing import Sequence
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model import AbstractHit, ChemblCompound, Search
-from mandos.model.atc_codes import AtcCode
 
 logger = logging.getLogger("mandos")
 
@@ -59,33 +58,20 @@ class AtcSearch(Search[AtcHit]):
 
         """
         dots = NestedDotDict(self.api.atc_class.get(atc))
+        return [self._code(lookup, compound, dots, 3), self._code(lookup, compound, dots, 4)]
+
+    def _code(self, lookup: str, compound: ChemblCompound, dots: NestedDotDict, level: int):
         # 'level1': 'N', 'level1_description': 'NERVOUS SYSTEM', 'level2': 'N05', ...
-        code = None
-        for level in [1, 2, 3, 4]:
-            if f"level{level}" not in dots:
-                break
-            code = AtcCode(dots[f"level{level}"], dots[f"level{level}_description"], level, code)
-        hit1 = AtcHit(
+        return AtcHit(
             None,
             compound.chid,
             compound.inchikey,
             lookup,
             compound.name,
-            object_id=code.record,
-            object_name=code.description,
-            level=code.level,
+            object_id=dots.get(f"level{level}"),
+            object_name=dots.get(f"level{level}_description"),
+            level=level,
         )
-        hit2 = AtcHit(
-            None,
-            compound.chid,
-            compound.inchikey,
-            lookup,
-            compound.name,
-            object_id=code.parent.record,
-            object_name=code.parent.description,
-            level=code.parent.level,
-        )
-        return [hit1, hit2]
 
 
 __all__ = ["AtcHit", "AtcSearch"]

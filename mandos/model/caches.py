@@ -4,6 +4,7 @@ Caching.
 
 from __future__ import annotations
 
+import abc
 import logging
 import shutil
 from pathlib import Path
@@ -30,17 +31,10 @@ def get_cache_resource(*nodes: Union[Path, str]) -> Path:
     return Path(cache, *nodes)
 
 
-class TaxonomyCache:
-    @classmethod
-    def get(cls, taxon: int) -> Taxonomy:
-        vertebrata = Taxonomy.from_path(get_resource("7742.tab.gz"))
-        if taxon in vertebrata:
-            return TaxonomyCache(7742).load().subtree(taxon)
-        else:
-            return TaxonomyCache(taxon).load()
-
-    def __init__(self, taxon: int):
-        self.taxon = taxon
+class TaxonomyCache(metaclass=abc.ABCMeta):
+    @property
+    def taxon(self) -> int:
+        raise NotImplementedError()
 
     @property
     def exists(self) -> bool:
@@ -98,6 +92,18 @@ class TaxonomyCache:
         return z.split("; ")[-1].strip()
 
     def _download(self) -> None:
+        raise NotImplementedError()
+
+
+class UniprotTaxonomyCache(TaxonomyCache):
+    def __init__(self, taxon: int):
+        self._taxon = taxon
+
+    @property
+    def taxon(self) -> int:
+        return self._taxon
+
+    def _download(self) -> None:
         raw_path = self.raw_path
         # this is faster and safer than using pd.read_csv(url)
         taxon = self.taxon
@@ -109,4 +115,51 @@ class TaxonomyCache:
         hasher.to_write(raw_path).write()
 
 
-__all__ = ["TaxonomyCache"]
+class FixedFileCache(TaxonomyCache):
+    def __init__(self, taxon: int):
+        self._taxon = taxon
+
+    @property
+    def taxon(self) -> int:
+        return self._taxon
+
+    def _download(self) -> None:
+        raise AssertionError("Already downloaded!")
+
+
+class TaxonomyCaches:
+    """
+    Collection of static factory methods.
+    """
+
+    @classmethod
+    def from_uniprot(cls, taxon: int) -> Taxonomy:
+        return UniprotTaxonomyCache(taxon).load()
+
+    @classmethod
+    def from_vertebrata(cls, taxon: int) -> Taxonomy:
+        return FixedFileCache(7742).load().subtree(taxon)
+
+    @classmethod
+    def from_raw_df(cls, taxon: int, df: pd.DataFrame) -> Taxonomy:
+        class RawDfTaxonomyCache(TaxonomyCache):
+            @property
+            def taxon(self) -> int:
+                return taxon
+
+            def _download(self) -> None:
+                df.to_csv(self.raw_path, sep="\t")
+                hasher.to_write(self.raw_path).write()
+
+        return RawDfTaxonomyCache().load().subtree(taxon)
+
+    @classmethod
+    def load(cls, taxon: int) -> Taxonomy:
+        vertebrata = Taxonomy.from_path(get_resource("7742.tab.gz"))
+        if taxon in vertebrata:
+            return vertebrata.subtree(taxon)
+        else:
+            return UniprotTaxonomyCache(taxon).load()
+
+
+__all__ = ["TaxonomyCache", "TaxonomyCaches"]

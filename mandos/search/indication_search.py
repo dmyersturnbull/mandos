@@ -21,7 +21,7 @@ class IndicationHit(AbstractHit):
 
     @property
     def predicate(self) -> str:
-        return f"indicated for"
+        return f"phase-{self.max_phase} indication"
 
 
 class IndicationSearch(Search[IndicationHit]):
@@ -67,7 +67,7 @@ class IndicationSearch(Search[IndicationHit]):
             lookup,
             compound.name,
             object_id=indication.req_as("mesh_id", str),
-            object_name=indication.req_as("mesh_heading", str),
+            object_name=indication.req_as("mesh_heading", str).strip("\n"),
             max_phase=indication.req_as("max_phase_for_ind", int),
         )
 

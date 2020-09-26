@@ -4,14 +4,15 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, ChemblCompound, Search
-from mandos.model.targets import TargetFactory, TargetType
+from mandos.model import ChemblCompound
+from mandos.model.targets import Target
+from mandos.search.protein_search import ProteinHit, ProteinSearch
 
 logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
-class ActivityHit(AbstractHit):
+class ActivityHit(ProteinHit):
     """
     An "activity" hit for a compound.
     """
@@ -27,137 +28,83 @@ class ActivityHit(AbstractHit):
     def predicate(self) -> str:
         return "activity"
 
-    def over(self, pchembl: float) -> bool:
-        """
 
-        Args:
-            pchembl:
-
-        Returns:
-
-        """
-        return self.pchembl >= float(pchembl)
-
-
-class ActivitySearch(Search[ActivityHit]):
+class ActivitySearch(ProteinSearch[ActivityHit]):
     """
-    Search under ChEMBL "activity".
+    Search for ``activity``.
     """
 
-    def find(self, lookup: str) -> Sequence[ActivityHit]:
-        """
-
-        Args:
-            lookup:
-
-        Returns:
-
-        """
-        form = self.get_compound(lookup)
-        results = self.api.activity.filter(
-            parent_molecule_chembl_id=form.chid,
-            assay_type="B",
-            standard_relation__iregex="(=|<|(?:<=))",
-            pchembl_value__isnull=False,
-            target_organism__isnull=False,
-            assay_organism__isnull=False,
+    def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
+        return list(
+            self.api.activity.filter(
+                parent_molecule_chembl_id=parent_form.chid,
+                assay_type="B",
+                standard_relation__iregex="(=|<|(?:<=))",
+                pchembl_value__isnull=False,
+                target_organism__isnull=False,
+            )
         )
-        hits = []
-        for result in results:
-            result = NestedDotDict(result)
-            hits.extend(self.process(lookup, form, result))
-        return hits
 
-    def process(
-        self, lookup: str, compound: ChemblCompound, activity: NestedDotDict
-    ) -> Sequence[ActivityHit]:
-        """
-
-        Args:
-            lookup:
-            compound:
-            activity:
-
-        Returns:
-
-        """
+    def should_include(self, lookup: str, compound: ChemblCompound, data: NestedDotDict) -> bool:
         bad_flags = {
             "potential missing data",
             "potential transcription error",
             "outside typical range",
         }
         if (
-            activity.get_as("data_validity_comment", lambda s: s.lower()) in bad_flags
-            or activity.req_as("standard_relation", str) not in ["=", "<", "<="]
-            or activity.req_as("assay_type", str) != "B"
-            or activity.get_as("pchembl_value", float) is None
-            or activity.get_as("target_tax_id", int) is None
-            or activity.get_as("target_tax_id", int) not in self.tax
-            or activity.req_as("pchembl_value", float) < self.config.min_pchembl
+            data.get_as("data_validity_comment", lambda s: s.lower()) in bad_flags
+            or data.req_as("standard_relation", str) not in ["=", "<", "<="]
+            or data.req_as("assay_type", str) != "B"
+            or data.get("target_tax_id") is None
+            or data.get_as("target_tax_id", int) not in self.tax
+            or data.get("pchembl_value") is None
+            or data.req_as("pchembl_value", float) < self.config.min_pchembl
         ):
-            return []
+            return False
+        if data.get("data_validity_comment") is not None:
+            logger.warning(
+                f"Activity annotation for {lookup} has flag '{data.get('data_validity_comment')} (ok)"
+            )
         # The `target_organism` doesn't always match the `assay_organism`
         # Ex: see assay CHEMBL823141 / document CHEMBL1135642 for homo sapiens in xenopus laevis
         # However, it's often something like yeast expressing a human / mouse / etc receptor
         # So there's no need to filter by it
-        assay = self.api.assay.get(activity.req_as("assay_chembl_id", str))
-        confidence_score = assay.req_as("confidence_score", int)
-        if confidence_score < self.config.min_confidence_score:
-            return []
-        return self._traverse(lookup, compound, activity, assay)
+        assay = self.api.assay.get(data.req_as("assay_chembl_id", str))
+        confidence_score = assay.get("confidence_score")
+        if confidence_score is None or confidence_score < self.config.min_confidence_score:
+            return False
+        return True
 
-    def _traverse(
-        self, lookup: str, compound: ChemblCompound, activity: NestedDotDict, assay: NestedDotDict
+    def to_hit(
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
     ) -> Sequence[ActivityHit]:
-        """
+        # these must match the constructor of the Hit,
+        # EXCEPT for object_id and object_name, which come from traversal
+        x = self._extract(lookup, compound, data)
+        return [ActivityHit(**x, object_id=target.chembl, object_name=target.name)]
 
-        Args:
-            lookup:
-            compound:
-            activity:
-
-        Returns:
-
-        """
-        organism = activity.req_as("target_organism", str)
-        tax_id = activity.req_as("target_tax_id", int)
+    def _extract(self, lookup: str, compound: ChemblCompound, data: NestedDotDict) -> NestedDotDict:
+        # we know these exist from the query
+        organism = data.req_as("target_organism", str)
+        tax_id = data.req_as("target_tax_id", int)
         tax = self.tax.req(tax_id)
         if organism != tax.name:
             logger.warning(f"Target organism {organism} is not {tax.name}")
-        data = dict(
-            record_id=activity.req_as("activity_id", str),
-            compound_id=compound.chid,
-            inchikey=compound.inchikey,
-            compound_name=compound.name,
-            compound_lookup=lookup,
-            taxon_id=tax.id,
-            taxon_name=tax.name,
-            pchembl=activity.req_as("pchembl_value", float),
-            std_type=activity.req_as("standard_type", str),
-            src_id=activity.req_as("src_id", int),
-            exact_target_id=activity.req_as("target_chembl_id", str),
+        return NestedDotDict(
+            dict(
+                record_id=data.req_as("activity_id", str),
+                compound_id=compound.chid,
+                inchikey=compound.inchikey,
+                compound_name=compound.name,
+                compound_lookup=lookup,
+                taxon_id=tax.id,
+                taxon_name=tax.name,
+                pchembl=data.req_as("pchembl_value", float),
+                std_type=data.req_as("standard_type", str),
+                src_id=data.req_as("src_id", int),
+                exact_target_id=data.req_as("target_chembl_id", str),
+            )
         )
-        chembl_id = activity.req_as("target_chembl_id", str)
-        if chembl_id is None:
-            raise ValueError(f"target_chembl_id is None for activity {activity}")
-        target_obj = TargetFactory.find(chembl_id, self.api)
-        is_non_protein = target_obj.type in [
-            TargetType.protein_protein_interaction,
-            TargetType.nucleic_acid,
-            TargetType.selectivity_group,
-        ]
-        if (
-            target_obj.type == TargetType.unknown
-            or is_non_protein
-            and self.config.min_confidence_score < 4
-        ):
-            logger.warning(f"Target {target_obj} has type {target_obj.type}")
-            return []
-        elif is_non_protein:
-            ancestor = target_obj
-        else:
-            ancestor = target_obj.traverse_smart()
-        return [ActivityHit(**data, object_id=ancestor.chembl, object_name=ancestor.name)]
 
 
 __all__ = ["ActivityHit", "ActivitySearch"]

@@ -29,6 +29,7 @@ class TargetType(enum.Enum):
     selectivity_group = enum.auto()
     protein_protein_interaction = enum.auto()
     nucleic_acid = enum.auto()
+    chimeric_protein = enum.auto()
     unknown = enum.auto()
 
     @classmethod
@@ -36,18 +37,39 @@ class TargetType(enum.Enum):
         return TargetType[s.replace(" ", "_").replace("-", "_").lower()]
 
     @property
+    def is_protein(self) -> bool:
+        return self in {
+            TargetType.single_protein,
+            TargetType.protein_family,
+            TargetType.protein_complex,
+        }
+
+    @property
     def priority(self) -> int:
         """
         Higher is better.
+        Rules:
+            - -1: unknown type
+            -  0: acceptable only if requested
+            -  1: protein family
+            -  2: single protein
+            -  3: protein complex
+            -  4: protein complex group
+
+        Selectivity group is a slightly complex type:
+        It might be fine to accept if there's nothing else and a user wants it,
+        but should probably never be traversed. Otherwise you might get a link
+        to one of possibly multiple protein complexes or protein complex groups.
 
         Returns:
 
         """
         return {
-            TargetType.selectivity_group: 0,
+            TargetType.unknown: -1,
             TargetType.protein_protein_interaction: 0,
+            TargetType.selectivity_group: 0,
             TargetType.nucleic_acid: 0,
-            TargetType.unknown: 0,
+            TargetType.chimeric_protein: 0,
             TargetType.protein_family: 1,
             TargetType.single_protein: 2,
             TargetType.protein_complex: 3,
@@ -119,38 +141,10 @@ class Target(metaclass=abc.ABCMeta):
         """
         relations = self.__class__.api().target_relation.filter(target_chembl_id=self.chembl)
         links = []
-        for superset in [r for r in relations if r["relationship"] == "SUPERSET OF"]:
+        for superset in [r for r in relations if r["relationship"] == "SUBSET OF"]:
             linked_target = self.find(superset["related_target_chembl_id"])
             links.append(linked_target)
         return sorted(links)
-
-    def traverse_smart(self) -> __qualname__:
-        """
-
-        Returns:
-
-        """
-        if self.type in [
-            TargetType.nucleic_acid,
-            TargetType.protein_protein_interaction,
-            TargetType.selectivity_group,
-        ]:
-            return self
-        traversable_types = {
-            TargetType.single_protein,
-            TargetType.protein_complex,
-            TargetType.protein_complex_group,
-            TargetType.protein_family,
-        }
-        # TODO depth-first only works if all branches join up within the set `traversable_types`
-        accepted = self.ancestors(traversable_types)
-        accepted = sorted(
-            accepted, key=lambda it: (it[1].type.priority, it[0], it[1]), reverse=True
-        )
-        if len(accepted) > 0:
-            return accepted[0][1]
-        else:
-            raise ValueError(f"No matches found for target {self}")
 
     def ancestors(self, permitting: Set[TargetType]) -> Set[Tup[int, __qualname__]]:
         """
@@ -161,6 +155,7 @@ class Target(metaclass=abc.ABCMeta):
 
         Returns:
             The targets in the set, in a breadth-first order (then sorted by CHEMBL ID)
+            The int is the depth, starting at 0 (this protein), going to +inf for the highest ancestors
         """
         results = set()
         self._traverse(0, permitting, results)

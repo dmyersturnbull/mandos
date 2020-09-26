@@ -34,8 +34,8 @@ class TestTargets:
             target_chembl_id="CHEMBL0000", pref_name="receptor", target_type="PROTEIN_COMPLEX"
         )
         relations = [
-            dict(relationship="SUPERSET OF", related_target_chembl_id="CHEMBL1111"),
-            dict(relationship="SUPERSET OF", related_target_chembl_id="CHEMBL0000"),
+            dict(relationship="SUBSET OF", related_target_chembl_id="CHEMBL1111"),
+            dict(relationship="SUBSET OF", related_target_chembl_id="CHEMBL0000"),
         ]
         get_target = {
             "DAT": dat,
@@ -122,9 +122,10 @@ class TestTargets:
         xrow5_row3 = x_row1
         xrow5_row7 = x_row4
         relations = [
-            dict(relationship="SUPERSET OF", related_target_chembl_id="CHEMBL1111"),
-            dict(relationship="SUPERSET OF", related_target_chembl_id="CHEMBL0000"),
+            dict(relationship="SUBSET OF", related_target_chembl_id="CHEMBL1111"),
+            dict(relationship="SUBSET OF", related_target_chembl_id="CHEMBL0000"),
         ]
+        # TODO
 
 
 if __name__ == "__main__":

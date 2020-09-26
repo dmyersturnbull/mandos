@@ -1,0 +1,8 @@
+mandos.taxon = 1111
+mandos.min_pchembl = 15
+mandos.min_confidence_score = 2
+mandos.min_phase = 0
+chembl.cache_path = "~"
+chembl.n_retries = 100
+chembl.fast_save = false
+chembl.timeout_sec = 0

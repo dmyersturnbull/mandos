@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import enum
 import logging
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Optional, Sequence
 from typing import Tuple as Tup
-from typing import Type
+from typing import Type, Union
 
 import pandas as pd
 import typer
@@ -18,7 +18,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.api import ChemblApi
 from mandos.model import Search, Triple
-from mandos.model.caches import TaxonomyCache
+from mandos.model.caches import TaxonomyCache, TaxonomyCaches
 from mandos.model.settings import Settings
 from mandos.search.activity_search import ActivitySearch
 from mandos.search.atc_search import AtcSearch
@@ -33,13 +33,13 @@ cli = typer.Typer()
 
 class What(enum.Enum):
     """
-    List of search items
+    List of search items.
     """
 
     activity = enum.auto(), ActivitySearch
     mechanism = enum.auto(), MechanismSearch
     atc = enum.auto(), AtcSearch
-    indication = enum.auto(), IndicationSearch
+    trial = enum.auto(), IndicationSearch
 
     def __new__(cls, *args, **kwargs):
         obj = object.__new__(cls)
@@ -100,23 +100,24 @@ class Commands:
         Args:
             taxon: The **ID** of the UniProt taxon
         """
-        TaxonomyCache(taxon).load()
+        TaxonomyCaches.load(taxon)
 
     @staticmethod
     def search_for(
-        what: What, path: Path, config: Optional[Path]
+        what: What, compounds: Union[Sequence[str], PurePath], config: Optional[Path]
     ) -> Tup[pd.DataFrame, Sequence[Triple]]:
         """
 
         Args:
             what:
-            path:
+            compounds:
             config:
 
         Returns:
 
         """
-        compounds = path.read_text(encoding="utf8").splitlines()
+        if isinstance(compounds, (PurePath, str)):
+            compounds = Path(compounds).read_text(encoding="utf8").splitlines()
         compounds = [c.strip() for c in compounds if len(c.strip()) > 0]
         settings = Settings.load(
             NestedDotDict({}) if config is None else NestedDotDict.read_toml(config)
@@ -124,7 +125,7 @@ class Commands:
         settings.set()
         compounds = list(compounds)
         api = ChemblApi.wrap(Chembl)
-        taxonomy = TaxonomyCache.get(settings.taxon)
+        taxonomy = TaxonomyCaches.load(settings.taxon)
         hits = what.clazz(api, settings, taxonomy).find_all(compounds)
         # collapse over and sort the triples
         triples = sorted(list({hit.to_triple() for hit in hits}))

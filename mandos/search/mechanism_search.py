@@ -4,14 +4,15 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, ChemblCompound, Search
-from mandos.model.targets import TargetFactory, TargetType
+from mandos.model import ChemblCompound
+from mandos.model.targets import Target
+from mandos.search.protein_search import ProteinHit, ProteinSearch
 
 logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
-class MechanismHit(AbstractHit):
+class MechanismHit(ProteinHit):
     """
     A mechanism entry for a compound.
     """
@@ -26,76 +27,37 @@ class MechanismHit(AbstractHit):
         return self.action_type.lower()
 
 
-class MechanismSearch(Search[MechanismHit]):
+class MechanismSearch(ProteinSearch[MechanismHit]):
     """
     Search for ``mechanisms``.
     """
 
-    def find(self, lookup: str) -> Sequence[MechanismHit]:
-        """
+    def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
+        return list(self.api.mechanism.filter(parent_molecule_chembl_id=parent_form.chid))
 
-        Args:
-            lookup:
+    def should_include(self, lookup: str, compound: ChemblCompound, data: NestedDotDict) -> bool:
+        # no conceivable problems not related directly to the target (which are handled in the superclass)
+        return True
 
-        Returns:
-
-        """
-        form = self.get_compound(lookup)
-        results = self.api.mechanism.filter(parent_molecule_chembl_id=form.chid)
-        hits = []
-        for result in results:
-            result = NestedDotDict(result)
-            hits.extend(self.process(lookup, form, result))
-        return hits
-
-    def process(
-        self, lookup: str, compound: ChemblCompound, mechanism: NestedDotDict
+    def to_hit(
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
     ) -> Sequence[MechanismHit]:
-        """
-
-        Args:
-            lookup:
-            compound:
-            mechanism:
-
-        Returns:
-
-        """
-        data = dict(
-            record_id=mechanism["mec_id"],
-            compound_id=compound.chid,
-            inchikey=compound.inchikey,
-            compound_name=compound.name,
-            compound_lookup=lookup,
-            action_type=mechanism["action_type"],
-            direct_interaction=mechanism["direct_interaction"],
-            description=mechanism["mechanism_of_action"],
-            exact_target_id=mechanism["target_chembl_id"],
-        )
-        if mechanism.get("target_chembl_id") is None:
-            logger.debug(
-                f"target_chembl_id missing from mechanism '{mechanism}' for compound {lookup}"
+        # these must match the constructor of the Hit,
+        # EXCEPT for object_id and object_name, which come from traversal
+        x = NestedDotDict(
+            dict(
+                record_id=data["mec_id"],
+                compound_id=compound.chid,
+                inchikey=compound.inchikey,
+                compound_name=compound.name,
+                compound_lookup=lookup,
+                action_type=data["action_type"],
+                direct_interaction=data["direct_interaction"],
+                description=data["mechanism_of_action"],
+                exact_target_id=data["target_chembl_id"],
             )
-            return []
-        chembl_id = mechanism["target_chembl_id"]
-        target_obj = TargetFactory.find(chembl_id, self.api)
-        is_non_protein = target_obj.type in [
-            TargetType.protein_protein_interaction,
-            TargetType.nucleic_acid,
-            TargetType.selectivity_group,
-        ]
-        if (
-            target_obj.type == TargetType.unknown
-            or is_non_protein
-            and self.config.min_confidence_score < 4
-        ):
-            logger.warning(f"Target {target_obj} has type {target_obj.type}")
-            return []
-        elif is_non_protein:
-            ancestor = target_obj
-        else:
-            ancestor = target_obj.traverse_smart()
-        return [MechanismHit(**data, object_id=ancestor.chembl, object_name=ancestor.name)]
+        )
+        return [MechanismHit(**x, object_id=target.chembl, object_name=target.name)]
 
 
 __all__ = ["MechanismHit", "MechanismSearch"]

@@ -37,10 +37,6 @@ class ChemblCompound:
     inchikey: str
     name: str
 
-    @property
-    def chid_int(self) -> int:
-        return int(self.chid.replace("CHEMBL", ""))
-
 
 @dataclass(frozen=True, order=True, repr=True)
 class AbstractHit:
@@ -101,10 +97,13 @@ H = TypeVar("H", bound=AbstractHit, covariant=True)
 
 
 class Search(Generic[H], metaclass=abc.ABCMeta):
-    """"""
+    """
+    Something to search and how to do it.
+    """
 
     def __init__(self, chembl_api: ChemblApi, config: Settings, tax: Taxonomy):
         """
+        Constructor.
 
         Args:
             chembl_api:
@@ -120,6 +119,8 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
     def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
         """
+        Loops over every compound and calls ``find``.
+        Just comes with better logging.
 
         Args:
             compounds:
@@ -132,14 +133,15 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             x = self.find(compound)
             lst.extend(x)
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
-            if i % 20 == 0 or i == len(compounds) - 1:
+            if i > 0 and i % 20 == 0 or i == len(compounds) - 1:
                 logger.info(
-                    f"Found {len(lst)} {self.search_name} annotations for {i} of {len(compounds)} compounds"
+                    f"Found {len(lst)} {self.search_name} annotations for {i+1} of {len(compounds)} compounds"
                 )
         return lst
 
     def find(self, compound: str) -> Sequence[H]:
         """
+        To override.
 
         Args:
             compound:
@@ -152,6 +154,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     @classmethod
     def hit_fields(cls) -> Sequence[str]:
         """
+        Gets the fields in the Hit type parameter.
 
         Returns:
 
@@ -164,12 +167,23 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # (not that we're using those)
         # If this magic is too magical, we can make this an abstract method
         # But that would be a lot of excess code and it might be less modular
-        # noinspection PyUnresolvedReferences
-        actual_h = typing.get_args(cls.__orig_bases__[0])[0]
+        actual_h = typing.get_args(cls.get_h())[0]
         return [f.name for f in dataclasses.fields(actual_h)]
+
+    @classmethod
+    def get_h(cls):
+        """
+        What is my hit type?
+
+        Returns:
+
+        """
+        # noinspection PyUnresolvedReferences
+        return cls.__orig_bases__[0]
 
     def get_target(self, chembl: str) -> NestedDotDict:
         """
+        Queries for the target.
 
         Args:
             chembl:
@@ -183,6 +197,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
     def get_compound(self, inchikey: str) -> ChemblCompound:
         """
+        Calls ``get_compound_dot_dict`` and then ``compound_dot_dict_to_obj``.
 
         Args:
             inchikey:
@@ -195,6 +210,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
     def compound_dot_dict_to_obj(self, ch: NestedDotDict) -> ChemblCompound:
         """
+        Turn results from ``get_compound_dot_dict`` into a ``ChemblCompound``.
 
         Args:
             ch:
@@ -214,6 +230,15 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         return ChemblCompound(chid, inchikey, name)
 
     def get_query_type(self, inchikey: str) -> QueryType:
+        """
+        Returns the type of query.
+
+        Args:
+            inchikey:
+
+        Returns:
+
+        """
         if inchikey.startswith("InChI="):
             return QueryType.inchi
         elif re.compile(r"[A-Z]{14}-[A-Z]{10}-[A-Z]").fullmatch(inchikey):
@@ -225,12 +250,13 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
     def get_compound_dot_dict(self, inchikey: str) -> NestedDotDict:
         """
+        Fetches info and put into a dict.
 
         Args:
             inchikey:
 
         Returns:
-            **Only ``molecule_chembl_id``, ``pref_name``, "and ``molecule_structures`` are guaranteed to exist
+            **Only** ``molecule_chembl_id``, ``pref_name``, "and ``molecule_structures`` are guaranteed to exist
         """
         # CHEMBL
         kind = self.get_query_type(inchikey)
@@ -257,6 +283,10 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
 @dataclass(frozen=True, repr=True, order=True, unsafe_hash=True)
 class Triple:
+    """
+    Compound, predicate, object.
+    """
+
     compound_id: str
     compound_lookup: str
     compound_name: str
@@ -266,6 +296,11 @@ class Triple:
 
     @classmethod
     def tab_header(cls) -> str:
+        """
+
+        Returns:
+
+        """
         return "\t".join(
             [
                 "compound_id",
@@ -292,6 +327,12 @@ class Triple:
 
     @property
     def statement(self) -> str:
+        """
+        Returns a simple text statement with brackets.
+
+        Returns:
+
+        """
         sub = f"{self.compound_lookup} [{self.compound_id}] [{self.compound_name}]>"
         pred = f"<{self.predicate}>"
         obj = f"<{self.object_name} [{self.object_id}]>"

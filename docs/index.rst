@@ -23,7 +23,7 @@ For example:
 
 .. code-block::
 
-    mandos search "mechanism,activity,indication,atc" compounds.txt
+    mandos search "mechanism,activity,trial,atc" compounds.txt
 
 Running this will output a CSV file containing raw annotations with extended data.
 It will then output a text file with compound–predicate–object triples:
@@ -33,14 +33,43 @@ It will then output a text file with compound–predicate–object triples:
     CHEMBL661 (alprazolam)   positive allosteric modulator   CHEMBL2093872 (GABA-A receptor; anion channel)
     CHEMBL661 (alprazolam)   activity at                     CHEMBL2096986 (Cholecystokinin receptor)
     CHEMBL661 (alprazolam)   activity at                     CHEMBL4106143 (BRD4/HDAC1)
-    CHEMBL661 (alprazolam)   indicated for                   D012559       (Schizophrenia)
-    CHEMBL661 (alprazolam)   indicated for                   D016584       (Panic Disorder)
+    CHEMBL661 (alprazolam)   phase-3 trial for               D012559       (Schizophrenia)
+    CHEMBL661 (alprazolam)   phase-4 trial for               D016584       (Panic Disorder)
     CHEMBL661 (alprazolam)   has ATC L3 code                 N05B          (ANXIOLYTICS)
     CHEMBL661 (alprazolam)   has ATC L4 code                 N05BA         (Benzodiazepine derivatives)
 
-Results are cached under ``~/.mandos``.
-``search`` will only search when necessary: If it already found annotations for a compound (using the same parameters),
-it will use those.
+Choices are:
+
++------------+---------------------------------------------------------------------------------------------------------+
+| search     | description                                                                                             |
++============+=========================================================================================================+
+| mechanism  | All ChEMBL molecular mechanism annotations for proteins under the specified taxon.                      |
+| activity   | ChEMBL binding activity annotations with several filters.                                               |
+| atc        | ATC level-3 and level-4 codes as listed by ChEMBL.                                                      |
+| trial      | ChEMBL indication annotations as MESH IDs, with at least phase-3 trials (by default).                   |
+| prediction | ChEMBL target predictions restricted to specified taxa and with "confidence 90%" as "active".           |
+| go_fn      | GO Function terms associated with ChEMBL activity annotations (re-using the filters from "activity".    |
+| go_proc    | GO Process terms associated with ChEMBL activity annotations (re-using the filters from "activity".     |
+| db_ind     | All DrugBank indication annotations. You need an API key.                                               |
+| db_target  | DrugBank mechanism annotations, optionally requiring "pharmacological action". You need an API key.     |
+| db_enzyme  | All DrugBank enzyme annotations. You need an API key.                                                   |
+| db_pk      | All DrugBank enzyme, carrier, and transporter annotations. You need an API key.                         |
+| db_trial   | DrugBank clinical trial annotations, optionally restricted by purpose and phase. You need an API key.   |
+| db_admet   | DrugBank ADMET feature annotations, filtered by probability and value. You need an API key.             |
+| db_class   | Classyfire chemical taxonomy annotations from DrugBank. You need an API key.                            |
+| db_cat     | All DrugBank "drug category" annotations. You need an API key.                                          |
+| db_pathway | All DrugBank "pathway" annotations. You need an API key.                                                |
+| db_legal   | DrugBank "legal group" annotations (approved / illicit / investigational). You need an API key.         |
+| db_text    | Non-trivial words extracted from DrugBank text fields, configurable. You need an API key.               |
+| db_org     | The affected organism from DrugBank. You need an API key.                                               |
+| db_int     | DrugBank interaction annotations, only approved by default. You need an API key.                        |
+| db_atc     | ATC annotations from DrugBank. These are more comprehensive. You need an API key.                       |
+| chembl     | Shorthand for all annotations from ChEMBL.                                                              |
+| db         | Shorthand for all annotations from DrugBank                                                             |
++------------+---------------------------------------------------------------------------------------------------------+
+
+
+Results are cached under ``~/.mandos``, and Mandos will only search when necessary.
 
 
 How does this work?
@@ -81,13 +110,15 @@ Mandos collapses annotations within subtypes of a single target, effectively cho
 ``GABA-A receptor; anion channel`` (CHEMBL2093872) is a good, albeit pathological exemplar of why this is important.
 There are 40 subunit-specific targets underneath in human alone.
 Getting annotations listed for ``GABA-A receptor; alpha-3/beta-3/gamma-2`` in one compound
-but ``GABA receptor beta-3 subunit`` in another. is probably not very helpful.
+but ``GABA receptor beta-3 subunit`` in another.
+For that alprazolam example you'll also get  ``GABA-A receptor; agonist GABA site`` (CHEMBL2109244)
 
+None of this is likely to be very helpful.
 Although there can be important pharmacological differences between the different assemblies,
 such a difference in the returned annotations is probably better explained by which assembly or subtype
 happened to be tested, rather than by any real difference in pharmacology.
 
-In the summarized text file, targets are also collapsed by name across species.
+In the summarized text file, you may want to collapse annotations across object (target) IDs with the same name.
 That way, you won't have one for mouse, rat, cow, and human.
 The full data with all targets is included in the CSV file.
 

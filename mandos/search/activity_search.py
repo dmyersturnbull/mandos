@@ -21,7 +21,7 @@ class ActivityHit(ProteinHit):
     taxon_name: str
     pchembl: float
     std_type: str
-    src_id: int
+    src_id: str
     exact_target_id: str
 
     @property
@@ -45,7 +45,9 @@ class ActivitySearch(ProteinSearch[ActivityHit]):
             )
         )
 
-    def should_include(self, lookup: str, compound: ChemblCompound, data: NestedDotDict) -> bool:
+    def should_include(
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
+    ) -> bool:
         bad_flags = {
             "potential missing data",
             "potential transcription error",
@@ -72,6 +74,9 @@ class ActivitySearch(ProteinSearch[ActivityHit]):
         assay = self.api.assay.get(data.req_as("assay_chembl_id", str))
         confidence_score = assay.get("confidence_score")
         if confidence_score is None or confidence_score < self.config.min_confidence_score:
+            return False
+        if target.type.is_trash or target.type.is_strange and self.config.min_confidence_score > 3:
+            logger.warning(f"Excluding {target} with type {target.type}")
             return False
         return True
 
@@ -101,7 +106,7 @@ class ActivitySearch(ProteinSearch[ActivityHit]):
                 taxon_name=tax.name,
                 pchembl=data.req_as("pchembl_value", float),
                 std_type=data.req_as("standard_type", str),
-                src_id=data.req_as("src_id", int),
+                src_id=data.req_as("src_id", str),
                 exact_target_id=data.req_as("target_chembl_id", str),
             )
         )

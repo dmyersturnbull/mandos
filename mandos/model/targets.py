@@ -36,45 +36,71 @@ class TargetType(enum.Enum):
     def of(cls, s: str) -> TargetType:
         return TargetType[s.replace(" ", "_").replace("-", "_").lower()]
 
+    @classmethod
+    def protein_types(cls) -> Set[TargetType]:
+        return {s for s in cls if s.is_protein}
+
     @property
     def is_protein(self) -> bool:
         return self in {
             TargetType.single_protein,
             TargetType.protein_family,
             TargetType.protein_complex,
+            TargetType.protein_complex_group,
         }
 
     @property
-    def priority(self) -> int:
-        """
-        Higher is better.
-        Rules:
-            - -1: unknown type
-            -  0: acceptable only if requested
-            -  1: protein family
-            -  2: single protein
-            -  3: protein complex
-            -  4: protein complex group
+    def is_trash(self) -> bool:
+        return self == TargetType.unknown
 
-        Selectivity group is a slightly complex type:
-        It might be fine to accept if there's nothing else and a user wants it,
-        but should probably never be traversed. Otherwise you might get a link
-        to one of possibly multiple protein complexes or protein complex groups.
+    @property
+    def is_strange(self) -> bool:
+        return self in {
+            TargetType.selectivity_group,
+            TargetType.protein_protein_interaction,
+            TargetType.nucleic_acid,
+            TargetType.chimeric_protein,
+            TargetType.unknown,
+        }
 
-        Returns:
 
-        """
-        return {
-            TargetType.unknown: -1,
-            TargetType.protein_protein_interaction: 0,
-            TargetType.selectivity_group: 0,
-            TargetType.nucleic_acid: 0,
-            TargetType.chimeric_protein: 0,
-            TargetType.protein_family: 1,
-            TargetType.single_protein: 2,
-            TargetType.protein_complex: 3,
-            TargetType.protein_complex_group: 4,
-        }[self]
+class TargetRelationshipType(enum.Enum):
+    subset_of = enum.auto()
+    superset_of = enum.auto()
+    overlaps_with = enum.auto()
+
+    @classmethod
+    def of(cls, s: str) -> TargetRelationshipType:
+        return TargetRelationshipType[s.replace(" ", "_").replace("-", "_").lower()]
+
+
+@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+class DagTargetLinkType:
+    source_type: TargetType
+    rel_type: TargetRelationshipType
+    dest_type: TargetType
+
+    @classmethod
+    def cross(
+        cls,
+        source_types: Set[TargetType],
+        rel_types: Set[TargetRelationshipType],
+        dest_types: Set[TargetType],
+    ) -> Set[DagTargetLinkType]:
+        st = set()
+        for source in source_types:
+            for rel in rel_types:
+                for dest in dest_types:
+                    st.add(DagTargetLinkType(source, rel, dest))
+        return st
+
+
+@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+class DagTarget:
+    depth: int
+    is_end: bool
+    target: Target
+    link_type: Optional[DagTargetLinkType]
 
 
 @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
@@ -106,7 +132,7 @@ class Target(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @classmethod
-    def find(cls, chembl: str) -> __qualname__:
+    def find(cls, chembl: str) -> Target:
         """
 
         Args:
@@ -124,29 +150,29 @@ class Target(metaclass=abc.ABCMeta):
             type=TargetType.of(target["target_type"]),
         )
 
-    @property
-    def id(self) -> int:
-        """
-
-        Returns:
-
-        """
-        return int(self.chembl.replace("CHEMBL", ""))
-
-    def parents(self) -> Sequence[__qualname__]:
+    def links(
+        self, rel_types: Set[TargetRelationshipType]
+    ) -> Sequence[Tup[Target, TargetRelationshipType]]:
         """
         Gets adjacent targets in the DAG.
+
+        Args:
+            rel_types:
 
         Returns:
         """
         relations = self.__class__.api().target_relation.filter(target_chembl_id=self.chembl)
         links = []
-        for superset in [r for r in relations if r["relationship"] == "SUBSET OF"]:
-            linked_target = self.find(superset["related_target_chembl_id"])
-            links.append(linked_target)
+        # "subset" means "up" (it's reversed from what's on the website)
+        for superset in relations:
+            linked_id = superset["related_target_chembl_id"]
+            rel_type = TargetRelationshipType.of(superset["relationship"])
+            if rel_type in rel_types:
+                linked_target = self.find(linked_id)
+                links.append((linked_target, rel_type))
         return sorted(links)
 
-    def ancestors(self, permitting: Set[TargetType]) -> Set[Tup[int, __qualname__]]:
+    def traverse(self, permitting: Set[DagTargetLinkType]) -> Set[DagTarget]:
         """
         Traverses the DAG from this node, hopping only to targets with type in the given set.
 
@@ -158,17 +184,40 @@ class Target(metaclass=abc.ABCMeta):
             The int is the depth, starting at 0 (this protein), going to +inf for the highest ancestors
         """
         results = set()
-        self._traverse(0, permitting, results)
+        # purposely use the invalid value None for is_root
+        self._traverse(DagTarget(0, None, self, None), permitting, results)
+        assert not any((x.is_end is None for x in results))
         return results
 
+    @classmethod
     def _traverse(
-        self, depth: int, permitting: Set[TargetType], results: Set[Tup[int, __qualname__]]
+        cls, source: DagTarget, permitting: Set[DagTargetLinkType], results: Set[DagTarget]
     ) -> None:
-        if self in results or self.type not in permitting:
+        # all good if we've already traversed this
+        if source.target.chembl in {s.target.chembl for s in results}:
             return
-        for parent in self.parents():
-            parent._traverse(depth + 1, permitting, results)
-        results.add((depth, self))
+        # find all links from ChEMBL, then filter to only the valid links
+        # do not traverse yet -- we just want to find these links
+        link_candidates = source.target.links({q.rel_type for q in permitting})
+        links = []
+        for link, rel_type in link_candidates:
+            link_type = DagTargetLinkType(source.target.type, rel_type, link.type)
+            if link_type in permitting:
+                # purposely use the invalid value None for is_root
+                linked = DagTarget(source.depth + 1, None, link, link_type)
+                links.append(linked)
+        # now, we'll add our own (breadth-first, remember)
+        # we know whether we're at an "end" node by whether we found any links
+        # note that this is an invariant of the node (and permitted link types): it doesn't depend on traversal order
+        is_at_end = len(links) == 0
+        results.add(DagTarget(source.depth, is_at_end, source.target, source.link_type))
+        # alright! now traverse on the links
+        for link in links:
+            # this check is needed
+            # otherwise we can go superset --- subset --- superset ---
+            # or just --- overlaps with --- overlaps with ---
+            if link not in results:
+                cls._traverse(link, permitting, results)
 
 
 class TargetFactory:
@@ -198,4 +247,11 @@ class TargetFactory:
         return _Target.find(chembl)
 
 
-__all__ = ["TargetType", "Target", "TargetFactory"]
+__all__ = [
+    "TargetType",
+    "TargetRelationshipType",
+    "Target",
+    "DagTarget",
+    "TargetFactory",
+    "DagTargetLinkType",
+]

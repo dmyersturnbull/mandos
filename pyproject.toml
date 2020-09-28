@@ -55,7 +55,7 @@ codemeta     = true
 
 [tool.poetry]
 name = "mandos"
-version = "0.1.1"
+version = "0.2.0"
 description = "Get the biological targets of compounds."
 include = [
     "README.md",

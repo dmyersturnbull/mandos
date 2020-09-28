@@ -35,8 +35,12 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         return list(self.api.mechanism.filter(parent_molecule_chembl_id=parent_form.chid))
 
-    def should_include(self, lookup: str, compound: ChemblCompound, data: NestedDotDict) -> bool:
-        # no conceivable problems not related directly to the target (which are handled in the superclass)
+    def should_include(
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
+    ) -> bool:
+        if target.type.is_trash:
+            logger.warning(f"Excluding {target} with type {target.type}")
+            return False
         return True
 
     def to_hit(

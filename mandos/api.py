@@ -213,6 +213,14 @@ class ChemblApi(metaclass=abc.ABCMeta):
         return self.__dict__["target_relation"]
 
     @property
+    def protein_class(self) -> ChemblEntrypoint:
+        return self.__dict__["protein_class"]
+
+    @property
+    def target_component(self) -> ChemblEntrypoint:
+        return self.__dict__["target_component"]
+
+    @property
     def target_prediction(self) -> ChemblEntrypoint:
         return self.__dict__["target_prediction"]
 

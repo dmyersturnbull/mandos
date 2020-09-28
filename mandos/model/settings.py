@@ -38,7 +38,7 @@ class Settings:
         return Settings(
             data.get_as("is_testing", bool, False),
             data.get_as("mandos.taxon", int, 7742),
-            data.get_as("mandos.min_pchembl", float, 7.0),
+            data.get_as("mandos.min_pchembl", float, 6.0),
             data.get_as("mandos.min_confidence_score", int, 4),
             data.get_as("mandos.min_phase", int, 3),
             data.get_as("chembl.cache_path", Path, cache_path),

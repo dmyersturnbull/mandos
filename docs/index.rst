@@ -119,6 +119,7 @@ Anything below Euteleostomi won’t include zebrafish, and anything under Euarch
 won’t include rodents.
 If you enter something outside of Vertebrata (525 Ma), a new set will be downloaded from UniProt and cached.
 
+
 Collapsing target subtypes
 **************************
 
@@ -150,6 +151,14 @@ Target DAG traversal
 ********************
 
 Here’s how this collapsing works.
+
+.. warning::
+
+    This section is now completely wrong.
+    The new method requires modeling the relationships as an undirected, possibly cyclic graph,
+    and having rules for which types of links can be followed.
+
+
 A directed acyclic graph (DAG) of target supersets is traversed upward,
 following ``SUPERSET`` links to targets of type
 ``SINGLE PROTEIN``, ``PROTEIN FAMILY``, ``PROTEIN COMPLEX``, and ``PROTEIN COMPLEX GROUP``.

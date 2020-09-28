@@ -1,7 +1,7 @@
 import pytest
 
 from mandos.api import ChemblApi, ChemblEntrypoint
-from mandos.model.targets import Target, TargetFactory, TargetType
+from mandos.model.targets import Target, TargetFactory, TargetRelationshipType, TargetType
 
 
 class TestTargets:
@@ -14,7 +14,6 @@ class TestTargets:
         api = ChemblApi.mock({"target": ChemblEntrypoint.mock({"DAT": dat})})
         target = TargetFactory.find("DAT", api)
         assert isinstance(target, Target)
-        assert target.id == 4444
         assert target.type == TargetType.single_protein
         assert target.name == "dopamine transporter"
         assert target.chembl == "CHEMBL4444"
@@ -63,12 +62,12 @@ class TestTargets:
             }
         )
         target = TargetFactory.find("CHEMBL4444", api)
-        assert len(target.parents()) == 2
+        assert len(target.links({TargetRelationshipType.subset_of})) == 2
         # should sort by CHEMBL ID first, so 0000 will be first
-        parent: Target = target.parents()[0]
+        parent, link_type = target.links({TargetRelationshipType.subset_of})[0]
         assert parent.name == "receptor"
         assert parent.chembl == "CHEMBL0000"
-        parent: Target = target.parents()[1]
+        parent, link_type = target.links({TargetRelationshipType.subset_of})[1]
         assert parent.name == "monoamine transporter"
         assert parent.chembl == "CHEMBL1111"
 

@@ -314,16 +314,15 @@ class Triple:
 
     @property
     def tabs(self) -> str:
-        return "\t".join(
-            [
-                self.compound_lookup,
-                self.compound_id,
-                self.compound_name,
-                self.predicate,
-                self.object_name,
-                self.object_id,
-            ]
-        )
+        items = [
+            self.compound_lookup,
+            self.compound_id,
+            self.compound_name,
+            self.predicate,
+            self.object_name,
+            self.object_id,
+        ]
+        return "\t".join(["-" if k is None else str(k) for k in items])
 
     @property
     def statement(self) -> str:

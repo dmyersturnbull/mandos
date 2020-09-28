@@ -8,6 +8,10 @@ from pocketutils.core.dot_dict import NestedDotDict
 from mandos.api import ChemblFilterQuery
 from mandos.model import AbstractHit, ChemblCompound, Search
 from mandos.model.targets import Target, TargetFactory, TargetType
+from mandos.search.target_traversal_strategy import (
+    TargetTraversalStrategies,
+    TargetTraversalStrategy,
+)
 
 logger = logging.getLogger("mandos")
 
@@ -30,7 +34,13 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         raise NotImplementedError()
 
-    def should_include(self, lookup: str, compound: ChemblCompound, data: NestedDotDict) -> bool:
+    @property
+    def traversal_strategy(self) -> TargetTraversalStrategy:
+        return TargetTraversalStrategies.strategy1(self.api)
+
+    def should_include(
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
+    ) -> bool:
         """
         Filter based on the returned (activity/mechanism) data.
         IGNORE filters about the target itself, including whether it's a valid target.
@@ -40,6 +50,7 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
             lookup:
             compound:
             data:
+            target:
 
         Returns:
 
@@ -99,47 +110,21 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
         Returns:
 
         """
-        # CHECK SUBCLASS FILTERS
-        # do this first because it's almost definitely fast
-        if not self.should_include(lookup, compound, data):
-            return []
         if data.get("target_chembl_id") is None:
             logger.debug(f"target_chembl_id missing from mechanism '{data}' for compound {lookup}")
             return []
         chembl_id = data["target_chembl_id"]
         target_obj = TargetFactory.find(chembl_id, self.api)
-        if (
-            target_obj.type.priority < 0
-            or target_obj.type.priority == 0
-            and self.config.min_confidence_score < 4
-        ):
-            logger.warning(f"Excluding {target_obj} with type {target_obj.type}")
+        if not self.should_include(lookup, compound, data, target_obj):
             return []
-        # traverse() will return the source target if it's a non-traversable type
+        # traverse() will return the source target if it's a non-traversable type (like DNA)
+        # and the subclass decided whether to filter those
         # so don't worry about that here
-        ancestor = self.traverse(target_obj)
-        return self.to_hit(lookup, compound, data, ancestor)
-
-    def traverse(self, target: Target) -> Target:
-        """
-
-        Returns:
-
-        """
-        if target.type.priority == 0:
-            # non-traversable type
-            return target
-        # priority > 0: traversable type
-        traversable_types = {t for t in TargetType if t.priority > 0}
-        accepted = target.ancestors(traversable_types)
-        # sort by priority, then by depth
-        # we want high priority, then high depth (further up the tree)
-        # TODO depth-first only works if all branches join up within the set `traversable_types`
-        accepted = sorted(
-            accepted, key=lambda it: (it[1].type.priority, it[0], it[1]), reverse=True
-        )
-        # in the worst case, Target.traverse() returns the source target
-        return accepted[0][1]
+        ancestors = self.traversal_strategy(target_obj)
+        lst = []
+        for ancestor in ancestors:
+            lst.extend(self.to_hit(lookup, compound, data, ancestor))
+        return lst
 
 
 __all__ = ["ProteinHit", "ProteinSearch"]

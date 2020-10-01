@@ -23,6 +23,7 @@ from mandos.model.settings import Settings
 from mandos.search.activity_search import ActivitySearch
 from mandos.search.atc_search import AtcSearch
 from mandos.search.indication_search import IndicationSearch
+from mandos.search.go_search import GoSearch, GoSearchFactory, GoType
 from mandos.search.mechanism_search import MechanismSearch
 
 logger = logging.getLogger(__package__)
@@ -40,6 +41,12 @@ class What(enum.Enum):
     mechanism = enum.auto(), MechanismSearch
     atc = enum.auto(), AtcSearch
     trial = enum.auto(), IndicationSearch
+    go_process_moa = enum.auto(), GoSearchFactory.create(GoType.process, MechanismSearch)
+    go_fn_moa = enum.auto(), GoSearchFactory.create(GoType.function, MechanismSearch)
+    go_comp_moa = enum.auto(), GoSearchFactory.create(GoType.component, MechanismSearch)
+    go_process_act = enum.auto(), GoSearchFactory.create(GoType.process, ActivitySearch)
+    go_fn_act = enum.auto(), GoSearchFactory.create(GoType.function, ActivitySearch)
+    go_comp_act = enum.auto(), GoSearchFactory.create(GoType.component, ActivitySearch)
 
     def __new__(cls, *args, **kwargs):
         obj = object.__new__(cls)

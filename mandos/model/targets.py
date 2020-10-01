@@ -68,6 +68,7 @@ class TargetRelationshipType(enum.Enum):
     subset_of = enum.auto()
     superset_of = enum.auto()
     overlaps_with = enum.auto()
+    equivalent_to = enum.auto()
 
     @classmethod
     def of(cls, s: str) -> TargetRelationshipType:

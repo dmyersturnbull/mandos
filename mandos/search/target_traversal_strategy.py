@@ -25,6 +25,18 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
+class TargetTraversalStrategy0(TargetTraversalStrategy, metaclass=abc.ABCMeta):
+    """"""
+
+    def __call__(self, target: Target) -> Sequence[Target]:
+        """
+
+        Returns:
+
+        """
+        return [target]
+
+
 class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
     """"""
 
@@ -35,30 +47,130 @@ class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
 
         """
         # traverse the DAG up and down, following only desired links
-        # these are:
-        # 1. All links from protein-like to protein-like supersets (protein, family, complex, & complex group)
-        # 2. Links from complex to complex group "overlaps"
-        # 3. From selectivity groups to their subsets
-        # Note that this means we could go from selectivity group to single protein, then up to receptor group
-        # (But I've never seen that)
         # some links from complex to complex group are "overlaps with"
         # ex: CHEMBL4296059
-        permitting = {
-            *DagTargetLinkType.cross(
-                set(TargetType), {TargetRelationshipType.subset_of}, TargetType.protein_types()
-            ),
-            *DagTargetLinkType.cross(
-                {TargetType.selectivity_group},
-                {TargetRelationshipType.subset_of},
-                TargetType.protein_types(),
-            ),
-            DagTargetLinkType(
-                TargetType.protein_complex,
-                TargetRelationshipType.overlaps_with,
-                TargetType.protein_complex_group,
-            ),
-        }
-        found = target.traverse(permitting)
+        # it's also rare to need going from a selectivity group "down" to complex group / family / etc.
+        # usually they have a link upwards
+        # so...
+        # If it's a single protein, it's too risk to traverse up into complexes
+        # That's because lots of proteins *occasionally* make complexes, and there are some weird ones
+        # BUT We want to catch some obvious cases like GABA A subunits
+        # ChEMBL calls many of these "something subunit something"
+        # This is the only time we'll allow going directly from protein to complex
+        # In this case, we'll also disallow links form protein to family,
+        # just because we're pretty sure it's a subunit
+        # But we can go from single protein to complex to complex group to family
+        if target.type in [
+            TargetType.single_protein,
+            TargetType.protein_family,
+            TargetType.protein_complex,
+            TargetType.protein_complex_group
+        ] and "subunit" in target.name:
+            edges = {
+                DagTargetLinkType(
+                    TargetType.single_protein,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_complex,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex,
+                    TargetRelationshipType.overlaps_with,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex_group,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex_group,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_family,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+            }
+        elif target.type in [TargetType.single_protein, TargetType.protein_family]:
+            edges = {
+                DagTargetLinkType(
+                    TargetType.single_protein,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_family,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+            }
+        elif target.type in [TargetType.protein_complex, TargetType.protein_complex_group]:
+            edges = {
+                DagTargetLinkType(
+                    TargetType.protein_complex,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex,
+                    TargetRelationshipType.overlaps_with,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex_group,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex_group,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_family,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+            }
+        elif target.type == TargetType.selectivity_group:
+            edges = {
+                DagTargetLinkType(
+                    TargetType.selectivity_group,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_complex_group,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_complex_group,
+                ),
+                DagTargetLinkType(
+                    TargetType.selectivity_group,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+                DagTargetLinkType(
+                    TargetType.protein_family,
+                    TargetRelationshipType.subset_of,
+                    TargetType.protein_family,
+                ),
+            }
+        else:
+            return [target]
+        for edge in set(edges):
+            edges.add(DagTargetLinkType(
+                edge.source_type,
+                TargetRelationshipType.equivalent_to,
+                edge.dest_type
+            ))
+        found = target.traverse(edges)
         return [f.target for f in found if f.is_end]
 
 
@@ -84,6 +196,10 @@ class TargetTraversalStrategies:
         clz = s[s.rfind(".") :]
         x = getattr(sys.modules[mod], clz)
         return cls.create(x, api)
+
+    @classmethod
+    def strategy0(cls, api: ChemblApi) -> TargetTraversalStrategy:
+        return cls.create(TargetTraversalStrategy0, api)
 
     @classmethod
     def strategy1(cls, api: ChemblApi) -> TargetTraversalStrategy:

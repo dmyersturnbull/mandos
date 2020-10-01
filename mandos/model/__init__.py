@@ -135,7 +135,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
             if i > 0 and i % 20 == 0 or i == len(compounds) - 1:
                 logger.info(
-                    f"Found {len(lst)} {self.search_name} annotations for {i+1} of {len(compounds)} compounds"
+                    f"Found {len(lst)} {self.search_name} annotations for {i} of {len(compounds)} compounds"
                 )
         return lst
 

@@ -59,6 +59,7 @@ activity     ChEMBL binding activity annotations with several filters.
 atc          ATC level-3 and level-4 codes as listed by ChEMBL.
 trial        ChEMBL indication annotations as MESH IDs, with at least phase-3 trials (by default).
 prediction   ChEMBL target predictions restricted “confidence 90%” as “active”.
+fingerprint  ChEMBL fingerprints.
 go_fn        GO Function terms associated with ChEMBL activity annotations.
 go_proc      GO Process terms associated with ChEMBL activity annotations.
 db_ind       All DrugBank indication annotations.
@@ -76,7 +77,7 @@ db_org       The affected organism from DrugBank.
 db_int       DrugBank interaction annotations, only approved by default.
 db_atc       ATC annotations from DrugBank. These are more comprehensive.
 chembl       Shorthand for all annotations from ChEMBL.
-db           Shorthand for all annotations from DrugBank
+db           Shorthand for all annotations from DrugBank.
 ==========   =====================================================================================
 
 

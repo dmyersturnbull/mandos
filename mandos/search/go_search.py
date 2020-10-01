@@ -70,28 +70,30 @@ class GoSearch(Search[GoHit], metaclass=abc.ABCMeta):
                             terms.add((xref["xref_id"], xref["xref_name"]))
         hits = []
         for xref_id, xref_name in terms:
-            hits.append(GoHit(
-                None,
-                compound_id=match.compound_id,
-                inchikey=match.inchikey,
-                compound_lookup=match.compound_lookup,
-                compound_name=match.compound_name,
-                object_id=xref_id,
-                object_name=xref_name,
-                go_type=self.go_type.name,
-                protein_hit=match,
-            ))
+            hits.append(
+                GoHit(
+                    None,
+                    compound_id=match.compound_id,
+                    inchikey=match.inchikey,
+                    compound_lookup=match.compound_lookup,
+                    compound_name=match.compound_name,
+                    object_id=xref_id,
+                    object_name=xref_name,
+                    go_type=self.go_type.name,
+                    protein_hit=match,
+                )
+            )
         return hits
 
 
 class GoSearchFactory:
-
     @classmethod
-    def create(cls, go_type: Union[str, GoType], protein_search: Type[ProteinSearch]) -> Type[GoSearch]:
+    def create(
+        cls, go_type: Union[str, GoType], protein_search: Type[ProteinSearch]
+    ) -> Type[GoSearch]:
         go_type = GoType.of(go_type)
 
         class X(GoSearch):
-
             @property
             def go_type(self) -> GoType:
                 return go_type

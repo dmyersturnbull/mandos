@@ -12,7 +12,7 @@ from . import get_test_resource
 
 
 class TestTargetTraversalStrategy1:
-    #def test_gabaa(self):
+    # def test_gabaa(self):
     #    target = TargetFactory.find("CHEMBL2109243", Chembl)
     #    found = TargetTraversalStrategies.strategy1(Chembl).traverse(target)
     #    assert [f.chembl for f in found] == ["CHEMBL2093872"]

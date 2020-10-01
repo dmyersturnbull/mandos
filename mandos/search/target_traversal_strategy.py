@@ -60,12 +60,16 @@ class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
         # In this case, we'll also disallow links form protein to family,
         # just because we're pretty sure it's a subunit
         # But we can go from single protein to complex to complex group to family
-        if target.type in [
-            TargetType.single_protein,
-            TargetType.protein_family,
-            TargetType.protein_complex,
-            TargetType.protein_complex_group
-        ] and "subunit" in target.name:
+        if (
+            target.type
+            in [
+                TargetType.single_protein,
+                TargetType.protein_family,
+                TargetType.protein_complex,
+                TargetType.protein_complex_group,
+            ]
+            and "subunit" in target.name
+        ):
             edges = {
                 DagTargetLinkType(
                     TargetType.single_protein,
@@ -165,11 +169,11 @@ class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
         else:
             return [target]
         for edge in set(edges):
-            edges.add(DagTargetLinkType(
-                edge.source_type,
-                TargetRelationshipType.equivalent_to,
-                edge.dest_type
-            ))
+            edges.add(
+                DagTargetLinkType(
+                    edge.source_type, TargetRelationshipType.equivalent_to, edge.dest_type
+                )
+            )
         found = target.traverse(edges)
         return [f.target for f in found if f.is_end]
 

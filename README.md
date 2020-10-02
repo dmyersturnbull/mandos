@@ -16,7 +16,7 @@ A pragmatic tool for cheminformatics and drug discovery.
 Example:
 
 ```bash
-cat "VREFGVBLTWBCJP-UHFFFAOYSA-N" > compounds.txt
+echo "VREFGVBLTWBCJP-UHFFFAOYSA-N" > compounds.txt
 mandos search mechanism,activity,atc,trial,predicted compounds.txt
 ```
 

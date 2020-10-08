@@ -12,7 +12,6 @@ from typing import Generic, Optional, Sequence, TypeVar
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.api import ChemblApi
-from mandos.model.caches import TaxonomyCache
 from mandos.model.settings import Settings
 from mandos.model.taxonomy import Taxonomy
 

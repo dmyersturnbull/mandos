@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import abc
 import enum
 import logging
@@ -7,7 +8,7 @@ from typing import Sequence, Type, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import Search, AbstractHit
+from mandos.model import AbstractHit, Search
 from mandos.search.protein_search import ProteinHit, ProteinSearch
 
 logger = logging.getLogger("mandos")

@@ -14,7 +14,7 @@ class TestSettings:
         assert x.min_pchembl == 15
         assert x.min_confidence_score == 2
         assert x.min_phase == 0
-        assert str(x.cache_path) == "~"
+        assert str(x.chembl_cache_path) == "~"
         assert x.n_retries == 100
         assert not x.fast_save
         assert x.timeout_sec == 0

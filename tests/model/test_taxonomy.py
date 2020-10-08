@@ -1,13 +1,13 @@
 import pytest
 
 from mandos import get_resource
-from mandos.model.caches import TaxonomyCaches
+from mandos.model.caches import TaxonomyFactories
 from mandos.model.taxonomy import Taxon, Taxonomy, _Taxon
 
 
 class TestFind:
     def test_find(self):
-        tax = TaxonomyCaches.from_uniprot(7742)
+        tax = TaxonomyFactories.from_vertebrata().load(7742)
         assert len(tax) == 100670
         assert tax.roots == [Taxon(7742, "Vertebrata", None, set())]
         assert len(tax.roots[0].descendents) == 100669

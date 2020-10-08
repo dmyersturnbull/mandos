@@ -18,12 +18,12 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.api import ChemblApi
 from mandos.model import Search, Triple
-from mandos.model.caches import TaxonomyCache, TaxonomyCaches
-from mandos.model.settings import Settings
+from mandos.model.caches import TaxonomyFactories
+from mandos.model.settings import DEFAULT_TAXONOMY_CACHE, Settings
 from mandos.search.activity_search import ActivitySearch
 from mandos.search.atc_search import AtcSearch
-from mandos.search.indication_search import IndicationSearch
 from mandos.search.go_search import GoSearch, GoSearchFactory, GoType
+from mandos.search.indication_search import IndicationSearch
 from mandos.search.mechanism_search import MechanismSearch
 
 logger = logging.getLogger(__package__)
@@ -95,7 +95,10 @@ class Commands:
 
     @staticmethod
     @cli.command(hidden=True)
-    def process_tax(taxon: int) -> None:
+    def process_tax(
+        taxon: int,
+        cache_path: Optional[Path] = None,
+    ) -> None:
         """
         Preps a new taxonomy file for use in mandos.
         Just returns if a corresponding file already exists in the resources dir or mandos cache (``~/.mandos``).
@@ -106,8 +109,11 @@ class Commands:
 
         Args:
             taxon: The **ID** of the UniProt taxon
+            cache_path:
         """
-        TaxonomyCaches.load(taxon)
+        if cache_path is None:
+            cache_path = DEFAULT_TAXONOMY_CACHE
+        TaxonomyFactories.from_uniprot(cache_path).load(taxon)
 
     @staticmethod
     def search_for(
@@ -139,7 +145,7 @@ class Commands:
         settings.set()
         compounds = list(compounds)
         api = ChemblApi.wrap(Chembl)
-        taxonomy = TaxonomyCaches.load(settings.taxon)
+        taxonomy = TaxonomyFactories.from_uniprot(settings.taxonomy_cache_path).load(settings.taxon)
         hits = what.clazz(api, settings, taxonomy).find_all(compounds)
         # collapse over and sort the triples
         triples = sorted(list({hit.to_triple() for hit in hits}))

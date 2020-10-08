@@ -51,34 +51,34 @@ You need a `DrugBank API key <https://docs.drugbank.com/v1/#token-authentication
 for DrugBank searches.
 
 
-==========   =====================================================================================
-search       description
-==========   =====================================================================================
-mechanism    All ChEMBL molecular mechanism annotations for proteins under the specified taxon.
-activity     ChEMBL binding activity annotations with several filters.
-atc          ATC level-3 and level-4 codes as listed by ChEMBL.
-trial        ChEMBL indication annotations as MESH IDs, with at least phase-3 trials (by default).
-prediction   ChEMBL target predictions restricted “confidence 90%” as “active”.
-fingerprint  ChEMBL fingerprints.
-go_fn        GO Function terms associated with ChEMBL activity annotations.
-go_proc      GO Process terms associated with ChEMBL activity annotations.
-db_ind       All DrugBank indication annotations.
-db_target    DrugBank mechanism annotations, optionally requiring “pharmacological action”.
-db_enzyme    All DrugBank enzyme annotations.
-db_pk        All DrugBank enzyme, carrier, and transporter annotations.
-db_trial     DrugBank clinical trial annotations, optionally restricted by purpose and phase.
-db_admet     DrugBank ADMET feature annotations, filtered by probability and value.
-db_class     Classyfire chemical taxonomy annotations from DrugBank.
-db_cat       All DrugBank “drug category” annotations.
-db_pathway   All DrugBank “pathway” annotations.
-db_legal     DrugBank “legal group” annotations (approved / illicit / investigational).
-db_text      Non-trivial words extracted from DrugBank text fields, configurable.
-db_org       The affected organism from DrugBank.
-db_int       DrugBank interaction annotations, only approved by default.
-db_atc       ATC annotations from DrugBank. These are more comprehensive.
-chembl       Shorthand for all annotations from ChEMBL.
-db           Shorthand for all annotations from DrugBank.
-==========   =====================================================================================
+============  =====================================================================================
+ search        description
+============  =====================================================================================
+mechanism     All ChEMBL molecular mechanism annotations for proteins under the specified taxon.
+activity      ChEMBL binding activity annotations with several filters.
+atc           ATC level-3 and level-4 codes as listed by ChEMBL.
+trial         ChEMBL indication annotations as MESH IDs, with at least phase-3 trials (by default).
+prediction    ChEMBL target predictions restricted “confidence 90%” as “active”.
+fingerprint   ChEMBL fingerprints.
+go_fn         GO Function terms associated with ChEMBL activity annotations.
+go_proc       GO Process terms associated with ChEMBL activity annotations.
+db_ind        All DrugBank indication annotations.
+db_target     DrugBank mechanism annotations, optionally requiring “pharmacological action”.
+db_enzyme     All DrugBank enzyme annotations.
+db_pk         All DrugBank enzyme, carrier, and transporter annotations.
+db_trial      DrugBank clinical trial annotations, optionally restricted by purpose and phase.
+db_admet      DrugBank ADMET feature annotations, filtered by probability and value.
+db_class      Classyfire chemical taxonomy annotations from DrugBank.
+db_cat        All DrugBank “drug category” annotations.
+db_pathway    All DrugBank “pathway” annotations.
+db_legal      DrugBank “legal group” annotations (approved / illicit / investigational).
+db_text       Non-trivial words extracted from DrugBank text fields, configurable.
+db_org        The affected organism from DrugBank.
+db_int        DrugBank interaction annotations, only approved by default.
+db_atc        ATC annotations from DrugBank. These are more comprehensive.
+chembl        Shorthand for all annotations from ChEMBL.
+db            Shorthand for all annotations from DrugBank.
+============  =====================================================================================
 
 
 Results are cached under ``~/.mandos``, and Mandos will only search when necessary.
@@ -145,61 +145,127 @@ That way, you won’t have one for mouse, rat, cow, and human.
 The full data with all targets is included in the CSV file.
 
 This is what makes mandos pragmatic and useful in more applications:
-it’s simpler (read: better) to have a single annotation than 40 (or 160).
+It’s simpler (read: better) to have a single annotation than 40 (or 160).
 
 
-Target DAG traversal
-********************
+Target graph traversal
+**********************
 
-Here’s how this collapsing works.
+This describes how targets are collapsed.
 
-.. warning::
+ChEMBL has structured relationships between targets.
+A target can be a:
 
-    This section is now completely wrong.
-    The new method requires modeling the relationships as an undirected, possibly cyclic graph,
-    and having rules for which types of links can be followed.
+- single protein
+- protein family
+- protein complex
+- protein complex group
+- selectivity group
+- other (nucleic acid, unknown, etc.)
 
+And each relationship can be:
 
-A directed acyclic graph (DAG) of target supersets is traversed upward,
-following ``SUPERSET`` links to targets of type
-``SINGLE PROTEIN``, ``PROTEIN FAMILY``, ``PROTEIN COMPLEX``, and ``PROTEIN COMPLEX GROUP``.
+- superset of
+- subset of
+- overlaps with
+- equivalent to
 
-A final target is chosen, preferring ``PROTEIN COMPLEX GROUP``, then ``PROTEIN COMPLEX``,
-then ``SINGLE PROTEIN``.
-This means that ``PROTEIN FAMILY`` targets are ignored unless the annotation is actually
-against one, or there is a chain
-``SINGLE PROTEIN ⟶ PROTEIN FAMILY ⟶ PROTEIN COMPLEX``. Both cases are rare at most.
+We’ll ignore *overlaps with*, *selectivity group*, and *unknown*.
+Relationships are also not uniform across species, even for near-exact orthologs,
+and there are some other problems, which we’ll show.
+But let’s look at some nice cases first.
 
-If there are two PROTEIN COMPLEX GROUPs in a chain:
+If we have an annotation against a target called *Single protein*:
 
-- ``SINGLE PROTEIN ⟶ PROTEIN COMPLEX ⟶ PROTEIN COMPLEX GROUP (a) ⟶ PROTEIN COMPLEX GROUP (b)``
+.. mermaid::
 
-Then the higher one (a) will be used. This is similar for branched chains.
-For example, (b) will be chosen given these two chains:
+   graph BT
+        t(Single protein, our target) --> a(Protein complex A)
+        t(Single protein, our target) --> b(Protein complex B)
+        a --> p(Complex group. Gotcha!)
+        b --> p(Complex group. Gotcha!)
 
-- ``SINGLE PROTEIN ⟶ PROTEIN COMPLEX ⟶ PROTEIN COMPLEX GROUP (a1) ⟶ PROTEIN COMPLEX GROUP (b)``
-- ``..                                ⟶ PROTEIN COMPLEX GROUP (a2) ⟶ PROTEIN COMPLEX GROUP (b)``
+That worked out well.
+All roads point to the complex group, so we can use that.
 
-Occasionally, two or more branched chains will fail to join up. In this case, one annotation will
-be emitted for each. For example, both (b1) and (b2) will be used for these:
+Another nice case:
 
-- ``SINGLE PROTEIN ⟶ PROTEIN COMPLEX ⟶ PROTEIN COMPLEX GROUP (a1) ⟶ PROTEIN COMPLEX GROUP (b1)``
-- ``                                     PROTEIN COMPLEX GROUP (a2) ⟶ PROTEIN COMPLEX GROUP (b2)``
+.. mermaid::
+
+   graph BT
+        t(Single protein, our target) --> a(Protein family A)
+        t(Single protein, our target) --> b(Protein family B)
+        a --> b(Protein family B. Gotcha!)
+
+These cases happen. But we might instead have this:
+
+.. mermaid::
+
+   graph BT
+        t(Single protein, our target) --> a(Protein complex A)
+        t(Single protein, our target) --> b(Protein complex B)
+        a --> p1(Complex group A. What?)
+        b --> p2(Complex group B. Damn it.)
+
+The issue is, of course, that a single protein can be involved in multiple complexes.
+And some of those complexes can be *strange*: heterooligomers that are probably better ignored,
+so jumping from a single protein to a complex might be dangerous.
+We could split on branches, ultimately using both complexes.
+But that fails for our criterion of landing on a small number of simple targets.
+We don’t want bizarre targets to show up just because GABA A subunit has been observed in a heterooligomeric assembly
+with some miscellaneous GPCR.
+
+In fact, the relationships do not form a tree, or even a `DAG <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_.
+The obvious ways to force this structure into a DAG didn’t work out well,
+so we’ll need a more complex algorithm.
+The end result was a dependency-injected `strategy pattern <https://en.wikipedia.org/wiki/Strategy_pattern>`_.
+The traversal strategy can be set by the config key `mandos.traversal_strategy`.
+You can create a custom strategy by subclassing `TargetTraversalStrategy`.
+Different default strategies are used for different search types; these are described below.
+
+Strategy 0
+----------
+
+This is the null strategy, which does not traverse targets at all;
+targets are left as-is.
+
+Strategy 1
+----------
+
+This strategy splits on selectivity groups, assuming these are not filtered out.
+Each selectivity group is split into its protein families or protein complex groups (using subset relationships).
+This is the default for mechanism of action (MoA) search
+because some MoA annotations are for selectivity groups.
+(This makes sense because exactly which target is involved in a mechanism is sometimes unknown.)
+
+Strategy 2
+----------
+
+This is the default strategy for activity annotations.
+It’s fairly complex.
+
+Briefly, annotations can be aggregated or split, or both.
+Single proteins can be followed to protein complexes only if *subunit* appears as a substring,
+and they can be followed to protein families only if it is not a substring.
+Complexes can be followed to complex groups along relationship types *subset* and *overlaps with*.
+(The latter cases appear surprisingly often; complex to complex group seems like subset-to-superset anyway.)
+Complex groups can be followed to other complex groups and families to other families (*subset* only).
+This also incorporates strategy 1. Non-protein types are left as-is, if not filtered out.
 
 
 Activity filtration rules
 ****************************
 
 Here are the full rules used to filter activity annotations:
-- DATA VALIDITY COMMENT is not ``Potential missing data``, ``Potential transcription error``,
-  or ``Outside typical range``.
+
+- DATA VALIDITY COMMENT is not ``Potential missing data``, ``Potential transcription error``, ``Outside typical range``
 - ASSAY TYPE is binding and STANDARD RELATION is ``=``, ``<``, or ``<=``
 - pCHEMBL is non-null
-- pCHEMBL ≥ 7 (only applies to the summary; modify with ``-pchembl``)
+- pCHEMBL ≥ 7 (modify with ``-pchembl``)
 - ASSAY ORGANISM is under the specified taxon
 - Assay-to-target relationship
   `confidence score <https://chembl.gitbook.io/chembl-interface-documentation/frequently-asked-questions/chembl-data-questions#what-is-the-confidence-score>`_
-  ≥ 4 (only applies to the summary; modify with ``target-confidence``)
+  ≥ 4 (modify with ``target-confidence``)
 
 .. tip::
 

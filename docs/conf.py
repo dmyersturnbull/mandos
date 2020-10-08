@@ -25,7 +25,12 @@ author = ", ".join(find("authors"))
 copyright = "Copyright (2020)"
 
 
-extensions = ["autoapi.extension", "sphinx.ext.napoleon", "sphinx_rtd_theme"]
+extensions = [
+    "autoapi.extension",
+    "sphinx.ext.napoleon",
+    "sphinx_rtd_theme",
+    "sphinxcontrib.mermaid",
+]
 autoapi_type = "python"
 autoapi_dirs = [str(root / project)]
 master_doc = "index"

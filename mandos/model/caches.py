@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 from pocketutils.core.hashers import Hasher
 
-from mandos import get_resource
+from mandos import MandosResources
 from mandos.model.taxonomy import Taxonomy
 
 logger = logging.getLogger(__package__)
@@ -40,7 +40,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         path = self._resolve_non_vertebrate_final(taxon)
         if path.exists():
             return Taxonomy.from_path(path)
-        vertebrata = Taxonomy.from_path(get_resource("7742.tab.gz"))
+        vertebrata = Taxonomy.from_path(MandosResources.path("7742.tab.gz"))
         if taxon in vertebrata:
             return vertebrata.subtree(taxon)
         raw_path = self._resolve_non_vertebrate_raw(taxon)
@@ -118,7 +118,7 @@ class CacheDirTaxonomyCache(UniprotTaxonomyCache):
         return self._get_resource(f"taxonomy-ancestor_{taxon}.tab.gz")
 
     def _get_resource(self, *nodes: Union[Path, str]) -> Path:
-        path = get_resource(*nodes)
+        path = MandosResources.path(*nodes)
         if path.exists():
             return path
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -132,7 +132,7 @@ class TaxonomyFactories:
 
     @classmethod
     def from_vertebrata(cls) -> TaxonomyFactory:
-        return CacheDirTaxonomyCache(get_resource("7742.tab.gz"))
+        return CacheDirTaxonomyCache(MandosResources.path("7742.tab.gz"))
 
     @classmethod
     def from_uniprot(cls, cache_dir: Path) -> TaxonomyFactory:

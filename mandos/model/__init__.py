@@ -4,18 +4,24 @@ import abc
 import dataclasses
 import enum
 import logging
-import re
 import typing
 from dataclasses import dataclass
 from typing import Generic, Optional, Sequence, TypeVar
 
+from urllib3.exceptions import HTTPError
+from requests.exceptions import RequestException
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.api import ChemblApi
+from mandos import MandosUtils, QueryType
+from mandos.chembl_api import ChemblApi
 from mandos.model.settings import Settings
 from mandos.model.taxonomy import Taxonomy
 
 logger = logging.getLogger("mandos")
+
+
+class CompoundNotFoundError(ValueError):
+    """"""
 
 
 class MolStructureType(enum.Enum):
@@ -81,17 +87,6 @@ class AbstractHit:
         return [f.name for f in dataclasses.fields(cls)]
 
 
-class QueryType(enum.Enum):
-    """
-    X
-    """
-
-    inchi = enum.auto()
-    inchikey = enum.auto()
-    chembl = enum.auto()
-    smiles = enum.auto()
-
-
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
 
@@ -129,7 +124,11 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         """
         lst = []
         for i, compound in enumerate(compounds):
-            x = self.find(compound)
+            try:
+                x = self.find(compound)
+            except CompoundNotFoundError:
+                logger.error(f"Failed to find compound {compound}. Skipping.")
+                continue
             lst.extend(x)
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
             if i > 0 and i % 20 == 0 or i == len(compounds) - 1:
@@ -146,7 +145,10 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             compound:
 
         Returns:
+            Something
 
+        Raises:
+            CompoundNotFoundError
         """
         raise NotImplementedError()
 
@@ -238,14 +240,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         Returns:
 
         """
-        if inchikey.startswith("InChI="):
-            return QueryType.inchi
-        elif re.compile(r"[A-Z]{14}-[A-Z]{10}-[A-Z]").fullmatch(inchikey):
-            return QueryType.inchikey
-        elif re.compile(r"CHEMBL[0-9]+").fullmatch(inchikey):
-            return QueryType.chembl
-        else:
-            return QueryType.smiles
+        return MandosUtils.get_query_type(inchikey)
 
     def get_compound_dot_dict(self, inchikey: str) -> NestedDotDict:
         """
@@ -260,24 +255,40 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # CHEMBL
         kind = self.get_query_type(inchikey)
         if kind == QueryType.smiles:
-            results = list(
-                self.api.molecule.filter(
-                    molecule_structures__canonical_smiles__flexmatch=inchikey
-                ).only(["molecule_chembl_id", "pref_name", "molecule_structures"])
-            )
-            assert len(results) == 1, f"{len(results)} matches for {inchikey}"
-            result = results[0]
+            ch = self._get_compound_from_smiles(inchikey)
         else:
-            result = self.api.molecule.get(inchikey)
-        if result is None:
-            raise ValueError(f"Result for compound {inchikey} is null!")
-        ch = NestedDotDict(result)
+            ch = self._get_compound(inchikey)
         # molecule_hierarchy can have the actual value None
         if ch.get("molecule_hierarchy") is not None:
             parent = ch["molecule_hierarchy"]["parent_chembl_id"]
             if parent != ch["molecule_chembl_id"]:
-                ch = NestedDotDict(self.api.molecule.get(parent))
+                ch = NestedDotDict(self._get_compound(inchikey))
         return ch
+
+    def _get_compound_from_smiles(self, smiles: str) -> NestedDotDict:
+        try:
+            results = list(
+                self.api.molecule.filter(
+                    molecule_structures__canonical_smiles__flexmatch=smiles
+                ).only(["molecule_chembl_id", "pref_name", "molecule_structures"])
+            )
+        except (HTTPError, RequestException):
+            raise CompoundNotFoundError(f"Failed to find compound {smiles}")
+        if len(results) != 1:
+            raise CompoundNotFoundError(f"Got {len(results)} for compound {smiles}")
+        result = results[0]
+        if result is None:
+            raise CompoundNotFoundError(f"Result for compound {smiles} is null!")
+        return NestedDotDict(result)
+
+    def _get_compound(self, inchikey: str) -> NestedDotDict:
+        try:
+            result = self.api.molecule.get(inchikey)
+            if result is None:
+                raise CompoundNotFoundError(f"Result for compound {inchikey} is null!")
+            return NestedDotDict(result)
+        except (HTTPError, RequestException):
+            raise CompoundNotFoundError(f"Failed to find compound {inchikey}")
 
 
 @dataclass(frozen=True, repr=True, order=True, unsafe_hash=True)
@@ -337,4 +348,11 @@ class Triple:
         return "\t".join([sub, pred, obj])
 
 
-__all__ = ["ChemblCompound", "AbstractHit", "QueryType", "Search", "Triple"]
+__all__ = [
+    "ChemblCompound",
+    "AbstractHit",
+    "QueryType",
+    "Search",
+    "Triple",
+    "CompoundNotFoundError",
+]

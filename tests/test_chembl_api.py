@@ -1,10 +1,10 @@
 import pytest
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.api import ChemblApi, ChemblEntrypoint, ChemblFilterQuery
+from mandos.chembl_api import ChemblApi, ChemblEntrypoint, ChemblFilterQuery
 
 
-class TestApiMock:
+class TestChemblApi:
     def test_mocked(self):
         api = ChemblApi.mock({"target": ChemblEntrypoint.mock({"DAT": {"x": ""}})})
         dotdict = NestedDotDict({"x": ""})

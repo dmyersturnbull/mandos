@@ -1,6 +1,6 @@
 import pytest
 
-from mandos import get_resource
+from mandos import MandosResources
 from mandos.model.caches import TaxonomyFactories
 from mandos.model.taxonomy import Taxon, Taxonomy, _Taxon
 
@@ -63,7 +63,7 @@ class TestFind:
         assert b < c < a, f"{a} vs {b} vs {c}"
 
     def test_real(self):
-        path = get_resource("7742.tab.gz")
+        path = MandosResources.path("7742.tab.gz")
         tax = Taxonomy.from_path(path)
         assert len(tax) == 100670
         tax = tax.subtree(117571)

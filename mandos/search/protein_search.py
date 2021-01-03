@@ -5,9 +5,8 @@ from typing import Generator, Sequence, TypeVar
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.api import ChemblFilterQuery
-from mandos.model import AbstractHit, ChemblCompound, Search
-from mandos.model.targets import Target, TargetFactory, TargetType
+from mandos.model import AbstractHit, ChemblCompound, Search, CompoundNotFoundError
+from mandos.model.targets import Target, TargetFactory
 from mandos.search.target_traversal_strategy import (
     TargetTraversalStrategies,
     TargetTraversalStrategy,
@@ -31,12 +30,24 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
     Abstract search.
     """
 
+    def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
+        logger.info(
+            f"Using traversal strategy {self.traversal_strategy.__class__.__name__} for {self.search_name}"
+        )
+        return super().find_all(compounds)
+
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         raise NotImplementedError()
 
     @property
     def traversal_strategy(self) -> TargetTraversalStrategy:
-        return TargetTraversalStrategies.strategy1(self.api)
+        if self.config.traversal_strategy is None:
+            return self.default_traversal_strategy
+        return TargetTraversalStrategies.by_name(self.config.traversal_strategy, self.api)
+
+    @property
+    def default_traversal_strategy(self) -> TargetTraversalStrategy:
+        raise NotImplementedError()
 
     def should_include(
         self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
@@ -88,7 +99,7 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
         Args:
             lookup:
 
-        Returns:
+        Returns:e
 
         """
         form = self.get_compound(lookup)

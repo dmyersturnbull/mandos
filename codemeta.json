@@ -27,7 +27,8 @@
     "downloadUrl":"https://pypi.org/project/mandos/",
     "keywords":[
 		"cheminformatics",
-        "chembl"
+        "chembl",
+        "pubchem"
     ],
     "dateCreated":"2018-08-18",
     "datePublished":"2020-08-18",

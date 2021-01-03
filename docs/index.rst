@@ -55,13 +55,18 @@ for DrugBank searches.
  search        description
 ============  =====================================================================================
 mechanism     All ChEMBL molecular mechanism annotations for proteins under the specified taxon.
+moa_updown    ChEMBL MoA using up/down/na for the predicates.
 activity      ChEMBL binding activity annotations with several filters.
-atc           ATC level-3 and level-4 codes as listed by ChEMBL.
+atc_l2        ATC level-2 codes as listed by ChEMBL.
+atc_l3        ATC level-3 codes as listed by ChEMBL.
+atc_l4        ATC level-4 codes as listed by ChEMBL.
 trial         ChEMBL indication annotations as MESH IDs, with at least phase-3 trials (by default).
-prediction    ChEMBL target predictions restricted “confidence 90%” as “active”.
-fingerprint   ChEMBL fingerprints.
-go_fn         GO Function terms associated with ChEMBL activity annotations.
-go_proc       GO Process terms associated with ChEMBL activity annotations.
+go_fn_moa     GO Function terms associated with ChEMBL MoA targets. Traversal strategy = 1.
+go_proc_moa   GO Process terms associated with ChEMBL MoA targets. Traversal strategy = 1.
+go_comp_moa   GO Component terms associated with ChEMBL MoA targets. Traversal strategy = 1.
+go_fn_act     GO Function terms associated with ChEMBL activity targets. Traversal strategy = 1.
+go_proc_act   GO Process terms associated with ChEMBL activity targets. Traversal strategy = 1.
+go_comp_act   GO Component terms associated with ChEMBL activity targets.
 db_ind        All DrugBank indication annotations.
 db_target     DrugBank mechanism annotations, optionally requiring “pharmacological action”.
 db_enzyme     All DrugBank enzyme annotations.
@@ -76,6 +81,12 @@ db_text       Non-trivial words extracted from DrugBank text fields, configurabl
 db_org        The affected organism from DrugBank.
 db_int        DrugBank interaction annotations, only approved by default.
 db_atc        ATC annotations from DrugBank. These are more comprehensive.
+db_sideef     Side effect MeSH terms from DrugBank.
+cactvs        CACTVS molecular fingerprints from PubChem.
+chem_props    Chemical property values from PubChem and ChEMBL (except cactvs).
+triples       Uses an already-created triples file. (Useful mainly for running with ``--correlate``.)
+self          Each compound has one annotation, itself.
+random        Random values in the range 1...n compounds (with replacement).
 chembl        Shorthand for all annotations from ChEMBL.
 db            Shorthand for all annotations from DrugBank.
 ============  =====================================================================================
@@ -252,6 +263,32 @@ Complexes can be followed to complex groups along relationship types *subset* an
 Complex groups can be followed to other complex groups and families to other families (*subset* only).
 This also incorporates strategy 1. Non-protein types are left as-is, if not filtered out.
 
+Strategy 3
+----------
+
+This is an extension of Strategy 2 that uses built-in stopping rules designed primarily for neurological targets.
+
+Strategy 4
+----------
+
+This strategy requires a text file like the following (which is used for Strategy 2).
+Put the path as ``mandos.traversal_strategy``.
+
+    ..code-block::
+
+        single_protein            -> protein_complex         words:"subunit","chain"
+        protein_complex           -> protein_complex
+        protein_complex           ~~ protein_complex_group
+        protein_complex_group     -> protein_complex_group
+        protein_family            -> protein_family
+        selectivity_group         -> protein_complex_group
+        selectivity_group         <- protein_complex_group
+        selectivity_group         -> protein_family
+        selectivity_group         <- protein_family
+        any                       == any
+
+
+
 
 Activity filtration rules
 ****************************
@@ -304,3 +341,8 @@ The DrugBank search is better and should include almost everything that the ChEM
 There’s also a DrugBank clinical trial search (``db_trial``) that should be more equivalent
 to the ChEMBL one.
 
+
+Correlation analysis
+****************************
+
+For ``chem_props``, affinity is derived from Mahalanobis distance.

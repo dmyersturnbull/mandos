@@ -1,6 +1,6 @@
 import pytest
 
-from mandos.api import ChemblApi, ChemblEntrypoint
+from mandos.chembl_api import ChemblApi, ChemblEntrypoint
 from mandos.model.targets import Target, TargetFactory, TargetRelationshipType, TargetType
 
 

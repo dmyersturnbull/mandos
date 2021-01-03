@@ -1,0 +1,101 @@
+code	statement	class	category	signal_word	type
+H200	Unstable Explosive	Explosives	Unstable Explosive	Danger	physical
+H201	Explosive; mass explosion hazard	Explosives	Div 1.1	Danger	physical
+H202	Explosive; severe projection hazard	Explosives	Div 1.2	Danger	physical
+H203	Explosive; fire, blast or projection hazard	Explosives	Div 1.3	Danger	physical
+H204	Fire or projection hazard	Explosives	Div 1.4	Warning	physical
+H205	May mass explode in fire	Explosives	Div 1.5	Danger	physical
+H206	Fire, blast or projection hazard; increased risk of explosion if desensitizing agent is reduced	Desensitized explosives	Category 1	Danger	physical
+H207	Fire or projection hazard; increased risk of explosion if desensitizing agent is reduced	Desensitized explosives	Category 2	Danger	physical
+H207	Fire or projection hazard; increased risk of explosion if desensitizing agent is reduced	Desensitized explosives	Category 3	Warning	physical
+H208	Fire hazard; increased risk of explosion if desensitizing agent is reduced	Desensitized explosives	Category 4	Warning	physical
+H220	Extremely flammable gas	Flammable gases	1A: Flammable gas, Pyrophoric gas, Chemically unstable gas A,B	Danger	physical
+H221	Flammable gas	Flammable gases	1B	Danger	physical
+H221	Flammable gas	Flammable gases	Category 2	Warning	physical
+H222	Extremely flammable aerosol	Aerosols	Category 1	Danger	physical
+H223	Flammable aerosol	Aerosols	Category 2	Warning	physical
+H224	Extremely flammable liquid and vapor	Flammable liquids	Category 1	Danger	physical
+H225	Highly Flammable liquid and vapor	Flammable liquids	Category 2	Danger	physical
+H226	Flammable liquid and vapor	Flammable liquids	Category 3	Warning	physical
+H227	Combustible liquid	Flammable liquids	Category 4	Warning	physical
+H228	Flammable solid	Flammable solids	Category 1	Danger	physical
+H228	Flammable solid	Flammable solids	Category 2	Warning	physical
+H229	Pressurized container: may burst if heated	Aerosols	Category 1	Danger	physical
+H229	Pressurized container: may burst if heated	Aerosols	Category 2	Warning	physical
+H229	Pressurized container: may burst if heated	Aerosols	Category 3	Warning	physical
+H230	May react explosively even in the absence of air	Flammable gases	1A, Chemically unstable gas A		physical
+H231	May react explosively even in the absence of air at elevated pressure and/or temperature	Flammable gases	1A, Chemically unstable gas B		physical
+H232	May ignite spontaneously if exposed to air	Flammable gases	1A, Pyrophoric gas	Danger	physical
+H240	Heating may cause an explosion	Self-reactive substances and mixtures; Organic peroxides	Type A	Danger	physical
+H241	Heating may cause a fire or explosion	Self-reactive substances and mixtures; Organic peroxides	Type B	Danger	physical
+H242	Heating may cause a fire	Self-reactive substances and mixtures; Organic peroxides	Type C, D	Danger	physical
+H242	Heating may cause a fire	Self-reactive substances and mixtures; Organic peroxides	Type E, F	Warning	physical
+		Self-reactive substances and mixtures; Organic peroxides	Type G		physical
+H250	Catches fire spontaneously if exposed to air	Pyrophoric liquids; Pyrophoric solids	Category 1	Danger	physical
+H251	Self-heating; may catch fire	Self-heating substances and mixtures	Category 1	Danger	physical
+H252	Self-heating in large quantities; may catch fire	Self-heating substances and mixtures	Category 2	Warning	physical
+H260	In contact with water releases flammable gases which may ignite spontaneously	Substances and mixtures which in contact with water, emit flammable gases	Category 1	Danger	physical
+H261	In contact with water releases flammable gas	Substances and mixtures which in contact with water, emit flammable gases	Category 2	Danger	physical
+H261	In contact with water releases flammable gas	Substances and mixtures which in contact with water, emit flammable gases	Category 3	Warning	physical
+H270	May cause or intensify fire; oxidizer	Oxidizing gases	Category 1	Danger	physical
+H271	May cause fire or explosion; strong Oxidizer	Oxidizing liquids; Oxidizing solids	Category 1	Danger	physical
+H272	May intensify fire; oxidizer	Oxidizing liquids; Oxidizing solids	Category 2	Danger	physical
+H272	May intensify fire; oxidizer	Oxidizing liquids; Oxidizing solids	Category 3	Warning	physical
+H280	Contains gas under pressure; may explode if heated	Gases under pressure	Compressed gas, Liquefied gas, Dissolved gas	Warning	physical
+H281	Contains refrigerated gas; may cause cryogenic burns or injury	Gases under pressure	Refrigerated liquefied gas	Warning	physical
+H282	Extremely flammable chemical under pressure: may explode if heated	Chemicals under pressure	Category 1	Danger	physical
+H283	Flammable chemical under pressure: may explode if heated	Chemicals under pressure	Category 2	Warning	physical
+H284	Chemical under pressure: may explode if heated	Chemicals under pressure	Category 3	Warning	physical
+H290	May be corrosive to metals	Corrosive to Metals	Category 1	Warning	physical
+H300	Fatal if swallowed	Acute toxicity, oral	Category 1, 2	Danger	acute
+H301	Toxic if swallowed	Acute toxicity, oral	Category 3	Danger	acute
+H302	Harmful if swallowed	Acute toxicity, oral	Category 4	Warning	acute
+H303	May be harmful if swallowed	Acute toxicity, oral	Category 5	Warning	acute
+H304	May be fatal if swallowed and enters airways	Aspiration hazard	Category 1	Danger	acute
+H305	May be fatal if swallowed and enters airways	Aspiration hazard	Category 2	Warning	acute
+H310	Fatal in contact with skin	Acute toxicity, dermal	Category 1, 2	Danger	acute
+H311	Toxic in contact with skin	Acute toxicity, dermal	Category 3	Danger	acute
+H312	Harmful in contact with skin	Acute toxicity, dermal	Category 4	Warning	acute
+H313	May be harmful in contact with skin	Acute toxicity, dermal	Category 5		acute
+H314	Causes severe skin burns and eye damage	Skin corrosion/irritation	Category 1A, 1B, 1C	Danger	acute
+H315	Causes skin irritation	Skin corrosion/irritation	Category 2	Warning	acute
+H316	Causes mild skin irritation	Skin corrosion/irritation	Category 3	Warning	acute
+H317	May cause an allergic skin reaction	Sensitization, Skin	Category 1, 1A, 1B	Warning	allergic
+H318	Causes serious eye damage	Serious eye damage/eye irritation	Category 1	Danger	acute
+H319	Causes serious eye irritation	Serious eye damage/eye irritation	Category 2A	Warning	acute
+H320	Causes eye irritation	Serious eye damage/eye irritation	Category 2B	Warning	acute
+H330	Fatal if inhaled	Acute toxicity, inhalation	Category 1, 2	Danger	acute
+H331	Toxic if inhaled	Acute toxicity, inhalation	Category 3	Danger	acute
+H332	Harmful if inhaled	Acute toxicity, inhalation	Category 4	Warning	acute
+H333	May be harmful if inhaled	Acute toxicity, inhalation	Category 5	Warning	acute
+H334	May cause allergy or asthma symptoms or breathing difficulties if inhaled	Sensitization, respiratory	Category 1, 1A, 1B	Danger	allergic
+H335	May cause respiratory irritation	Specific target organ toxicity, single exposure; Respiratory tract irritation	Category 3	Warning	acute
+H336	May cause drowsiness or dizziness	Specific target organ toxicity, single exposure; Narcotic effects	Category 3	Warning	acute
+H340	May cause genetic defects	Germ cell mutagenicity	Category 1A, 1B	Danger	chronic
+H341	Suspected of causing genetic defects	Germ cell mutagenicity	Category 2	Warning	chronic
+H350	May cause cancer	Carcinogenicity	Category 1A, 1B	Danger	chronic
+H350i	May cause cancer by inhalation	Carcinogenicity	Category 1A, 1B	Danger	chronic
+H351	Suspected of causing cancer	Carcinogenicity	Category 2	Warning	chronic
+H360	May damage fertility or the unborn child	Reproductive toxicity	Category 1A, 1B	Danger	chronic
+H360F	May damage fertility	Reproductive toxicity	Category 1A, 1B	Danger	chronic
+H360D	May damage the unborn child	Reproductive toxicity	Category 1A, 1B	Danger	chronic
+H360FD	May damage fertility; May damage the unborn child	Reproductive toxicity	Category 1A, 1B	Danger	chronic
+H360Fd	May damage fertility; Suspected of damaging the unborn child	Reproductive toxicity	Category 1A, 1B	Danger	chronic
+H360Df	May damage the unborn child; Suspected of damaging fertility	Reproductive toxicity	Category 1A, 1B	Danger	chronic
+H361	Suspected of damaging fertility or the unborn child	Reproductive toxicity	Category 2	Warning	chronic
+H361f	Suspected of damaging fertility	Reproductive toxicity	Category 2	Warning	chronic
+H361d	Suspected of damaging the unborn child	Reproductive toxicity	Category 2	Warning	chronic
+H361fd	Suspected of damaging fertility; Suspected of damaging the unborn child	Reproductive toxicity	Category 2	Warning	chronic
+H362	May cause harm to breast-fed children	Reproductive toxicity, effects on or via lactation	Additional category		chronic
+H370	Causes damage to organs	Specific target organ toxicity, single exposure	Category 1	Danger	acute
+H371	May cause damage to organs	Specific target organ toxicity, single exposure	Category 2	Warning	acute
+H372	Causes damage to organs through prolonged or repeated exposure	Specific target organ toxicity, repeated exposure	Category 1	Danger	acute
+H373	Causes damage to organs through prolonged or repeated exposure	Specific target organ toxicity, repeated exposure	Category 2	Warning	acute
+H400	Very toxic to aquatic life	Hazardous to the aquatic environment, acute hazard	Category 1	Warning	aquatic:acute
+H401	Toxic to aquatic life	Hazardous to the aquatic environment, acute hazard	Category 2		aquatic:acute
+H402	Harmful to aquatic life	Hazardous to the aquatic environment, acute hazard	Category 3		aquatic:acute
+H410	Very toxic to aquatic life with long lasting effects	Hazardous to the aquatic environment, long-term hazard	Category 1	Warning	aquatic:chronic
+H411	Toxic to aquatic life with long lasting effects	Hazardous to the aquatic environment, long-term hazard	Category 2		aquatic:chronic
+H412	Harmful to aquatic life with long lasting effects	Hazardous to the aquatic environment, long-term hazard	Category 3		aquatic:chronic
+H413	May cause long lasting harmful effects to aquatic life	Hazardous to the aquatic environment, long-term hazard	Category 4		aquatic:chronic
+H420	Harms public health and the environment by destroying ozone in the upper atmosphere	Hazardous to the ozone layer	Category 1	Warning	environmental

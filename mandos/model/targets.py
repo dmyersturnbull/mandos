@@ -10,11 +10,16 @@ from dataclasses import dataclass
 from typing import Optional, Sequence, Set
 from typing import Tuple as Tup
 
+from urllib3.util.retry import MaxRetryError
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.api import ChemblApi
+from mandos.chembl_api import ChemblApi
 
 logger = logging.getLogger(__package__)
+
+
+class TargetNotFoundError(ValueError):
+    """"""
 
 
 class TargetType(enum.Enum):
@@ -30,15 +35,28 @@ class TargetType(enum.Enum):
     protein_protein_interaction = enum.auto()
     nucleic_acid = enum.auto()
     chimeric_protein = enum.auto()
+    protein_nucleic_acid_complex = enum.auto()
+    metal = enum.auto()
+    small_molecule = enum.auto()
+    subcellular = enum.auto()
     unknown = enum.auto()
 
     @classmethod
     def of(cls, s: str) -> TargetType:
-        return TargetType[s.replace(" ", "_").replace("-", "_").lower()]
+        key = s.replace(" ", "_").replace("-", "_").lower()
+        try:
+            return TargetType[key]
+        except KeyError:
+            logger.error(f"Target type {key} not found. Using TargetType.unknown.")
+            return TargetType.unknown
 
     @classmethod
     def protein_types(cls) -> Set[TargetType]:
         return {s for s in cls if s.is_protein}
+
+    @classmethod
+    def all_types(cls) -> Set[TargetType]:
+        return set(TargetType)  # here for symmetry
 
     @property
     def is_protein(self) -> bool:
@@ -50,7 +68,7 @@ class TargetType(enum.Enum):
         }
 
     @property
-    def is_trash(self) -> bool:
+    def is_unknown(self) -> bool:
         return self == TargetType.unknown
 
     @property
@@ -60,6 +78,10 @@ class TargetType(enum.Enum):
             TargetType.protein_protein_interaction,
             TargetType.nucleic_acid,
             TargetType.chimeric_protein,
+            TargetType.metal,
+            TargetType.small_molecule,
+            TargetType.subcellular,
+            TargetType.protein_nucleic_acid_complex,
             TargetType.unknown,
         }
 
@@ -142,7 +164,10 @@ class Target(metaclass=abc.ABCMeta):
         Returns:
 
         """
-        targets = cls.api().target.filter(target_chembl_id=chembl)
+        try:
+            targets = cls.api().target.filter(target_chembl_id=chembl)
+        except MaxRetryError:
+            raise TargetNotFoundError(f"Failed to find target {chembl}")
         assert len(targets) == 1, f"Found {len(targets)} targets for {chembl}"
         target = NestedDotDict(targets[0])
         return cls(
@@ -255,4 +280,5 @@ __all__ = [
     "DagTarget",
     "TargetFactory",
     "DagTargetLinkType",
+    "TargetNotFoundError",
 ]

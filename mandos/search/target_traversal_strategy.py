@@ -2,7 +2,7 @@ import abc
 import sys
 from typing import Sequence, Type
 
-from mandos.api import ChemblApi
+from mandos.chembl_api import ChemblApi
 from mandos.model.targets import DagTargetLinkType, Target, TargetRelationshipType, TargetType
 
 
@@ -42,6 +42,40 @@ class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
 
     def __call__(self, target: Target) -> Sequence[Target]:
         """
+        Returns:
+
+        """
+        edges = {
+            DagTargetLinkType(
+                TargetType.selectivity_group,
+                TargetRelationshipType.superset_of,
+                TargetType.protein_complex_group,
+            ),
+            DagTargetLinkType(
+                TargetType.protein_complex_group,
+                TargetRelationshipType.subset_of,
+                TargetType.protein_complex_group,
+            ),
+            DagTargetLinkType(
+                TargetType.selectivity_group,
+                TargetRelationshipType.superset_of,
+                TargetType.protein_family,
+            ),
+            DagTargetLinkType(
+                TargetType.protein_family,
+                TargetRelationshipType.subset_of,
+                TargetType.protein_family,
+            ),
+        }
+        found = target.traverse(edges)
+        return [f.target for f in found if f.is_end]
+
+
+class TargetTraversalStrategy2(TargetTraversalStrategy, metaclass=abc.ABCMeta):
+    """"""
+
+    def __call__(self, target: Target) -> Sequence[Target]:
+        """
 
         Returns:
 
@@ -68,7 +102,7 @@ class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
                 TargetType.protein_complex,
                 TargetType.protein_complex_group,
             ]
-            and "subunit" in target.name
+            and ("subunit" in target.name.split(" ") or "chain" in target.name.split(" "))
         ):
             edges = {
                 DagTargetLinkType(
@@ -147,7 +181,7 @@ class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
             edges = {
                 DagTargetLinkType(
                     TargetType.selectivity_group,
-                    TargetRelationshipType.subset_of,
+                    TargetRelationshipType.superset_of,
                     TargetType.protein_complex_group,
                 ),
                 DagTargetLinkType(
@@ -157,7 +191,7 @@ class TargetTraversalStrategy1(TargetTraversalStrategy, metaclass=abc.ABCMeta):
                 ),
                 DagTargetLinkType(
                     TargetType.selectivity_group,
-                    TargetRelationshipType.subset_of,
+                    TargetRelationshipType.superset_of,
                     TargetType.protein_family,
                 ),
                 DagTargetLinkType(
@@ -210,6 +244,10 @@ class TargetTraversalStrategies:
         return cls.create(TargetTraversalStrategy1, api)
 
     @classmethod
+    def strategy2(cls, api: ChemblApi) -> TargetTraversalStrategy:
+        return cls.create(TargetTraversalStrategy2, api)
+
+    @classmethod
     def create(cls, clz: Type[TargetTraversalStrategy], api: ChemblApi) -> TargetTraversalStrategy:
         """
         Factory method.
@@ -227,8 +265,8 @@ class TargetTraversalStrategies:
             def api(cls) -> ChemblApi:
                 return api
 
-        X.__name__ = clz.__name__ + "X"
+        X.__name__ = clz.__name__
         return X()
 
 
-__all__ = ["TargetTraversalStrategy", "TargetTraversalStrategy1", "TargetTraversalStrategies"]
+__all__ = ["TargetTraversalStrategy", "TargetTraversalStrategies"]

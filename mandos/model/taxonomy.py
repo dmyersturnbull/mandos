@@ -7,8 +7,13 @@ from pathlib import Path
 from typing import List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
+from typeddfs import TypedDfs
 
 logger = logging.getLogger(__package__)
+
+TaxonomyDf = (
+    TypedDfs.typed("TaxonomyDf").require("taxon").require("parent").require("scientific_name")
+).build()
 
 
 @total_ordering
@@ -168,7 +173,7 @@ class Taxonomy:
         return cls.from_df(df)
 
     @classmethod
-    def from_df(cls, df: pd.DataFrame) -> Taxonomy:
+    def from_df(cls, df: TaxonomyDf) -> Taxonomy:
         """
         Reads from a DataFrame from a CSV file provided by a UniProt download.
         Strips any entries with missing or empty-string scientific names.

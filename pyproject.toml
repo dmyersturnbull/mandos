@@ -2,7 +2,7 @@
 description-file = "README.md"
 
 [build-system]
-requires = ["poetry>=1,<2", "coverage[toml]>=5,<6"]
+requires = ["poetry>=1,<2", "coverage[toml]>=5,<6", "virtualenv>=20.2"]
 build-backend = "poetry.masonry.api"
 
 
@@ -16,7 +16,7 @@ align = true
 [tool.tyrannosaurus.sources]
 status             = "'Development'"
 date               = "'${today}'"
-copyright          = "'Copyright ${today.year}'"
+copyright          = "'Copyright 2020–2021'"
 version            = "tool.poetry.version"
 release            = "tool.poetry.version"
 pyversions         = "tool.poetry.dependencies"
@@ -66,7 +66,7 @@ authors = ["Douglas Myers-Turnbull"]
 maintainers = ["Douglas Myers-Turnbull"]
 license = "Apache-2.0"
 readme = "README.md"
-keywords = ["cheminformatics", "chembl"]
+keywords = ["cheminformatics", "chembl", "pubchem"]
 homepage = "https://github.com/dmyersturnbull/mandos"
 repository = "https://github.com/dmyersturnbull/mandos"
 documentation = "https://mandos-chem.readthedocs.io"
@@ -75,6 +75,7 @@ classifiers = [
     "Natural Language :: English",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
 	"Intended Audience :: Science/Research",
 	"Intended Audience :: Developers",
     "Operating System :: OS Independent",
@@ -99,34 +100,43 @@ mandos = "mandos.cli:cli"
 [tool.poetry.dependencies]
 python                         = ">=3.8, <4"
 chembl-webresource-client      = "^0.10"
-pandas                         = ">=1.1, <2.0"
+pandas                         = ">=1.2, <2.0"
 requests                       = ">=2.24, <3.0"
 tomlkit                        = ">=0.7, <1.0"
 tqdm                           = ">=4.48, <5.0"
 typer                          = {version=">=0.3, <1.0", extras=["colorama"]}
-pocketutils                    = ">=0.3.2, <0.4"
+orjson                         = ">=3.4, <4.0"
+pocketutils                    = ">=0.4, <0.5"
+typeddfs                       = ">=0.3, <0.4"
+PubChemPy                      = "^1.0"
 
 
 [tool.poetry.dev-dependencies]
-pre-commit               = ">=2.7, <3.0"
-pre-commit-hooks         = ">=3.2, <4.0"
+pre-commit               = ">=2.9, <3.0"
+pre-commit-hooks         = ">=3.4, <4.0"
+bandit                   = ">=1.7, <2.0"
+black                    = {git = "https://github.com/psf/black.git", rev="f07832eac44e"}
 pytest                   = "^6"
 coverage                 = {extras = ["toml"], version = "^5"}
 pytest-cov               = "^2"
-black                    = "=20.8b1"
-isort                    = "^5"
+flake8                   = "^3"
+flake8-docstrings        = "^1"
+flake8-bugbear           = "^20"
+mypy                     = ">=0.790, <1.0"
 sphinx                   = "^3"
 sphinx-autoapi           = "^1"
-sphinxcontrib.mermaid    = ">=0.5, <1.0"
 sphinx-rtd-theme         = ">=0.5, <1.0"
-flake8                   = ">=3.8, <4.0"
-flake8-docstrings        = ">=1.5, <2.0"
-flake8-bugbear           = "^20"
+#sphinxcontrib.mermaid    = ">=0.5, <1.0"
 
 
 [tool.poetry.extras]
 dev = [
-        "toml", "pytest", "coverage", "pytest-cov"
+    "pre-commit", "pre-commit-hooks",
+    "black", "bandit",
+    "pytest", "coverage", "pytest-cov",
+    "flake8", "flake8-docstrings", "flake8-bugbear",
+    "mypy",
+    "sphinx", "sphinx-autoapi"
 ]
 
 
@@ -147,17 +157,14 @@ show_missing = true
 line-length = 100
 target-version = ["py38"]
 
-[tool.isort]
-line_length = 100
-
 [mypy]
 check_untyped_defs = true
 strict_optional = true
 
-[pycodestyle]
+[tool.pycodestyle]
 max-line-length = 100
 statistics = true
 
-[pydocstyle]
+[tool.pydocstyle]
 # 212 and 213 contradict; 203 and 204 contradict; D302 is not relevant in Py3
 ignore = ["D203", "D212", "D302"]

@@ -16,7 +16,7 @@ import typer
 from chembl_webresource_client.new_client import new_client as Chembl
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.api import ChemblApi
+from mandos.chembl_api import ChemblApi
 from mandos.model import Search, Triple
 from mandos.model.caches import TaxonomyFactories
 from mandos.model.settings import DEFAULT_TAXONOMY_CACHE, Settings
@@ -41,10 +41,10 @@ class What(enum.Enum):
     mechanism = enum.auto(), MechanismSearch
     atc = enum.auto(), AtcSearch
     trial = enum.auto(), IndicationSearch
-    go_process_moa = enum.auto(), GoSearchFactory.create(GoType.process, MechanismSearch)
+    go_proc_moa = enum.auto(), GoSearchFactory.create(GoType.process, MechanismSearch)
     go_fn_moa = enum.auto(), GoSearchFactory.create(GoType.function, MechanismSearch)
     go_comp_moa = enum.auto(), GoSearchFactory.create(GoType.component, MechanismSearch)
-    go_process_act = enum.auto(), GoSearchFactory.create(GoType.process, ActivitySearch)
+    go_proc_act = enum.auto(), GoSearchFactory.create(GoType.process, ActivitySearch)
     go_fn_act = enum.auto(), GoSearchFactory.create(GoType.function, ActivitySearch)
     go_comp_act = enum.auto(), GoSearchFactory.create(GoType.component, ActivitySearch)
 
@@ -73,14 +73,19 @@ class Commands:
         what: str,
         path: Path,
         config: Optional[Path] = None,
+        correlate: bool = False,
     ) -> None:
         """
         Process data.
 
         Args:
             what: Comma-separated list of ``activity``, ``mechanism``, ``atc``, and ``indication``.
-            path: Path to file containing one InChI per line
+            path: Path to the input file of one of the formats:
+                - .txt containing one key (InChI / CHEMBL ID) per line
+                - .csv/.tsv/.tab containing one key per row
+                - .csv/.tsv/.tab of a symmetric affinity matrix, with a row header and column header with the keys
             config: Path to a TOML config file
+            correlate: Calculate correlation ratios on the input affinity matrix
         """
         for w in what.split(","):
             w = What[w.lower()]

@@ -5,8 +5,12 @@ from typing import Sequence
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model import ChemblCompound
-from mandos.model.targets import Target
+from mandos.model.targets import Target, TargetType
 from mandos.search.protein_search import ProteinHit, ProteinSearch
+from mandos.search.target_traversal_strategy import (
+    TargetTraversalStrategy,
+    TargetTraversalStrategies,
+)
 
 logger = logging.getLogger("mandos")
 
@@ -32,13 +36,17 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     Search for ``mechanisms``.
     """
 
+    @property
+    def default_traversal_strategy(self) -> TargetTraversalStrategy:
+        return TargetTraversalStrategies.strategy0(self.api)
+
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         return list(self.api.mechanism.filter(parent_molecule_chembl_id=parent_form.chid))
 
     def should_include(
         self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
     ) -> bool:
-        if target.type.is_trash:
+        if target.type.name.lower() not in {s.lower() for s in self.config.allowed_target_types}:
             logger.warning(f"Excluding {target} with type {target.type}")
             return False
         return True

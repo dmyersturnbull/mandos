@@ -1,5 +1,5 @@
-tomlkit                   >=0.7, <1.0
-sphinx                    >=3.0,<4.0
-sphinx-rtd-theme          >=0.5,<1.0
-sphinx-autoapi            >=1.4,<2.0
-sphinxcontrib.mermaid     >=0.5,<1.0
+sphinx                  >=3.0,<4.0
+sphinx-autoapi          >=1.4,<2.0
+sphinxcontrib.mermaid   >=0.5,<1.0
+sphinx-rtd-theme        >=0.5,<1.0
+tomlkit                 >=0.7,<1.0

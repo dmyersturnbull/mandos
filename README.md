@@ -17,7 +17,7 @@ Example:
 
 ```bash
 echo "VREFGVBLTWBCJP-UHFFFAOYSA-N" > compounds.txt
-mandos search mechanism,activity,atc,trial,predicted compounds.txt
+mandos search mechanism,activity,atc,trial compounds.txt
 ```
 
 It will output a CSV file containing extended data and a simple text file of compound–predicate–object triples:
@@ -27,8 +27,6 @@ CHEMBL661 (alprazolam)  positive allosteric modulator  CHEMBL2093872 (GABA-A rec
 CHEMBL661 (alprazolam)  activity at                    CHEMBL2093872 (GABA-A receptor; anion channel)
 CHEMBL661 (alprazolam)  activity at                    CHEMBL2096986 (Cholecystokinin receptor)
 CHEMBL661 (alprazolam)  activity at                    CHEMBL4106143 (BRD4/HDAC1)
-CHEMBL661 (alprazolam)  predicted at                   CHEMBL2094116 (Serotonin 3 (5-HT3) receptor)
-CHEMBL661 (alprazolam)  predicted at                   CHEMBL4430    (Cytochrome P450 17A1)
 CHEMBL661 (alprazolam)  phase-3 trial for              D012559       (Schizophrenia)
 CHEMBL661 (alprazolam)  phase-4 trial for              D016584       (Panic Disorder)
 CHEMBL661 (alprazolam)  phase-4 trial for              D016584       (Anxiety Disorders)

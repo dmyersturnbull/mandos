@@ -11,16 +11,20 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/aa7c12d45ad794e45e55/maintainability)](https://codeclimate.com/github/dmyersturnbull/mandos/maintainability)
 [![Coverage](https://coveralls.io/repos/github/dmyersturnbull/mandos/badge.svg?branch=master&service=github)](https://coveralls.io/github/dmyersturnbull/mandos?branch=master)
 
-A pragmatic tool for cheminformatics and drug discovery.
+A cheminformatics tool that extracts and summarizes knowledge about compounds from 20+ sources.
+It then outputs that knowledge in a consistent, human-readable and machine-readable format.
 
-Example:
+*Status: alpha. The 0.1 release is functional but only used ChEMBL.*
+
+Running it on alprazolam:
 
 ```bash
 echo "VREFGVBLTWBCJP-UHFFFAOYSA-N" > compounds.txt
-mandos search mechanism,activity,atc,trial compounds.txt
+mandos search all compounds.txt
 ```
 
-It will output a CSV file containing extended data and a simple text file of compound–predicate–object triples:
+It will output a CSV file containing extended data, and a simple text file of compound–predicate–object triples.  
+Here is a sample of lines in the resulting text file:
 
 ```
 CHEMBL661 (alprazolam)  positive allosteric modulator  CHEMBL2093872 (GABA-A receptor; anion channel)
@@ -32,11 +36,35 @@ CHEMBL661 (alprazolam)  phase-4 trial for              D016584       (Panic Diso
 CHEMBL661 (alprazolam)  phase-4 trial for              D016584       (Anxiety Disorders)
 CHEMBL661 (alprazolam)  has ATC L3 code                N05B          (ANXIOLYTICS)
 CHEMBL661 (alprazolam)  has ATC L4 code                N05BA         (Benzodiazepine derivatives)
+PC218     (alprazolam)  links to                       PC119         (GABA)
+PC218     (alprazolam)  has GHS symbol                 H302          (Harmful if swallowed)
+PC218     (alprazolam)  has acute effect               -             (behavioral: euphoria)
+PC218     (alprazolam)  has DDI with                   PC65016       (amprenavir)
+PC218     (alprazolam)  has disease marker/moa         D000647       (amnesia)
+PC218     (alprazolam)  has disease marker/moa         D000647       (amnesia)
+PC218     (alprazolam)  has disease therapeutic        D001008       (Anxiety Disorders)
+PC218     (alprazolam)  enriched for lit term          -             (depression)
+PC218     (alprazolam)  enriched for lit term          -             (anxiolytic)
+PC218     (alprazolam)  has lit drug co-occ with       PC134664      (Benzodiazepine)
+PC218     (alprazolam)  has gene drug co-occ with      1.14.14.1     (Monoamine Oxidase)
+PC218     (alprazolam)  has disease drug co-occ with   D016584       (Panic Disorder)
+PC218     (alprazolam)  interacts with gene            -             (CYP3A4)
+PC218     (alprazolam)  positive allosteric modulator  GABRA1        (GABA(A) Receptor)
+PC218     (alprazolam)  ligand at                      ALB           (Serum albumin)
+PC218     (alprazolam)  has DDI with                   PC657181      (Leuprolide)
+PC218     (alprazolam)  inactive at                    KCNMB4        (BK Channel)
+PC218     (alprazolam)  active at                      AR            (androgen receptor)
+PC218     (alprazolam)  is a                           CHEBI:22720   (benzodiazepine)
+PC218     (alprazolam)  is a                           CHEBI:35501   (triazolobenzodiazepine)
+D00225    (alprazolam)  is in                          KEGG:1124     (Benzodiazepins)
+D00225    (alprazolam)  acts by                        KEGG:GABR     (GABAAR)
+D00225    (alprazolam)  affects pathway                KEGG:hsa04727 (GABAergic synapse)
+PC218     (alprazolam)  has DEA schedule               4             (Schedule IV)
 ```
 
 **[See the docs](https://mandos-chem.readthedocs.io/en/latest/)** for more info.
 
 
 [New issues](https://github.com/dmyersturnbull/mandos/issues) and pull requests are welcome.
-Please refer to the [contributing guide](https://github.com/dmyersturnbull/mandos/blob/master/CONTRIBUTING.md).
+Please refer to the [contributing guide](https://github.com/dmyersturnbull/mandos/blob/master/CONTRIBUTING.md).  
 Generated with [Tyrannosaurus](https://github.com/dmyersturnbull/tyrannosaurus).

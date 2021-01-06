@@ -4,9 +4,7 @@ Support classes to help with querying and processing web data.
 from __future__ import annotations
 
 import logging
-import json
 import re
-import time
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -22,10 +20,8 @@ from typing import (
     FrozenSet,
 )
 
-import requests
-import numpy as np
-from pocketutils.core.chars import Chars
 from pocketutils.tools.base_tools import BaseTools
+from pocketutils.tools.string_tools import StringTools
 from pocketutils.core.dot_dict import NestedDotDict
 
 logger = logging.getLogger("mandos")
@@ -113,15 +109,7 @@ class Fns:
         cls, min_val: Optional[int] = None, max_val: Optional[int] = None
     ) -> Callable[[str], int]:
         def roman_to_arabic(s: str) -> int:
-            mp = dict(I=1, V=5, X=10, L=50, C=100, D=500, M=1000)
-            coeff = 1
-            if s.startswith("-") or s.startswith(Chars.minus):
-                coeff = -1
-                s = s[1:]
-            v = sum((mp[c] for c in s))
-            if min_val is not None and v < min_val or min_val is not None and v > max_val:
-                raise ValueError(f"Value {s} (int={v}) is out of range ({min_val}, {max_val})")
-            return coeff * v
+            return StringTools.roman_to_arabic(s, min_val=min_val, max_val=max_val)
 
         return roman_to_arabic
 
@@ -153,11 +141,15 @@ class Fns:
         return lowercase_unless_acronym
 
     @classmethod
-    def split_bars(cls, sep: str = "||") -> Callable[[Sequence[str]], str]:
+    def split_bars_to_int(cls, sep: str = "||") -> Callable[[str], Sequence[int]]:
+        return lambda value: [int(s) for s in value.split(sep)]
+
+    @classmethod
+    def split_bars(cls, sep: str = "||") -> Callable[[str], Sequence[str]]:
         return lambda value: value.split(sep)
 
     @staticmethod
-    def n_bar_items(sep: str = "||") -> Callable[[Sequence[str]], int]:
+    def n_bar_items(sep: str = "||") -> Callable[[str], int]:
         return lambda value: len(set(value.split(sep)))
 
     @staticmethod
@@ -178,6 +170,26 @@ class Fns:
     def req_is_int(value):
         if not isinstance(value, int):
             raise ValueError(f"{value} is a {type(value)}, not int")
+        return value
+
+    @staticmethod
+    def str_id_or_none(value):
+        if value is None:
+            return None
+        elif isinstance(value, (int, str)):
+            return str(value)
+        raise ValueError(f"{value} is a {type(value)}, not int or str")
+
+    @staticmethod
+    def req_is_int_or_none(value):
+        if value is not None and not isinstance(value, int):
+            raise ValueError(f"{value} is a {type(value)}, not int")
+        return value
+
+    @staticmethod
+    def req_is_str_or_none(value):
+        if value is not None and not isinstance(value, str):
+            raise ValueError(f"{value} is a {type(value)}, not str")
         return value
 
 
@@ -356,33 +368,4 @@ class JsonNavigator(AbstractJsonNavigator):
         return JsonNavigatorListOfOptionals([z.get(key) for z in self.contents])
 
 
-class QueryExecutor:
-    def __init__(
-        self,
-        sec_delay_min: float = 0.25,
-        sec_delay_max: float = 0.25,
-        encoding: Optional[str] = "utf-8",
-    ):
-        self._min = sec_delay_min
-        self._max = sec_delay_max
-        self._rand = np.random.RandomState()
-        self._encoding = encoding
-        self._next_at = 0
-
-    def __call__(
-        self, url: str, method: str = "get", encoding: Optional[str] = "-1", errors: str = "ignore"
-    ) -> str:
-        encoding = self._encoding if encoding == "-1" else encoding
-        now = time.monotonic()
-        if now < self._next_at:
-            time.sleep(self._next_at - now)
-        content = getattr(requests, method)(url).content
-        if encoding is None:
-            data = content.decode(errors=errors)
-        else:
-            data = content.decode(encoding=encoding, errors=errors)
-        self._next_at = time.monotonic() + self._rand.uniform(self._min + 0.0001, self._max)
-        return data
-
-
-__all__ = ["JsonNavigator", "QueryExecutor", "JsonNavigatorListOfLists", "Fns", "FilterFn"]
+__all__ = ["JsonNavigator", "JsonNavigatorListOfLists", "Fns", "FilterFn"]

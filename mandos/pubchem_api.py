@@ -8,27 +8,24 @@ import logging
 import time
 import re
 import enum
-from copy import deepcopy
 from datetime import date, datetime
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Mapping, Optional, Sequence, Dict, Union, FrozenSet, Any
+from typing import Mapping, Optional, Sequence, Dict, Union, FrozenSet, Any
 from typing import Tuple as Tup
 
 import io
-import json
 import gzip
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.query_utils import QueryExecutor
 from pocketutils.tools.string_tools import StringTools
 
+from mandos import MandosResources, MandosUtils
+from mandos.model.query_utils import JsonNavigator, Fns, FilterFn
+
 logger = logging.getLogger("mandos")
-
-from mandos import MandosResources, MandosUtils, QueryType
-from mandos.model.query_utils import JsonNavigator, QueryExecutor, Fns, FilterFn
-
-
 hazards = pd.read_csv(MandosResources.path("hazards.tab"), sep="\t")
 hazards = dict(hazards.set_index("code").T.to_dict())
 
@@ -45,29 +42,63 @@ class Patterns:
     mesh_codes = re.compile(r"[A-Z]")
 
 
-class AbsId(str):
-    value: str
-
+class Code(str):
     @property
     def type_name(self) -> str:
         return self.__class__.__name__.lower()
 
 
-class Ids:
-    class EcNumber(AbsId):
+class CodeTypes:
+    """
+    These turn out to be extremely useful for documenting return types.
+    For example, ``DrugbankInteraction`` might have a ``gene`` field,
+    which can be described as a ``GenecardSymbol`` if known.
+    """
+
+    class EcNumber(Code):
         """
-        e.x. 'EC:4.6.1.1'
+        e.g. 'EC:4.6.1.1'
         """
 
-    class GeneCardId(AbsId):
+    class GeneId(Code):
         """
-        e.x. 'slc1a2'
+        GeneCard, UniProt gene name, etc.
+        e.g. 'slc1a2'
         """
 
-    class PubchemCompoundId(AbsId):
+    class GenecardSymbol(GeneId):
+        """"""
+
+    class PubchemCompoundId(Code):
         """
-        e.x. 2352
+        e.g. 2352
         """
+
+        @property
+        def value(self) -> int:
+            return int(self)
+
+    class MeshCode(Code):
+        """"""
+
+    class PdbId(Code):
+        """"""
+
+    class MeshHeading(Code):
+        """"""
+
+    class MeshSubheading(Code):
+        """"""
+
+    class DeaSchedule(Code):
+        """"""
+
+        @property
+        def value(self) -> int:
+            return Fns.roman_to_arabic(1, 5)(self)
+
+    class GhsCode(Code):
+        """"""
 
 
 class CoOccurrenceType(enum.Enum):
@@ -92,7 +123,7 @@ class CoOccurrenceType(enum.Enum):
         elif self is CoOccurrenceType.gene:
             return "GeneSymbol"
         elif self is CoOccurrenceType.disease:
-            return "DiseaseName"
+            return "MeSH"
         raise AssertionError(f"{self} not found!!")
 
 
@@ -120,7 +151,7 @@ class ClinicalTrial:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class GhsCode:
-    code: str
+    code: CodeTypes.GhsCode
     statement: str
     clazz: str
     categories: FrozenSet[str]
@@ -132,7 +163,7 @@ class GhsCode:
         h = hazards[code]
         cats = h["category"]  # TODO
         return GhsCode(
-            code=code,
+            code=CodeTypes.GhsCode(code),
             statement=h["statement"],
             clazz=h["class"],
             categories=cats,
@@ -192,10 +223,16 @@ class PubchemBioassay:
 
 
 @dataclass(frozen=True, repr=True, eq=True)
-class ReferencedPair:
-    predicate: str
-    object: str
-    n_refs: int
+class PdbEntry:
+    pdbid: str
+    title: str
+    exp_method: str
+    resolution: float
+    lig_names: FrozenSet[str]
+    cids: FrozenSet[int]
+    uniprot_ids: FrozenSet[str]
+    pmids: FrozenSet[str]
+    dois: FrozenSet[str]
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -203,9 +240,9 @@ class PubmedEntry:
     pmid: int
     article_type: str
     pmidsrcs: FrozenSet[str]
-    mesh_headings: FrozenSet[str]
-    mesh_subheadings: FrozenSet[str]
-    mesh_codes: FrozenSet[str]
+    mesh_headings: FrozenSet[CodeTypes.MeshHeading]
+    mesh_subheadings: FrozenSet[CodeTypes.MeshSubheading]
+    mesh_codes: FrozenSet[CodeTypes.MeshCode]
     cids: FrozenSet[int]
     article_title: str
     article_abstract: str
@@ -225,7 +262,7 @@ class Publication:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class CoOccurrence:
-    neighbor_id: AbstractId
+    neighbor_id: str
     neighbor_name: str
     kind: CoOccurrenceType
     # https://pubchemdocs.ncbi.nlm.nih.gov/knowledge-panels
@@ -237,13 +274,21 @@ class CoOccurrence:
 
 
 @dataclass(frozen=True, repr=True, eq=True)
-class GeneInteraction:
-    gid: int
-    gene_id: int
-    gene_name: str
-    gene_claim_name: str  # (from ref)
-    claim_source: str
-    interaction_types: FrozenSet[str]
+class DrugGeneInteraction:
+    gene_name: Optional[str]
+    gene_claim_id: Optional[str]
+    source: str
+    interactions: FrozenSet[str]
+    pmids: FrozenSet[int]
+    dois: FrozenSet[str]
+
+
+@dataclass(frozen=True, repr=True, eq=True)
+class CompoundGeneInteraction:
+    gene_name: Optional[str]
+    interactions: FrozenSet[str]
+    tax_name: str
+    pmids: FrozenSet[int]
 
 
 class PubchemDataView(metaclass=abc.ABCMeta):
@@ -258,7 +303,9 @@ class PubchemDataView(metaclass=abc.ABCMeta):
                 # noinspection PyProtectedMember
                 return dict(obj._x)
 
-        encoded = orjson.dumps(dict(self._data._x), default=default, option=orjson.OPT_INDENT_2)
+        # noinspection PyProtectedMember
+        data = dict(self._data._x)
+        encoded = orjson.dumps(data, default=default, option=orjson.OPT_INDENT_2)
         encoded = encoded.decode(encoding="utf8")
         encoded = StringTools.retab(encoded, 2)
         return encoded
@@ -440,7 +487,7 @@ class DrugAndMedicationInformation(PubchemDataView):
         ).to_set
 
     @property
-    def dea_schedule(self) -> Optional[str]:
+    def dea_schedule(self) -> Optional[CodeTypes.DeaSchedule]:
         return (
             self.mini
             / "DEA Controlled Substances"
@@ -451,7 +498,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             // ["String"]
             // Fns.require_only()
             / Fns.extract_group_1(r" *Schedule ([IV]+).*")
-            / Fns.roman_to_arabic(min_val=1, max_val=5)
+            / CodeTypes.DeaSchedule
             // Fns.request_only()
         ).get
 
@@ -568,41 +615,38 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
 
     @property
     def moa_summary_drugbank_links(self) -> FrozenSet[str]:
-        return (
-            self._mini
-            / "Mechanism of Action"
-            / "Information"
-            / self._has_ref("DrugBank")
-            / "Value"
-            / "StringWithMarkup"
-            / "Markup"
-            / Fns.key_equals("Type", "PubChem Internal Link")
-            // ["URL"]
-            // Fns.require_only()
-            / Fns.extract_group_1(Patterns.pubchem_compound_url)
-            / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
-        ).to_set
+        return self._get_moa_links("DrugBank")
 
     @property
     def moa_summary_drugbank_text(self) -> Optional[str]:
+        return self._get_moa_text("DrugBank")
+
+    @property
+    def moa_summary_hsdb_links(self) -> FrozenSet[str]:
+        return self._get_moa_links("Hazardous Substances Data Bank (HSDB)")
+
+    @property
+    def moa_summary_hsdb_text(self) -> Optional[str]:
+        return self._get_moa_text("Hazardous Substances Data Bank (HSDB)")
+
+    def _get_moa_text(self, ref: str) -> Optional[str]:
         return (
             self._mini
             / "Mechanism of Action"
             / "Information"
-            / self._has_ref("DrugBank")
+            / self._has_ref(ref)
             / "Value"
             / "StringWithMarkup"
             >> "String"
             >> Fns.request_only()
         ).get
 
-    @property
-    def moa_summary_hsdb_links(self) -> FrozenSet[str]:
+    def _get_moa_links(self, ref: str) -> FrozenSet[str]:
         return (
             self._mini
             / "Mechanism of Action"
             / "Information"
-            / self._has_ref("Hazardous Substances Data Bank (HSDB)")
+            / self._has_ref(ref)
             / "Value"
             / "StringWithMarkup"
             / "Markup"
@@ -612,19 +656,6 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / Fns.extract_group_1(Patterns.pubchem_compound_url)
             / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
         ).to_set
-
-    @property
-    def moa_summary_hsdb_text(self) -> Optional[str]:
-        return (
-            self._mini
-            / "Mechanism of Action"
-            / "Information"
-            / self._has_ref("Hazardous Substances Data Bank (HSDB)")
-            / "Value"
-            / "StringWithMarkup"
-            >> "String"
-            >> Fns.join_nonnulls()
-        ).get
 
     @property
     def biochem_reactions(self) -> FrozenSet[str]:
@@ -711,7 +742,7 @@ class Literature(PubchemMiniDataView):
 
     @property
     def depositor_pubmed_articles(self) -> FrozenSet[PubmedEntry]:
-        def split_mesh_headings(s: str) -> FrozenSet[str]:
+        def split_mesh_headings(s: str) -> FrozenSet[CodeTypes.MeshHeading]:
             # this is a nightmare
             # these fields are comma-delimited strings, but there are commas within each
             # all of the examples I've seen with this are for chem name cis/trans
@@ -734,12 +765,12 @@ class Literature(PubchemMiniDataView):
             bits.append(current_bit)
             return frozenset({b.strip() for b in bits if b.strip() != ""})
 
-        def split_mesh_subheadings(s: Optional[str]) -> FrozenSet[str]:
+        def split_mesh_subheadings(s: Optional[str]) -> FrozenSet[CodeTypes.MeshSubheading]:
             if s is None:
                 return Misc.empty_frozenset
             return frozenset({k.strip() for k in s.split(",") if k.strip() != ""})
 
-        def split_mesh_codes(s: Optional[str]) -> FrozenSet[str]:
+        def split_mesh_codes(s: Optional[str]) -> FrozenSet[CodeTypes.MeshCode]:
             if s is None:
                 return Misc.empty_frozenset
             z = [bit.split(" ")[0] for bit in s.split(",")]
@@ -802,19 +833,22 @@ class Literature(PubchemMiniDataView):
         results = set()
         for link in links:
             link = NestedDotDict(link)
-            neighbor_id = str(link["ID_2"][kind.id_name])
+            try:
+                neighbor_id = str(link["ID_2"][kind.id_name])
+            except KeyError:
+                raise KeyError(f"Could not find ${kind.id_name} in ${link['ID_2']}")
             if kind is CoOccurrenceType.chemical:
-                neighbor_id = PubchemCompoundId(neighbor_id)
+                neighbor_id = CodeTypes.PubchemCompoundId(neighbor_id)
             elif kind is CoOccurrenceType.gene and neighbor_id.startswith("EC:"):
-                neighbor_id = EcNumber(neighbor_id)
-            elif kind is CoOccurrenceType.gene and re.compile("^[a-z][a-z0-9]+$").fullmatch(
+                neighbor_id = CodeTypes.EcNumber(neighbor_id)
+            elif kind is CoOccurrenceType.gene and re.compile("^[a-z][a-z0-9.]+$").fullmatch(
                 neighbor_id
             ):
-                neighbor_id = GeneCardId(neighbor_id)
+                neighbor_id = CodeTypes.GeneId(neighbor_id)
             elif kind is CoOccurrenceType.disease:
                 pass
             else:
-                raise NotImplementedError()
+                raise ValueError(f"Could not find ID type for {kind} ID {neighbor_id}")
             evidence = link["Evidence"][kind.x_name]
             neighbor_name = evidence["NeighborName"]
             ac = evidence["ArticleCount"]
@@ -848,12 +882,43 @@ class Literature(PubchemMiniDataView):
         return frozenset(results)
 
     @property
-    def drug_gene_interactions(self) -> FrozenSet[ReferencedPair]:
-        raise NotImplementedError()
+    def drug_gene_interactions(self) -> FrozenSet[DrugGeneInteraction]:
+        # the order of this dict is crucial
+        keys = {
+            "genename": Fns.str_id_or_none,
+            "geneclaimname": Fns.str_id_or_none,
+            "interactionclaimsource": Fns.req_is_str_or_none,
+            "interactiontypes": Fns.split_bars("|"),
+            "pmids": Fns.split_bars_to_int(","),
+            "dois": Fns.split_bars("|"),
+        }
+        return (
+            self._tables
+            / "dgidb"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(DrugGeneInteraction)
+        ).to_set
 
     @property
-    def compound_gene_interactions(self) -> FrozenSet[ReferencedPair]:
-        raise NotImplementedError()
+    def compound_gene_interactions(self) -> FrozenSet[CompoundGeneInteraction]:
+        # the order of this dict is crucial
+        keys = {
+            "genesymbol": CodeTypes.GenecardSymbol,
+            "interactionclaimsource": Fns.req_is_str_or_none,
+            "tax_id": Fns.req_is_str,
+            "interaction": Fns.split_bars("|"),
+            "pmids": Fns.split_bars_to_int(
+                "|"
+            ),  # YES, this really is different from the , used in DrugGeneInteraction
+        }
+        return (
+            self._tables
+            / "ctdchemicalgene"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(CompoundGeneInteraction)
+        ).to_set
 
     @property
     def drugbank_interactions(self) -> FrozenSet[DrugbankInteraction]:
@@ -1142,16 +1207,24 @@ class CachingPubchemApi(PubchemApi):
             data = self._querier.fetch_data(inchikey)
             path.parent.mkdir(parents=True, exist_ok=True)
             encoded = data.to_json()
-            if self._compress:
-                path.write_bytes(gzip.compress(encoded.encode(encoding="utf8")))
-            else:
-                path.write_text(encoded, encoding="utf8")
+            self._write_json(encoded, path)
+            return data
+        read = self._read_json(path)
+        return PubchemData(read)
+
+    def _write_json(self, encoded: str, path: Path) -> None:
+        if self._compress:
+            path.write_bytes(gzip.compress(encoded.encode(encoding="utf8")))
+        else:
+            path.write_text(encoded, encoding="utf8")
+
+    def _read_json(self, path: Path) -> NestedDotDict:
         if self._compress:
             deflated = gzip.decompress(path.read_bytes())
             read = orjson.loads(deflated)
         else:
             read = orjson.loads(path.read_text(encoding="utf8"))
-        return PubchemData(NestedDotDict(read))
+        return NestedDotDict(read)
 
     def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:
         path = self.similarity_path(inchi)
@@ -1193,10 +1266,11 @@ __all__ = [
     "DrugbankInteraction",
     "DrugbankDdi",
     "PubchemBioassay",
-    "ReferencedPair",
+    "DrugGeneInteraction",
+    "CompoundGeneInteraction",
     "PubmedEntry",
-    "AbsId",
-    "Ids",
+    "Code",
+    "CodeTypes",
     "CoOccurrenceType",
     "CoOccurrence",
     "Publication",

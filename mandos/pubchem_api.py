@@ -837,18 +837,7 @@ class Literature(PubchemMiniDataView):
                 neighbor_id = str(link["ID_2"][kind.id_name])
             except KeyError:
                 raise KeyError(f"Could not find ${kind.id_name} in ${link['ID_2']}")
-            if kind is CoOccurrenceType.chemical:
-                neighbor_id = CodeTypes.PubchemCompoundId(neighbor_id)
-            elif kind is CoOccurrenceType.gene and neighbor_id.startswith("EC:"):
-                neighbor_id = CodeTypes.EcNumber(neighbor_id)
-            elif kind is CoOccurrenceType.gene and re.compile("^[a-z][a-z0-9.]+$").fullmatch(
-                neighbor_id
-            ):
-                neighbor_id = CodeTypes.GeneId(neighbor_id)
-            elif kind is CoOccurrenceType.disease:
-                pass
-            else:
-                raise ValueError(f"Could not find ID type for {kind} ID {neighbor_id}")
+            neighbor_id = self._guess_neighbor(kind, neighbor_id)
             evidence = link["Evidence"][kind.x_name]
             neighbor_name = evidence["NeighborName"]
             ac = evidence["ArticleCount"]
@@ -880,6 +869,18 @@ class Literature(PubchemMiniDataView):
                 )
             )
         return frozenset(results)
+
+    def _guess_neighbor(self, kind: CoOccurrenceType, neighbor_id: str) -> str:
+        if kind is CoOccurrenceType.chemical:
+            return CodeTypes.PubchemCompoundId(neighbor_id)
+        elif kind is CoOccurrenceType.gene and neighbor_id.startswith("EC:"):
+            return CodeTypes.EcNumber(neighbor_id)
+        elif kind is CoOccurrenceType.gene:
+            return CodeTypes.GeneId(neighbor_id)
+        elif kind is CoOccurrenceType.disease:
+            return CodeTypes.MeshCode(neighbor_id)
+        else:
+            raise ValueError(f"Could not find ID type for {kind} ID {neighbor_id}")
 
     @property
     def drug_gene_interactions(self) -> FrozenSet[DrugGeneInteraction]:

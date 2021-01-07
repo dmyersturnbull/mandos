@@ -34,7 +34,7 @@ class MolStructureType(enum.Enum):
         return MolStructureType[s.lower()]
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class ChemblCompound:
     """"""
 
@@ -291,7 +291,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             raise CompoundNotFoundError(f"Failed to find compound {inchikey}")
 
 
-@dataclass(frozen=True, repr=True, order=True, unsafe_hash=True)
+@dataclass(frozen=True, repr=True, order=True)
 class Triple:
     """
     Compound, predicate, object.

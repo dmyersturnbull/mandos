@@ -97,7 +97,7 @@ class TargetRelationshipType(enum.Enum):
         return TargetRelationshipType[s.replace(" ", "_").replace("-", "_").lower()]
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class DagTargetLinkType:
     source_type: TargetType
     rel_type: TargetRelationshipType
@@ -118,7 +118,7 @@ class DagTargetLinkType:
         return st
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class DagTarget:
     depth: int
     is_end: bool
@@ -126,7 +126,7 @@ class DagTarget:
     link_type: Optional[DagTargetLinkType]
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class Target(metaclass=abc.ABCMeta):
     """
     A target from ChEMBL, from the ``target`` table.
@@ -263,7 +263,7 @@ class TargetFactory:
             A ``Target`` instance from a newly created subclass of that class
         """
 
-        @dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+        @dataclass(frozen=True, order=True, repr=True)
         class _Target(Target):
             @classmethod
             def api(cls) -> ChemblApi:

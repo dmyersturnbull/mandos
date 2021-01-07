@@ -16,7 +16,7 @@ from mandos.search.target_traversal_strategy import (
 logger = logging.getLogger("mandos")
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class ActivityHit(ProteinHit):
     """
     An "activity" hit for a compound.

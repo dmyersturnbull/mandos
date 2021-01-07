@@ -5,9 +5,9 @@ Mandos
     :maxdepth: 1
 
 
-Mandos is simple cheminformatics tool that extracts and simplifies annotations for the
-disease indications, drug classifications, target binding activity,
-and biological processes of compounds or drugs, using annotations derived from ChEMBL.
+Mandos is simple cheminformatics tool that extracts and simplifies annotations
+for disease indications, drug classifications, target binding activity,
+and biological processes of compounds or drugs, using annotations derived from ChEMBL
 
 It is especially useful to:
     - Find known target activity, predicted activity, and predicted biological processes
@@ -344,5 +344,3 @@ to the ChEMBL one.
 
 Correlation analysis
 ****************************
-
-For ``chem_props``, affinity is derived from Mahalanobis distance.

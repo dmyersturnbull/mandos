@@ -4,7 +4,7 @@ import os
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Sequence, Set
+from typing import FrozenSet, Optional, Sequence, Set
 
 from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
@@ -32,7 +32,7 @@ DEFAULT_BAD_FLAGS = [
 logger = logging.getLogger("mandos")
 
 
-@dataclass(frozen=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, repr=True)
 class Settings:
     """"""
 
@@ -40,10 +40,10 @@ class Settings:
     traversal_strategy: Optional[str]
     require_taxon: bool
     taxon: int
-    allowed_assay_types: Set[str]
-    allowed_relations: Set[str]
-    allowed_target_types: Set[str]
-    banned_flags: Set[str]
+    allowed_assay_types: FrozenSet[str]
+    allowed_relations: FrozenSet[str]
+    allowed_target_types: FrozenSet[str]
+    banned_flags: FrozenSet[str]
     require_pchembl: bool
     min_pchembl: float
     require_confidence_score: bool
@@ -76,7 +76,7 @@ class Settings:
             chembl_cache_path=chembl_cache_path,
             random_seed=data.get_as("mandos.random_seed", int, 0),
             traversal_strategy=data.get_as("mandos.chembl.target.traversal_strategy", str, None),
-            allowed_target_types=set(
+            allowed_target_types=frozenset(
                 data.get_list_as("mandos.chembl.target.allowed_types", str, default_target_types)
             ),
             require_taxon=data.get_as("mandos.chembl.target.require_taxon", bool, True),
@@ -84,18 +84,18 @@ class Settings:
             require_confidence_score=data.get_as(
                 "mandos.chembl.target.require_confidence_score", bool, True
             ),
-            allowed_assay_types=set(
+            allowed_assay_types=frozenset(
                 data.get_list_as("mandos.chembl.activity.allowed_assay_types", str, ["B"])
             ),
             min_confidence_score=data.get_as(
                 "mandos.chembl.activity.min_target_confidence_score", int, 4
             ),
-            allowed_relations=set(
+            allowed_relations=frozenset(
                 data.get_list_as("mandos.chembl.activity.allowed_relations", str, ["<", "<=", "="])
             ),
             require_pchembl=data.get_as("mandos.chembl.activity.require_pchembl", bool, True),
             min_pchembl=data.get_as("mandos.chembl.activity.min_pchembl", float, 6.0),
-            banned_flags=set(
+            banned_flags=frozenset(
                 data.get_list_as("mandos.chembl.target.disallowed_flags", str, DEFAULT_BAD_FLAGS)
             ),
             min_phase=data.get_as("mandos.chembl.trial.min_phase", int, 3),

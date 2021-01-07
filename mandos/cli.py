@@ -37,17 +37,6 @@ class What(enum.Enum):
     List of search items.
     """
 
-    activity = enum.auto(), ActivitySearch
-    mechanism = enum.auto(), MechanismSearch
-    atc = enum.auto(), AtcSearch
-    trial = enum.auto(), IndicationSearch
-    go_proc_moa = enum.auto(), GoSearchFactory.create(GoType.process, MechanismSearch)
-    go_fn_moa = enum.auto(), GoSearchFactory.create(GoType.function, MechanismSearch)
-    go_comp_moa = enum.auto(), GoSearchFactory.create(GoType.component, MechanismSearch)
-    go_proc_act = enum.auto(), GoSearchFactory.create(GoType.process, ActivitySearch)
-    go_fn_act = enum.auto(), GoSearchFactory.create(GoType.function, ActivitySearch)
-    go_comp_act = enum.auto(), GoSearchFactory.create(GoType.component, ActivitySearch)
-
     def __new__(cls, *args, **kwargs):
         obj = object.__new__(cls)
         obj._value_ = args[0]

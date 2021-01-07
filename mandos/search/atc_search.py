@@ -11,7 +11,7 @@ from mandos.model import AbstractHit, ChemblCompound, Search
 logger = logging.getLogger("mandos")
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class AtcHit(AbstractHit):
     """
     An ATC code found for a compound.

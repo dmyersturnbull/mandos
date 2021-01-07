@@ -15,7 +15,7 @@ from mandos.search.target_traversal_strategy import (
 logger = logging.getLogger("mandos")
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class MechanismHit(ProteinHit):
     """
     A mechanism entry for a compound.

@@ -104,12 +104,12 @@ mandos = "mandos.cli:cli"
 [tool.poetry.dependencies]
 python                         = ">=3.8, <4"
 chembl-webresource-client      = "^0.10"
+colorama                       = ">=0.4, <1.0"
 pandas                         = ">=1.2, <2.0"
 numpy                          = ">=1.19, <2.0"
 requests                       = ">=2.24, <3.0"
 tomlkit                        = ">=0.7, <1.0"
-tqdm                           = ">=4.48, <5.0"
-typer                          = {version=">=0.3, <1.0", extras=["colorama"]}
+typer                          = ">=0.3, <1.0"
 orjson                         = ">=3.4, <4.0"
 pocketutils                    = ">=0.4, <0.5"
 typeddfs                       = ">=0.4, <0.5"
@@ -129,7 +129,7 @@ flake8-bugbear           = "^20"
 sphinx                   = "^3"
 sphinx-autoapi           = "^1"
 sphinx-rtd-theme         = ">=0.5, <1.0"
-#sphinxcontrib.mermaid    = ">=0.5, <1.0"
+sphinxcontrib-mermaid    = ">=0.5, <1.0"
 
 
 [tool.poetry.extras]

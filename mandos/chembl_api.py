@@ -5,15 +5,9 @@ Designed to facilitate testing, but also improves static type checking.
 from __future__ import annotations
 
 import abc
-import enum
 import logging
-import re
-from dataclasses import dataclass
 from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Set, List, Union, Iterable
-from typing import Tuple as Tup
 
-import requests
-import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 
 logger = logging.getLogger("mandos")

@@ -26,7 +26,7 @@ class GoType(enum.Enum):
         return GoType[s.lower()]
 
 
-@dataclass(frozen=True, order=True, repr=True, unsafe_hash=True)
+@dataclass(frozen=True, order=True, repr=True)
 class GoHit(AbstractHit, metaclass=abc.ABCMeta):
     """
     A mechanism entry for a compound.

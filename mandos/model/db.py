@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Union
 
 import pandas as pd
-import requests
 from pocketutils.core.hashers import Hasher
 
 from mandos import MandosResources

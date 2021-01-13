@@ -1,14 +1,5 @@
 # Security policy
 
-## Supported versions
-
-These versions of Mandos are supported:
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.2.x   | :white_check_mark: |
-
-
 ## How to report a vulnerability
 
 Mandos is in an alpha release.

@@ -91,6 +91,7 @@ classifiers = [
 [tool.poetry.urls]
 CI = "https://github.com/dmyersturnbull/mandos/actions"
 Issues = "https://github.com/dmyersturnbull/mandos/issues"
+Download = "https://pypi.org/project/mandos/"
 
 
 #########################################################################################

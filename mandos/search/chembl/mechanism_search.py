@@ -5,9 +5,9 @@ from typing import Sequence
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model import ChemblCompound
-from mandos.model.targets import Target, TargetType
-from mandos.search.protein_search import ProteinHit, ProteinSearch
-from mandos.search.target_traversal_strategy import (
+from mandos.model.targets import Target
+from mandos.search.chembl.protein_search import ProteinHit, ProteinSearch
+from mandos.search.chembl.target_traversal_strategy import (
     TargetTraversalStrategy,
     TargetTraversalStrategies,
 )

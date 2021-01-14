@@ -1,14 +1,10 @@
 import pytest
 from chembl_webresource_client.new_client import new_client as Chembl
 
-from mandos.chembl_api import ChemblApi, ChemblEntrypoint
-from mandos.model.targets import Target, TargetFactory, TargetType
-from mandos.search.target_traversal_strategy import (
+from mandos.model.targets import TargetFactory
+from mandos.search.chembl.target_traversal_strategy import (
     TargetTraversalStrategies,
-    TargetTraversalStrategy1,
 )
-
-from . import get_test_resource
 
 
 class TestTargetTraversalStrategy1:

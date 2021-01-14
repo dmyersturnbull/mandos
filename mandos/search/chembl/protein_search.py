@@ -1,13 +1,13 @@
 import abc
 import logging
 from dataclasses import dataclass
-from typing import Generator, Sequence, TypeVar
+from typing import Sequence, TypeVar
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, ChemblCompound, Search, CompoundNotFoundError
+from mandos.model import AbstractHit, ChemblCompound, Search
 from mandos.model.targets import Target, TargetFactory
-from mandos.search.target_traversal_strategy import (
+from mandos.search.chembl.target_traversal_strategy import (
     TargetTraversalStrategies,
     TargetTraversalStrategy,
 )

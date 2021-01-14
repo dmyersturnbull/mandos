@@ -20,15 +20,13 @@ from mandos.chembl_api import ChemblApi
 from mandos.model import Search, Triple
 from mandos.model.caches import TaxonomyFactories
 from mandos.model.settings import DEFAULT_TAXONOMY_CACHE, Settings
-from mandos.search.activity_search import ActivitySearch
-from mandos.search.atc_search import AtcSearch
-from mandos.search.go_search import GoSearch, GoSearchFactory, GoType
-from mandos.search.indication_search import IndicationSearch
-from mandos.search.mechanism_search import MechanismSearch
+from mandos.search.chembl.activity_search import ActivitySearch
+from mandos.search.chembl.atc_search import AtcSearch
+from mandos.search.chembl.go_search import GoSearchFactory, GoType
+from mandos.search.chembl.indication_search import IndicationSearch
+from mandos.search.chembl.mechanism_search import MechanismSearch
 
 logger = logging.getLogger(__package__)
-
-
 cli = typer.Typer()
 
 
@@ -36,6 +34,17 @@ class What(enum.Enum):
     """
     List of search items.
     """
+
+    activity = enum.auto(), ActivitySearch
+    mechanism = enum.auto(), MechanismSearch
+    atc = enum.auto(), AtcSearch
+    trial = enum.auto(), IndicationSearch
+    go_proc_moa = enum.auto(), GoSearchFactory.create(GoType.process, MechanismSearch)
+    go_fn_moa = enum.auto(), GoSearchFactory.create(GoType.function, MechanismSearch)
+    go_comp_moa = enum.auto(), GoSearchFactory.create(GoType.component, MechanismSearch)
+    go_proc_act = enum.auto(), GoSearchFactory.create(GoType.process, ActivitySearch)
+    go_fn_act = enum.auto(), GoSearchFactory.create(GoType.function, ActivitySearch)
+    go_comp_act = enum.auto(), GoSearchFactory.create(GoType.component, ActivitySearch)
 
     def __new__(cls, *args, **kwargs):
         obj = object.__new__(cls)
@@ -62,7 +71,6 @@ class Commands:
         what: str,
         path: Path,
         config: Optional[Path] = None,
-        correlate: bool = False,
     ) -> None:
         """
         Process data.
@@ -74,7 +82,6 @@ class Commands:
                 - .csv/.tsv/.tab containing one key per row
                 - .csv/.tsv/.tab of a symmetric affinity matrix, with a row header and column header with the keys
             config: Path to a TOML config file
-            correlate: Calculate correlation ratios on the input affinity matrix
         """
         for w in what.split(","):
             w = What[w.lower()]

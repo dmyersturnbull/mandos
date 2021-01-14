@@ -9,17 +9,20 @@ import time
 import re
 import enum
 from datetime import date, datetime
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Optional, Sequence, Dict, Union, FrozenSet, Any
+from typing import Mapping, Optional, Sequence, Type, Union, FrozenSet, Any, Dict
 from typing import Tuple as Tup
 
 import io
 import gzip
 import orjson
 import pandas as pd
+from pocketutils.core.exceptions import MultipleMatchesError
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
+from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
 from mandos import MandosResources, MandosUtils
@@ -32,6 +35,23 @@ hazards = dict(hazards.set_index("code").T.to_dict())
 
 class Misc:
     empty_frozenset = frozenset([])
+
+
+@dataclass(frozen=True, repr=True, eq=True, order=True)
+class ComputedProperty:
+    key: str
+    value: Union[int, str, float, bool]
+    unit: Optional[str]
+    ref: str
+
+    def req_is(self, type_) -> Union[int, str, float, bool]:
+        if not isinstance(self.value, type_):
+            raise TypeError(f"{self.key}->{self.value} has {type(self.value)}, not {type_}")
+        return self.value
+
+    @property
+    def as_str(self) -> str:
+        return f"{self.value} {self.unit}"
 
 
 class Patterns:
@@ -407,26 +427,92 @@ class ChemicalAndPhysicalProperties(PubchemMiniDataView):
         return "Chemical and Physical Properties"
 
     @property
-    def computed(self) -> Mapping[Tup[str, str], str]:
+    def inchikey(self) -> str:
+        return self.single_property("InChI Key").req_is(str)
+
+    @property
+    def inchi(self) -> str:
+        return self.single_property("InChI").req_is(str)
+
+    @property
+    def formula(self) -> str:
+        return self.single_property("InChI Key").req_is(str)
+
+    @property
+    def xlogp3(self) -> str:
+        return self.single_property("XLogP3").req_is(float)
+
+    @property
+    def mol_weight(self) -> str:
+        weight = self.single_property("Molecular Weight")
+        if weight.unit != "g/mol":
+            raise ValueError(f"Expected g/mol for weight; got {weight.unit}")
+        return weight.req_is(float)
+
+    @property
+    def tpsa(self) -> str:
+        weight = self.single_property("Topological Polar Surface Area")
+        if weight.unit != "Å²":
+            raise ValueError(f"Expected Å² for weight; got {weight.unit}")
+        return weight.req_is(float)
+
+    @property
+    def charge(self) -> int:
+        return self.single_property("Formal Charge", "PubChem")
+
+    def single_property(self, key: str, ref: Optional[str] = "PubChem") -> ComputedProperty:
+        return CommonTools.only(
+            [kvr for kvr in self.computed if kvr.key == key and (ref is None or kvr.ref == ref)]
+        )
+
+    @property
+    def computed(self) -> FrozenSet[ComputedProperty]:
+        cid = self.cid
         props = {
             dot["TOCHeading"]: dot["Information"]
             for dot in (self._mini / "Computed Properties" / "Section").get
         }
-        dct: Dict[Tup[str, str], str] = {}
+        results: Dict[Tup[str, str], ComputedProperty] = {}
         for heading, info in props.items():
             for dot in info:
                 try:
                     dot = NestedDotDict(dot)
-                    if "Reference" in dot:
-                        ref = ",".join(dot["Reference"])
-                        if "Value" in dot and "Number" in dot["Value"]:
-                            num = ",".join([str(q) for q in dot["Value"]["Number"]])
-                            value = num.strip() + " " + dot.get_as("Value.Unit", str, "")
-                            dct[(heading, ref)] = value.replace("\n", "").replace("\r", "").strip()
+                    kvr = self._extract_kvr(heading, dot)
+                    if kvr is not None:
+                        if (kvr.key, kvr.ref) in results:
+                            raise MultipleMatchesError(f"Multiple matches for {kvr} on {cid}")
+                        results[(kvr.key, kvr.ref)] = kvr
                 except (KeyError, ValueError):
-                    logger.debug(f"Failed on {dot}")
+                    logger.debug(f"Failed on {dot} for cid {cid}")
                     raise
-        return dct
+        return frozenset(results.values())
+
+    def _extract_kvr(self, heading: str, dot: NestedDotDict) -> Optional[ComputedProperty]:
+        if "Value" not in dot or "Reference" not in dot:
+            return None
+        ref = ", ".join(dot["Reference"])
+        value, unit = self._extract_value_and_unit(dot["Value"])
+        return ComputedProperty(heading, value, unit, ref)
+
+    def _extract_value_and_unit(
+        self, dot: NestedDotDict
+    ) -> Tup[Union[None, int, str, float, bool], str]:
+        value, unit = None, None
+        if "Number" in dot and len(["Number"]) == 1:
+            value = dot["Number"]
+        elif "Number" in dot:
+            value = ", ".join([str(s) for s in dot["Number"]])
+        elif "StringWithMarkup" in dot and len(dot["StringWithMarkup"]["String"]) == 1:
+            value = dot["StringWithMarkup"]["String"]
+        elif "StringWithMarkup" in dot:
+            value = ", ".join([str(s) for s in dot["StringWithMarkup"]["String"]])
+        else:
+            value = None
+        if "Unit" in dot and value is not None:
+            unit = dot["Unit"]
+        if isinstance(value, str):
+            value = value.strip().replace("\n", "").replace("\r", "").strip()
+        return value, unit
 
 
 class DrugAndMedicationInformation(PubchemDataView):
@@ -1061,10 +1147,15 @@ class QueryingPubchemApi(PubchemApi):
     _link_db = "https://pubchem.ncbi.nlm.nih.gov/link_db/link_db_server.cgi"
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
+        data = dict(
+            timestamp_fetch_started=MandosUtils.get_complete_timestamp(),
+            lookup=inchikey,
+        )
+        t0 = time.monotonic_ns()
         cid = self._fetch_compound(inchikey)
         if cid is None:
             return None
-        data = dict(self._fetch_display_data(cid))
+        data.update(self._fetch_display_data(cid))
         external_table_names = {
             "related:pubchem:related_compounds_with_annotation": "compound",
             "drug:clinicaltrials.gov:clinical_trials": "clinicaltrials",
@@ -1094,6 +1185,9 @@ class QueryingPubchemApi(PubchemApi):
         }
         data["misc_data"] = self._fetch_misc_data(cid)
         data["classifications"] = self._fetch_hierarchies(cid)
+        data["timestamp_fetch_finished"] = MandosUtils.get_complete_timestamp()
+        t1 = time.monotonic_ns()
+        data["fetch_nanos_taken"] = str(t1 - t0)
         return PubchemData(NestedDotDict(data))
 
     def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:
@@ -1269,10 +1363,22 @@ __all__ = [
     "PubchemBioassay",
     "DrugGeneInteraction",
     "CompoundGeneInteraction",
+    "TitleAndSummary",
+    "RelatedRecords",
+    "ChemicalAndPhysicalProperties",
+    "DrugAndMedicationInformation",
+    "PharmacologyAndBiochemistry",
+    "SafetyAndHazards",
+    "Toxicity",
+    "AssociatedDisordersAndDiseases",
+    "Literature",
+    "BiomolecularInteractionsAndPathways",
+    "Classification",
     "PubmedEntry",
     "Code",
     "CodeTypes",
     "CoOccurrenceType",
     "CoOccurrence",
     "Publication",
+    "ComputedProperty",
 ]

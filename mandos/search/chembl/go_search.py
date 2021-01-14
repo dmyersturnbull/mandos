@@ -9,7 +9,7 @@ from typing import Sequence, Type, Union
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model import AbstractHit, Search
-from mandos.search.protein_search import ProteinHit, ProteinSearch
+from mandos.search.chembl.protein_search import ProteinHit, ProteinSearch
 
 logger = logging.getLogger("mandos")
 

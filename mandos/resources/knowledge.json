@@ -130,21 +130,24 @@
       "ref": "ChEMBL",
       "name": "ChEMBL MoA",
       "description": "Mechanism of action annotations from ChEMBL",
-      "params": ["chembl.moa.*"]
+      "params": ["chembl.moa.*"],
+      "target": "mandos.search.mechanism_search.MechanismSearch"
     },
     {
       "meta_ref": "ChEMBL",
       "ref": "ChEMBL",
       "name": "ChEMBL activity",
       "description": "Activity annotations from ChEMBL",
-      "params": ["chembl.activity.*"]
+      "params": ["chembl.activity.*"],
+      "target": "mandos.search.activity_search.ActivitySearch"
     },
     {
       "meta_ref": "ChEMBL",
       "ref": "ChEMBL",
       "name": "ChEMBL trials",
       "description": "Clinical trial annotations from ChEMBL",
-      "params": ["chembl.trial.*"]
+      "params": ["chembl.trial.*"],
+      "target": "mandos.search.indication_search.IndicationSearch"
     }
   ]
 }

@@ -5,6 +5,7 @@ Metadata for this project.
 import enum
 import logging
 import re
+from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import metadata as __load
 from pathlib import Path
@@ -60,6 +61,18 @@ class QueryType(enum.Enum):
 
 
 class MandosUtils:
+    @classmethod
+    def get_complete_timestamp(cls) -> str:
+        """
+        Only works on Python 3.9+.
+
+        Returns:
+
+        """
+        dt = datetime.now(timezone.utc).astimezone()
+        tz = dt.tzinfo.tzname(dt)
+        return f"{dt.isoformat()} [{tz}]"
+
     @classmethod
     def stars(cls, pvalue: float) -> str:
         for k, v in {0.001: "*" * 4, 0.005: "*" * 3, 0.01: "*" * 2, 0.05: "*", 0.1: "+"}.items():

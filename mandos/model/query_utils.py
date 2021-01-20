@@ -20,6 +20,7 @@ from typing import (
     FrozenSet,
 )
 
+import numpy as np
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools
 from pocketutils.core.dot_dict import NestedDotDict
@@ -79,13 +80,13 @@ class Fns:
     @classmethod
     def split_and_flatten_nonnulls(
         cls, sep: str, skip_nulls: bool = False
-    ) -> Callable[[Iterable[str]], Set[str]]:
+    ) -> Callable[[Iterable[Union[str, int, float, None]]], Set[str]]:
         def split_flat(things: Iterable[str]) -> Set[str]:
             results = set()
             for thing in things:
-                if thing is not None or not skip_nulls:
+                if thing is not None and thing != float("NaN") or not skip_nulls:
                     # let it fail if skip_nulls is False
-                    for bit in thing.split(sep):
+                    for bit in str(thing).split(sep):
                         results.add(bit)
             return results
 
@@ -141,16 +142,16 @@ class Fns:
         return lowercase_unless_acronym
 
     @classmethod
-    def split_bars_to_int(cls, sep: str = "||") -> Callable[[str], Sequence[int]]:
-        return lambda value: [int(s) for s in value.split(sep)]
+    def split_bars_to_int(cls, sep: str = "||") -> Callable[[Optional[str]], FrozenSet[int]]:
+        return lambda value: frozenset([] if value is None else [int(s) for s in value.split(sep)])
 
     @classmethod
-    def split_bars(cls, sep: str = "||") -> Callable[[str], Sequence[str]]:
-        return lambda value: value.split(sep)
+    def split_bars(cls, sep: str = "||") -> Callable[[Optional[str]], FrozenSet[str]]:
+        return lambda value: frozenset([] if value is None else str(value).split(sep))
 
     @staticmethod
-    def n_bar_items(sep: str = "||") -> Callable[[str], int]:
-        return lambda value: len(set(value.split(sep)))
+    def n_bar_items(sep: str = "||") -> Callable[[Optional[str]], int]:
+        return lambda value: 0 if value is None else len(set(value.split(sep)))
 
     @staticmethod
     def not_null(value):

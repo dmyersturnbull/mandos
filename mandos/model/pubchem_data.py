@@ -1,0 +1,884 @@
+"""
+PubChem data views and processors.
+"""
+from __future__ import annotations
+
+import abc
+import logging
+import re
+from datetime import date, datetime
+from typing import Mapping, Optional, Sequence, Union, FrozenSet, Any, Dict
+from typing import Tuple as Tup
+
+import orjson
+from pocketutils.core.exceptions import MultipleMatchesError
+from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.tools.common_tools import CommonTools
+from pocketutils.tools.string_tools import StringTools
+
+from mandos.model.query_utils import JsonNavigator, Fns, FilterFn
+from mandos.model.pubchem_support import (
+    ComputedProperty,
+    CodeTypes,
+    CoOccurrenceType,
+    ClinicalTrial,
+    GhsCode,
+    AssociatedDisorder,
+    AtcCode,
+    DrugbankInteraction,
+    DrugbankDdi,
+    PubmedEntry,
+    Publication,
+    CoOccurrence,
+    DrugGeneInteraction,
+    CompoundGeneInteraction,
+)
+
+logger = logging.getLogger("mandos")
+
+
+class Misc:
+    empty_frozenset = frozenset([])
+
+
+class Patterns:
+    ghs_code = re.compile(r"((?:H\d+)(?:\+H\d+)*)")
+    ghs_code_singles = re.compile(r"(H\d+)")
+    pubchem_compound_url = re.compile(r"^https:\/\/pubchem\.ncbi\.nlm\.nih\.gov\/compound\/(.+)$")
+    atc_codes = re.compile(r"([A-Z])([0-9]{2})?([A-Z])?([A-Z])?([A-Z])?")
+    mesh_codes = re.compile(r"[A-Z]")
+
+
+class PubchemDataView(metaclass=abc.ABCMeta):
+    """"""
+
+    def __init__(self, data: NestedDotDict):
+        self._data = data
+
+    def to_json(self) -> str:
+        def default(obj: Any) -> Any:
+            if isinstance(obj, NestedDotDict):
+                # noinspection PyProtectedMember
+                return dict(obj._x)
+
+        # noinspection PyProtectedMember
+        data = dict(self._data._x)
+        encoded = orjson.dumps(data, default=default, option=orjson.OPT_INDENT_2)
+        encoded = encoded.decode(encoding="utf8")
+        encoded = StringTools.retab(encoded, 2)
+        return encoded
+
+    @property
+    def cid(self) -> int:
+        if self._data["Record.RecordType"] != "CID":
+            raise ValueError(
+                "RecordType for {} is {}".format(
+                    self._data["Record.RecordNumber"], self._data["Record.RecordType"]
+                )
+            )
+        return self._data["Record.RecordNumber"]
+
+    @property
+    def _toc(self) -> JsonNavigator:
+        return self._nav / "Section" % "TOCHeading"
+
+    @property
+    def _tables(self) -> JsonNavigator:
+        return JsonNavigator.create(self._data) / "external_tables"
+
+    @property
+    def _links(self) -> JsonNavigator:
+        return JsonNavigator.create(self._data) / "link_sets"
+
+    @property
+    def _classifications(self) -> JsonNavigator:
+        return self._nav / "classifications"
+
+    @property
+    def _nav(self) -> JsonNavigator:
+        return JsonNavigator.create(self._data) / "Record"
+
+    @property
+    def _refs(self) -> Mapping[int, str]:
+        return {z["ReferenceNumber"]: z["SourceName"] for z in (self._nav / "Reference").contents}
+
+    def _has_ref(self, name: str) -> FilterFn:
+        return FilterFn(lambda dot: self._refs.get(dot.get_as("ReferenceNumber", int)) == name)
+
+
+class PubchemMiniDataView(PubchemDataView, metaclass=abc.ABCMeta):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        raise NotImplementedError()
+
+    @property
+    def _mini(self) -> JsonNavigator:
+        return self._toc / self._whoami / "Section" % "TOCHeading"
+
+
+class TitleAndSummary(PubchemDataView):
+    """"""
+
+    @property
+    def safety(self) -> FrozenSet[str]:
+        return (
+            self._toc
+            / "Chemical Safety"
+            / "Information"
+            / self._has_ref("PubChem")
+            / "Value"
+            / "StringWithMarkup"
+            / "Markup"
+            >> "Extra"
+        ).to_set
+
+
+class RelatedRecords(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Related Records"
+
+    @property
+    def parent(self) -> Optional[int]:
+        parent = (
+            self._mini
+            / "Parent Compound"
+            / "Information"
+            / "Value"
+            / "StringWithMarkup"
+            // ["String"]
+            // Fns.require_only()
+        )
+        parent = parent / Fns.extract_group_1(r"CID (\d+) +.*") / int // Fns.request_only()
+        return self.cid if parent.get is None else parent.get
+
+
+class ChemicalAndPhysicalProperties(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Chemical and Physical Properties"
+
+    @property
+    def inchikey(self) -> str:
+        return self.single_property("InChI Key").req_is(str)
+
+    @property
+    def inchi(self) -> str:
+        return self.single_property("InChI").req_is(str)
+
+    @property
+    def formula(self) -> str:
+        return self.single_property("InChI Key").req_is(str)
+
+    @property
+    def xlogp3(self) -> str:
+        return self.single_property("XLogP3").req_is(float)
+
+    @property
+    def mol_weight(self) -> str:
+        weight = self.single_property("Molecular Weight")
+        if weight.unit != "g/mol":
+            raise ValueError(f"Expected g/mol for weight; got {weight.unit}")
+        return weight.req_is(float)
+
+    @property
+    def tpsa(self) -> str:
+        weight = self.single_property("Topological Polar Surface Area")
+        if weight.unit != "Å²":
+            raise ValueError(f"Expected Å² for weight; got {weight.unit}")
+        return weight.req_is(float)
+
+    @property
+    def charge(self) -> int:
+        return self.single_property("Formal Charge", "PubChem").value
+
+    def single_property(self, key: str, ref: Optional[str] = "PubChem") -> ComputedProperty:
+        return CommonTools.only(
+            [kvr for kvr in self.computed if kvr.key == key and (ref is None or kvr.ref == ref)]
+        )
+
+    @property
+    def computed(self) -> FrozenSet[ComputedProperty]:
+        cid = self.cid
+        props = {
+            dot["TOCHeading"]: dot["Information"]
+            for dot in (self._mini / "Computed Properties" / "Section").get
+        }
+        results: Dict[Tup[str, str], ComputedProperty] = {}
+        for heading, info in props.items():
+            for dot in info:
+                try:
+                    dot = NestedDotDict(dot)
+                    kvr = self._extract_kvr(heading, dot)
+                    if kvr is not None:
+                        if (kvr.key, kvr.ref) in results:
+                            raise MultipleMatchesError(f"Multiple matches for {kvr} on {cid}")
+                        results[(kvr.key, kvr.ref)] = kvr
+                except (KeyError, ValueError):
+                    logger.debug(f"Failed on {dot} for cid {cid}")
+                    raise
+        return frozenset(results.values())
+
+    def _extract_kvr(self, heading: str, dot: NestedDotDict) -> Optional[ComputedProperty]:
+        if "Value" not in dot or "Reference" not in dot:
+            return None
+        ref = ", ".join(dot["Reference"])
+        value, unit = self._extract_value_and_unit(dot["Value"])
+        return ComputedProperty(heading, value, unit, ref)
+
+    def _extract_value_and_unit(
+        self, dot: NestedDotDict
+    ) -> Tup[Union[None, int, str, float, bool], str]:
+        value, unit = None, None
+        if "Number" in dot and len(["Number"]) == 1:
+            value = dot["Number"][0]
+        elif "Number" in dot and len(["Number"]) > 1:
+            value = ", ".join([str(s) for s in dot["Number"]])
+        elif (
+            "StringWithMarkup" in dot
+            and len(dot["StringWithMarkup"]) == 1
+            and "String" in dot["StringWithMarkup"][0]
+        ):
+            value = dot["StringWithMarkup"][0]["String"]
+        elif (
+            "StringWithMarkup" in dot
+            and len(dot["StringWithMarkup"]) > 1
+            and all(["String" in swump for swump in dot["StringWithMarkup"]])
+        ):
+            value = ", ".join([str(s) for s in dot["StringWithMarkup"]])
+        else:
+            value = None
+        if "Unit" in dot and value is not None:
+            unit = dot["Unit"]
+        if isinstance(value, str):
+            value = value.strip().replace("\n", "").replace("\r", "").strip()
+        return value, unit
+
+
+class DrugAndMedicationInformation(PubchemDataView):
+    """"""
+
+    @property
+    def mini(self) -> JsonNavigator:
+        return self._toc / "Drug and Medication Information" / "Section" % "TOCHeading"
+
+    @property
+    def indication_summary_drugbank(self) -> Optional[str]:
+        return (
+            self.mini
+            / "Drug Indication"
+            / "Information"
+            / self._has_ref("DrugBank")
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+            >> Fns.join_nonnulls()
+        ).get
+
+    @property
+    def indication_summary_livertox(self) -> Optional[str]:
+        return (
+            self.mini
+            / "LiverTox Summary"
+            / "Information"
+            / self._has_ref("LiverTox")
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+            >> Fns.join_nonnulls()
+        ).get
+
+    @property
+    def classes(self) -> FrozenSet[str]:
+        return (
+            self.mini
+            / "Drug Classes"
+            / "Information"
+            / self._has_ref("LiverTox")
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+        ).to_set
+
+    @property
+    def dea_class(self) -> FrozenSet[str]:
+        return (
+            self.mini
+            / "DEA Drug Facts"
+            / "Information"
+            / self._has_ref("Drug Enforcement Administration (DEA)")
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+        ).to_set
+
+    @property
+    def dea_schedule(self) -> Optional[CodeTypes.DeaSchedule]:
+        return (
+            self.mini
+            / "DEA Controlled Substances"
+            / "Information"
+            / self._has_ref("Drug Enforcement Administration (DEA)")
+            / "Value"
+            / "StringWithMarkup"
+            // ["String"]
+            // Fns.require_only()
+            / Fns.extract_group_1(r" *Schedule ([IV]+).*")
+            / CodeTypes.DeaSchedule
+            // Fns.request_only()
+        ).get
+
+    @property
+    def hsdb_uses(self) -> FrozenSet[str]:
+        mesh = "National Library of Medicine's Medical Subject Headings"
+        return (
+            self.mini
+            / "Therapeutic Uses"
+            / "Information"
+            / self._has_ref("Hazardous Substances Data Bank (HSDB)")
+            / FilterFn(lambda dot: dot.req_as("Reference", str).startswith(mesh))
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+        ).to_set
+
+    @property
+    def clinical_trials(self) -> FrozenSet[ClinicalTrial]:
+        trials = (self._tables / "clinicaltrials").get
+        objs = []
+        for trial in trials:
+            source = self._refs[int(trial["srcid"])]
+            obj = ClinicalTrial(
+                trial["title"],
+                frozenset(trial["conditions"].split("|")),
+                trial["phase"],
+                trial["status"],
+                frozenset(trial["interventions"].split("|")),
+                frozenset([int(z) for z in trial["cids"].split("|")]),
+                source,
+            )
+            objs.append(obj)
+        return frozenset(objs)
+
+
+class PharmacologyAndBiochemistry(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Pharmacology and Biochemistry"
+
+    @property
+    def summary_drugbank_text(self) -> Optional[str]:
+        return (
+            self._mini
+            / "Pharmacology"
+            / "Information"
+            / self._has_ref("DrugBank")
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+            >> Fns.join_nonnulls()
+        ).get
+
+    @property
+    def summary_ncit_text(self) -> Optional[str]:
+        return (
+            self._mini
+            / "Pharmacology"
+            / "Information"
+            / self._has_ref("NCI Thesaurus (NCIt)")
+            / Fns.key_equals("Name", "Pharmacology")
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+            >> Fns.join_nonnulls()
+        ).get
+
+    @property
+    def summary_ncit_links(self) -> FrozenSet[str]:
+        return (
+            self._mini
+            / "Pharmacology"
+            / "Information"
+            / self._has_ref("NCI Thesaurus (NCIt)")
+            / Fns.key_equals("Name", "Pharmacology")
+            / "Value"
+            / "StringWithMarkup"
+            / "Markup"
+            / Fns.key_equals("Type", "PubChem Internal Link")
+            // ["URL"]
+            // Fns.require_only()
+            / Fns.extract_group_1(Patterns.pubchem_compound_url)
+            / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
+        ).to_set
+
+    @property
+    def mesh(self) -> FrozenSet[str]:
+        return (
+            self._mini
+            / "MeSH Pharmacological Classification"
+            / "Information"
+            / self._has_ref("MeSH")
+            >> "Name"
+        ).to_set
+
+    @property
+    def atc(self) -> FrozenSet[AtcCode]:
+        strs = (
+            self._mini
+            / "ATC Code"
+            / "Information"
+            / self._has_ref("WHO Anatomical Therapeutic Chemical (ATC) Classification")
+            / Fns.key_equals("Name", "ATC Code")
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+        ).to_set
+        return frozenset(
+            [AtcCode(s.split(" - ")[0].strip(), s.split(" - ")[1].strip()) for s in strs]
+        )
+
+    @property
+    def moa_summary_drugbank_links(self) -> FrozenSet[str]:
+        return self._get_moa_links("DrugBank")
+
+    @property
+    def moa_summary_drugbank_text(self) -> Optional[str]:
+        return self._get_moa_text("DrugBank")
+
+    @property
+    def moa_summary_hsdb_links(self) -> FrozenSet[str]:
+        return self._get_moa_links("Hazardous Substances Data Bank (HSDB)")
+
+    @property
+    def moa_summary_hsdb_text(self) -> Optional[str]:
+        return self._get_moa_text("Hazardous Substances Data Bank (HSDB)")
+
+    def _get_moa_text(self, ref: str) -> Optional[str]:
+        return (
+            self._mini
+            / "Mechanism of Action"
+            / "Information"
+            / self._has_ref(ref)
+            / "Value"
+            / "StringWithMarkup"
+            >> "String"
+            >> Fns.join_nonnulls()
+        ).get
+
+    def _get_moa_links(self, ref: str) -> FrozenSet[str]:
+        return (
+            self._mini
+            / "Mechanism of Action"
+            / "Information"
+            / self._has_ref(ref)
+            / "Value"
+            / "StringWithMarkup"
+            / "Markup"
+            / Fns.key_equals("Type", "PubChem Internal Link")
+            // ["URL"]
+            // Fns.require_only()
+            / Fns.extract_group_1(Patterns.pubchem_compound_url)
+            / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
+        ).to_set
+
+    @property
+    def biochem_reactions(self) -> FrozenSet[str]:
+        # TODO from multiple sources
+        return (self._tables / "pathwayreaction" >> "name").to_set
+
+
+class SafetyAndHazards(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Safety and Hazards"
+
+    @property
+    def ghs_codes(self) -> FrozenSet[GhsCode]:
+        codes = (
+            self._mini
+            / "Hazards Identification"
+            / "Section"
+            % "TOCHeading"
+            / "GHS Classification"
+            / "Information"
+            / self._has_ref("European Chemicals Agency (ECHA)")
+            / Fns.key_equals("Name", "GHS Hazard Statements")
+            / "Value"
+            / "StringWithMarkup"
+            // ["String"]
+            // Fns.require_only()
+            / Fns.extract_group_1(r"^(H\d+)[ :].*$")
+            // Fns.split_and_flatten_nonnulls("+")
+        ).get
+        return frozenset([GhsCode.find(code) for code in codes])
+
+
+class Toxicity(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Toxicity"
+
+    @property
+    def acute_effects(self) -> FrozenSet[str]:
+        values = (
+            self._tables
+            / "chemidplus"
+            // ["effect"]
+            // Fns.request_only()
+            // Fns.split_and_flatten_nonnulls(";", skip_nulls=True)
+        ).contents
+        return frozenset(
+            {
+                v.strip().lower().replace("\n", " ").replace("\r", " ").replace("\t", " ")
+                for v in values
+            }
+        )
+
+
+class AssociatedDisordersAndDiseases(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Associated Disorders and Diseases"
+
+    @property
+    def associated_disorders_and_diseases(self) -> FrozenSet[AssociatedDisorder]:
+        return (
+            self._tables
+            / "ctd_chemical_disease"
+            // ["diseasename", "directevidence", "dois"]
+            / [Fns.identity, Fns.identity, Fns.n_bar_items]
+            // AssociatedDisorder
+        ).to_set
+
+
+class Literature(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Literature"
+
+    @property
+    def depositor_pubmed_articles(self) -> FrozenSet[PubmedEntry]:
+        def split_mesh_headings(s: str) -> FrozenSet[CodeTypes.MeshHeading]:
+            # this is a nightmare
+            # these fields are comma-delimited strings, but there are commas within each
+            # all of the examples I've seen with this are for chem name cis/trans
+            # we can fix those
+            # however, there may be some left incorrectly split
+            # and it's possible that we join some when we shouldn't
+            # ex: 6-Cyano-7-nitroquinoxaline-2,3-dione,Animals,Anticonvulsants,Cocaine,Death, [...]
+            # ex: 2,3,4,5-Tetrahydro-7,8-dihydroxy-1-phenyl-1H-3-benzazepine,Animals,Benzazepines, [...]
+            if s is None:
+                return Misc.empty_frozenset
+            bits = []
+            current_bit = " "
+            for bit in s.split(","):
+                if current_bit[-1].isdigit() and bit[0].isdigit():
+                    current_bit += bit
+                else:
+                    bits.append(current_bit.strip())
+                    current_bit = bit
+            # get the one at the end
+            bits.append(current_bit)
+            return frozenset({b.strip() for b in bits if b.strip() != ""})
+
+        def split_mesh_subheadings(s: Optional[str]) -> FrozenSet[CodeTypes.MeshSubheading]:
+            if s is None:
+                return Misc.empty_frozenset
+            return frozenset({k.strip() for k in s.split(",") if k.strip() != ""})
+
+        def split_mesh_codes(s: Optional[str]) -> FrozenSet[CodeTypes.MeshCode]:
+            if s is None:
+                return Misc.empty_frozenset
+            z = [bit.split(" ")[0] for bit in s.split(",")]
+            return frozenset({b.strip() for b in z if b.strip() != ""})
+
+        def split_sources(s: Optional[str]) -> FrozenSet[str]:
+            return frozenset(s.split(","))
+
+        def split_cids(s: Optional[str]) -> FrozenSet[int]:
+            if s is None:
+                return Misc.empty_frozenset
+            return frozenset([int(q) for q in s.split(",")])
+
+        def get_text(s: Optional[str]) -> Optional[str]:
+            if s is None:
+                return None
+            return StringTools.strip_brackets_and_quotes(s.strip()).strip()
+
+        def get_date(s: Optional[str]) -> Optional[date]:
+            if s is None:
+                return None
+            return datetime.strptime(str(s).strip(), "%Y%m%d").date()
+
+        keys = {
+            "pmid": Fns.req_is_int,
+            "articletype": Fns.req_is_str,
+            "pmidsrcs": split_sources,
+            "meshheadings": split_mesh_headings,
+            "meshsubheadings": split_mesh_subheadings,
+            "meshcodes": split_mesh_codes,
+            "cids": split_cids,
+            "articletitle": get_text,
+            "articleabstract": get_text,
+            "articlejourname": get_text,
+            "articlepubdate": get_date,
+        }
+        entries = (
+            self._tables
+            / "pubmed"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(PubmedEntry)
+        ).to_set
+        return entries
+
+    @property
+    def chemical_cooccurrences(self) -> FrozenSet[CoOccurrence]:
+        return self._get_cooccurrences(CoOccurrenceType.chemical)
+
+    @property
+    def gene_cooccurrences(self) -> FrozenSet[CoOccurrence]:
+        return self._get_cooccurrences(CoOccurrenceType.gene)
+
+    @property
+    def disease_cooccurrences(self) -> FrozenSet[CoOccurrence]:
+        return self._get_cooccurrences(CoOccurrenceType.disease)
+
+    def _get_cooccurrences(self, kind: CoOccurrenceType) -> FrozenSet[CoOccurrence]:
+        links = (self._links / kind.x_name / "LinkDataSet" / "LinkData").get
+        results = set()
+        for link in links:
+            link = NestedDotDict(link)
+            try:
+                neighbor_id = str(link["ID_2"][kind.id_name])
+            except KeyError:
+                raise KeyError(f"Could not find ${kind.id_name} in ${link['ID_2']}")
+            neighbor_id = self._guess_neighbor(kind, neighbor_id)
+            evidence = link["Evidence"][kind.x_name]
+            neighbor_name = evidence["NeighborName"]
+            ac = evidence["ArticleCount"]
+            nac = evidence["NeighborArticleCount"]
+            qac = evidence["QueryArticleCount"]
+            score = evidence["CooccurrenceScore"]
+            articles = [NestedDotDict(k) for k in evidence["Article"]]
+            pubs = {
+                Publication(
+                    pmid=pub.req_as("PMID", int),
+                    pub_date=datetime.strptime(pub["PublicationDate"].strip(), "%Y-%m-%d").date(),
+                    is_review=pub["IsReview"],
+                    title=pub["Title"].strip(),
+                    journal=pub["Journal"],
+                    relevance_score=pub.req_as("RelevanceScore", int),
+                )
+                for pub in articles
+            }
+            results.add(
+                CoOccurrence(
+                    neighbor_id=neighbor_id,
+                    neighbor_name=neighbor_name,
+                    kind=kind,
+                    article_count=ac,
+                    query_article_count=qac,
+                    neighbor_article_count=nac,
+                    score=score,
+                    publications=frozenset(pubs),
+                )
+            )
+        return frozenset(results)
+
+    def _guess_neighbor(self, kind: CoOccurrenceType, neighbor_id: str) -> str:
+        if kind is CoOccurrenceType.chemical:
+            return CodeTypes.PubchemCompoundId(neighbor_id)
+        elif kind is CoOccurrenceType.gene and neighbor_id.startswith("EC:"):
+            return CodeTypes.EcNumber(neighbor_id)
+        elif kind is CoOccurrenceType.gene:
+            return CodeTypes.GeneId(neighbor_id)
+        elif kind is CoOccurrenceType.disease:
+            return CodeTypes.MeshCode(neighbor_id)
+        else:
+            raise ValueError(f"Could not find ID type for {kind} ID {neighbor_id}")
+
+    @property
+    def drug_gene_interactions(self) -> FrozenSet[DrugGeneInteraction]:
+        # the order of this dict is crucial
+        keys = {
+            "genename": Fns.str_id_or_none,
+            "geneclaimname": Fns.str_id_or_none,
+            "interactionclaimsource": Fns.req_is_str_or_none,
+            "interactiontypes": Fns.split_bars("|"),
+            "pmids": Fns.split_bars(","),
+            "dois": Fns.split_bars("|"),
+        }
+        z = self._tables / "dgidb" // list(keys.keys()) / list(keys.values())
+        return (
+            self._tables
+            / "dgidb"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(DrugGeneInteraction)
+        ).to_set
+
+    @property
+    def compound_gene_interactions(self) -> FrozenSet[CompoundGeneInteraction]:
+        # the order of this dict is crucial
+        # YES, the | used in pmids really is different from the , used in DrugGeneInteraction
+        keys = {
+            "genesymbol": CodeTypes.GenecardSymbol,
+            "taxid": Fns.req_is_int_or_none,
+            "interaction": Fns.split_bars("|"),
+            "pmids": Fns.split_bars("|"),
+        }
+        return (
+            self._tables
+            / "ctdchemicalgene"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(CompoundGeneInteraction)
+        ).to_set
+
+    @property
+    def drugbank_interactions(self) -> FrozenSet[DrugbankInteraction]:
+        raise NotImplementedError()
+
+    @property
+    def drugbank_ddis(self) -> FrozenSet[DrugbankDdi]:
+        raise NotImplementedError()
+
+    @property
+    def bioassay(self) -> FrozenSet[DrugbankDdi]:
+        raise NotImplementedError()
+
+
+class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Biomolecular Interactions and Pathways"
+
+
+class Classification(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Classification"
+
+    @property
+    def mesh_tree(self) -> Sequence[str]:
+        raise NotImplementedError()
+
+    @property
+    def chebi_tree(self) -> Sequence[str]:
+        raise NotImplementedError()
+
+    @property
+    def atc_tree(self) -> FrozenSet[Sequence[str]]:
+        raise NotImplementedError()
+
+    @property
+    def chemid(self) -> FrozenSet[Sequence[str]]:
+        raise NotImplementedError()
+
+    @property
+    def g2p_tree(self) -> FrozenSet[Sequence[str]]:
+        raise NotImplementedError()
+
+    @property
+    def chembl_tree(self) -> FrozenSet[Sequence[str]]:
+        raise NotImplementedError()
+
+    @property
+    def cpdat_tree(self) -> FrozenSet[Sequence[str]]:
+        raise NotImplementedError()
+
+    @property
+    def dea(self) -> FrozenSet[str]:
+        raise NotImplementedError()
+
+
+class PubchemData(PubchemDataView):
+    @property
+    def name(self) -> Optional[str]:
+        return self._data.get("Record.RecordTitle")
+
+    @property
+    def title_and_summary(self) -> TitleAndSummary:
+        return TitleAndSummary(self._data)
+
+    @property
+    def chemical_and_physical_properties(self) -> ChemicalAndPhysicalProperties:
+        return ChemicalAndPhysicalProperties(self._data)
+
+    @property
+    def related_records(self) -> RelatedRecords:
+        return RelatedRecords(self._data)
+
+    @property
+    def drug_and_medication_information(self) -> DrugAndMedicationInformation:
+        return DrugAndMedicationInformation(self._data)
+
+    @property
+    def pharmacology_and_biochemistry(self) -> PharmacologyAndBiochemistry:
+        return PharmacologyAndBiochemistry(self._data)
+
+    @property
+    def safety_and_hazards(self) -> SafetyAndHazards:
+        return SafetyAndHazards(self._data)
+
+    @property
+    def toxicity(self) -> Toxicity:
+        return Toxicity(self._data)
+
+    @property
+    def literature(self) -> Literature:
+        return Literature(self._data)
+
+    @property
+    def associated_disorders_and_diseases(self) -> AssociatedDisordersAndDiseases:
+        return AssociatedDisordersAndDiseases(self._data)
+
+    @property
+    def biomolecular_interactions_and_pathways(self) -> BiomolecularInteractionsAndPathways:
+        return BiomolecularInteractionsAndPathways(self._data)
+
+    @property
+    def classification(self) -> Classification:
+        return Classification(self._data)
+
+    @property
+    def parent_or_self(self) -> int:
+        parent = self.related_records.parent
+        return self.cid if parent is None else parent
+
+
+__all__ = [
+    "PubchemData",
+    "TitleAndSummary",
+    "RelatedRecords",
+    "ChemicalAndPhysicalProperties",
+    "DrugAndMedicationInformation",
+    "PharmacologyAndBiochemistry",
+    "SafetyAndHazards",
+    "Toxicity",
+    "AssociatedDisordersAndDiseases",
+    "Literature",
+    "BiomolecularInteractionsAndPathways",
+    "Classification",
+]

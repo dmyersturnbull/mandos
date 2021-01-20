@@ -78,7 +78,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Natural Language :: English",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
 	"Intended Audience :: Science/Research",
 	"Intended Audience :: Developers",
@@ -103,9 +102,8 @@ mandos = "mandos.cli:cli"
 
 
 [tool.poetry.dependencies]
-python                         = ">=3.8, <4"
+python                         = ">=3.9, <4"
 chembl-webresource-client      = "^0.10"
-colorama                       = ">=0.4, <1.0"
 pandas                         = ">=1.2, <2.0"
 numpy                          = ">=1.19, <2.0"
 requests                       = ">=2.24, <3.0"

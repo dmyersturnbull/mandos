@@ -62,9 +62,13 @@ D00225    (alprazolam)  affects pathway                KEGG:hsa04727 (GABAergic 
 PC218     (alprazolam)  has DEA schedule               4             (Schedule IV)
 ```
 
+(Note that actual format is tab-delimited.)
 **[See the docs](https://mandos-chem.readthedocs.io/en/latest/)** for more info.
 
 
+### Contributing
+
+Mandos is licensed under the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 [New issues](https://github.com/dmyersturnbull/mandos/issues) and pull requests are welcome.
 Please refer to the [contributing guide](https://github.com/dmyersturnbull/mandos/blob/master/CONTRIBUTING.md).  
 Generated with [Tyrannosaurus](https://github.com/dmyersturnbull/tyrannosaurus).

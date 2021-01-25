@@ -1,7 +1,0 @@
-U+0030..U+0039     Basic Latin, 0-9
-U+0041..U+005A     Basic Latin, uppercase A-Z
-U+0061..U+007A     Basic Latin, lowercase a-z
-U+00C0..U+00FF     Latin-1 Supplement, accented letters (and multiplication and division signs)
-U+0100..U+017F     Latin Extended A, accented letters
-U+0180..U+024F     Latin Extended B, accented letters (uncommon)
-U+1E00..U+1EFF     Latin Extended Additional, accented letters (uncommon)

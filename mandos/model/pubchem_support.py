@@ -36,8 +36,18 @@ class Code(str):
     def type_name(self) -> str:
         return self.__class__.__name__.lower()
 
+    @classmethod
+    def of(cls, value: Union[str, int, float]):
+        if isinstance(value, float):
+            try:
+                value = int(value)
+            except ArithmeticError:
+                value = str(value)
+        value = str(value).strip()
+        return cls(value)
 
-class CodeTypes:
+
+class Codes:
     """
     These turn out to be extremely useful for documenting return types.
     For example, ``DrugbankInteraction`` might have a ``gene`` field,
@@ -58,6 +68,9 @@ class CodeTypes:
     class GenecardSymbol(GeneId):
         """"""
 
+    class UniprotId(GeneId):
+        """"""
+
     class PubchemCompoundId(Code):
         """
         e.g. 2352
@@ -66,6 +79,15 @@ class CodeTypes:
         @property
         def value(self) -> int:
             return int(self)
+
+    class AtcCode(Code):
+        """"""
+
+    class PubmedId(Code):
+        """"""
+
+    class Doi(Code):
+        """"""
 
     class MeshCode(Code):
         """"""
@@ -77,6 +99,9 @@ class CodeTypes:
         """"""
 
     class MeshSubheading(Code):
+        """"""
+
+    class DrugbankCompoundId(Code):
         """"""
 
     class DeaSchedule(Code):
@@ -123,7 +148,7 @@ class ClinicalTrial:
     phase: str
     status: str
     interventions: FrozenSet[str]
-    cids: FrozenSet[int]
+    cids: FrozenSet[Codes.PubchemCompoundId]
     source: str
 
     @property
@@ -140,7 +165,7 @@ class ClinicalTrial:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class GhsCode:
-    code: CodeTypes.GhsCode
+    code: Codes.GhsCode
     statement: str
     clazz: str
     categories: FrozenSet[str]
@@ -152,7 +177,7 @@ class GhsCode:
         h = hazards[code]
         cats = h["category"]  # TODO
         return GhsCode(
-            code=CodeTypes.GhsCode(code),
+            code=Codes.GhsCode(code),
             statement=h["statement"],
             clazz=h["class"],
             categories=cats,
@@ -190,49 +215,76 @@ class AtcCode:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class DrugbankInteraction:
+    gene_symbol: Codes.GeneId
     action: str
-    target: str
-    gene: str
-    function: str
-    n_refs: int
+    target_name: str
+    general_function: Sequence[str]
+    specific_function: str
+    pmids: FrozenSet[Codes.PubmedId]
+    dois: FrozenSet[Codes.Doi]
 
 
 @dataclass(frozen=True, repr=True, eq=True)
 class DrugbankDdi:
-    is_active: bool
-    micromolar: float
-    activity_type: str
-    target: str
+    drug_drugbank_id: Codes.DrugbankCompoundId
+    drug_pubchem_id: Codes.PubchemCompoundId
+    drug_drugbank_name: str
+    description: str
+
+
+class AssayType(enum.Enum):
+    confirmatory = enum.auto()
+    literature = enum.auto()
 
 
 @dataclass(frozen=True, repr=True, eq=True)
-class PubchemBioassay:
-    drug: str
-    interaction: str
+class PubchemAssay:
+    type: AssayType
+    ref: str  # e.g. "ChEMBL"
+    name: str  # e.g. "Binding affinity towards human monoclonal antibody 2E2 using [3H]cocaine"
+    made_date: date
+
+
+class Activity(enum.Enum):
+    active = enum.auto()
+    inactive = enum.auto()
+    unspecified = enum.auto()
+
+
+@dataclass(frozen=True, repr=True, eq=True)
+class Bioactivity:
+    assay: PubchemAssay
+    gene_id: Optional[Codes.GeneId]
+    tax_id: Optional[int]
+    pmid: Optional[Codes.PubmedId]
+    activity: Activity
+    activity_name: str
+    activity_value: str
+    target_name: Optional[str]
 
 
 @dataclass(frozen=True, repr=True, eq=True)
 class PdbEntry:
-    pdbid: str
+    pdbid: Codes.PdbId
     title: str
     exp_method: str
     resolution: float
     lig_names: FrozenSet[str]
-    cids: FrozenSet[int]
-    uniprot_ids: FrozenSet[str]
-    pmids: FrozenSet[str]
-    dois: FrozenSet[str]
+    cids: FrozenSet[Codes.PubchemCompoundId]
+    uniprot_ids: FrozenSet[Codes.UniprotId]
+    pmids: FrozenSet[Codes.PubmedId]
+    dois: FrozenSet[Codes.Doi]
 
 
 @dataclass(frozen=True, repr=True, eq=True)
 class PubmedEntry:
-    pmid: int
+    pmid: Codes.PubmedId
     article_type: str
     pmidsrcs: FrozenSet[str]
-    mesh_headings: FrozenSet[CodeTypes.MeshHeading]
-    mesh_subheadings: FrozenSet[CodeTypes.MeshSubheading]
-    mesh_codes: FrozenSet[CodeTypes.MeshCode]
-    cids: FrozenSet[int]
+    mesh_headings: FrozenSet[Codes.MeshHeading]
+    mesh_subheadings: FrozenSet[Codes.MeshSubheading]
+    mesh_codes: FrozenSet[Codes.MeshCode]
+    cids: FrozenSet[Codes.PubchemCompoundId]
     article_title: str
     article_abstract: str
     journal_name: str
@@ -241,7 +293,7 @@ class PubmedEntry:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class Publication:
-    pmid: int
+    pmid: Codes.PubmedId
     pub_date: date
     is_review: bool
     title: str
@@ -261,6 +313,18 @@ class CoOccurrence:
     score: int
     publications: FrozenSet[Publication]
 
+    def strip_pubs(self) -> CoOccurrence:
+        return CoOccurrence(
+            self.neighbor_id,
+            self.neighbor_name,
+            self.kind,
+            self.article_count,
+            self.query_article_count,
+            self.neighbor_article_count,
+            self.score,
+            frozenset({}),
+        )
+
 
 @dataclass(frozen=True, repr=True, eq=True)
 class DrugGeneInteraction:
@@ -270,16 +334,16 @@ class DrugGeneInteraction:
     gene_claim_id: Optional[str]
     source: str
     interactions: FrozenSet[str]
-    pmids: FrozenSet[str]
-    dois: FrozenSet[str]
+    pmids: FrozenSet[Codes.PubmedId]
+    dois: FrozenSet[Codes.Doi]
 
 
 @dataclass(frozen=True, repr=True, eq=True)
 class CompoundGeneInteraction:
-    gene_name: Optional[str]
+    gene_name: Optional[Codes.GeneId]
     interactions: FrozenSet[str]
     tax_name: Optional[str]
-    pmids: FrozenSet[str]
+    pmids: FrozenSet[Codes.PubmedId]
 
 
 __all__ = [
@@ -288,13 +352,14 @@ __all__ = [
     "AtcCode",
     "DrugbankInteraction",
     "DrugbankDdi",
-    "PubchemBioassay",
+    "Bioactivity",
+    "PubchemAssay",
     "DrugGeneInteraction",
     "CompoundGeneInteraction",
     "GhsCode",
     "PubmedEntry",
     "Code",
-    "CodeTypes",
+    "Codes",
     "CoOccurrenceType",
     "CoOccurrence",
     "Publication",

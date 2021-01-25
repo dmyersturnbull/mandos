@@ -1,4 +1,3 @@
-
 single_protein            -> protein_complex         words:"subunit","chain"
 protein_complex           -> protein_complex
 protein_complex           ~~ protein_complex_group
@@ -9,49 +8,3 @@ selectivity_group         <- protein_complex_group
 selectivity_group         -> protein_family
 selectivity_group         <- protein_family
 any                       == any
-
-
-------------------------------------------------------------------------------------------------------------------------
-Alpha\-\d[A-Za-z]? receptor                      ---> Adrenergic receptor α
-Adrenergic receptor alpha.*                      ---> Adrenergic receptor α
-Adrenergic receptor beta.*                       ---> Adrenergic receptor β
-Cerebral cortex alpha adrenergic receptor        ---> Adrenergic receptor α
-Beta\-\d[A-Za-z]? receptor                       ---> Adrenergic receptor β
-GABA-A receptor; anion channel                   ---> GABA-A receptor
-GABA receptor [a-z]+-1 subunit                   ---> GABA-A receptor
-Dopamine receptor                                ---> Dopamine 1/5 receptor && Dopamine 2/3/4 receptor
-D1-like dopamine receptor                        ---> Dopamine 1/5 receptor
-D2-like dopamine receptor                        ---> Dopamine 2/3/4 receptor
-Dopamine D[15] receptor                          ---> Dopamine 1/5 receptor
-Dopamine D[234] receptor                         ---> Dopamine 2/3/4 receptor
-Adenosine A(\d) receptor                         ---> Adenosine A$1 receptor
-Serotonin (\d)[a-f]? \(5-HT\d[a-f]?\) receptor   ---> Serotonin $1 receptor
-GABA transporter *\d?                            ---> GABA transporter
-GABA-B receptor *\d?                             ---> GABA-B receptor
-GABA-A receptor;.*                               ---> GABA-A receptor
-Glutamate \[NMDA\] receptor.*                    ---> NMDA receptor
-Glutamate receptor ionotropic AMPA *\d?          ---> AMPA receptor
-Glutamate receptor ionotropic,? kainate *\d?     ---> Kainate receptor
-Glycine receptor.*                               ---> Glycine receptor
-Metabotropic glutamate receptor *\d?             ---> Metabotropic glutamate receptor
-Sigma opioid receptor                            ---> σ1 receptor
-Sigma intracellular receptor 2                   ---> σ2 receptor
-Muscarinic acetylcholine receptor.*              ---> Muscarinic acetylcholine receptor
-Neuronal acetylcholine receptor.*                ---> Nicotinic acetylcholine receptor
-Neuronal nicotinic acetylcholine receptor.*      ---> Nicotinic acetylcholine receptor
-Nicotinic acetylcholine receptor.*               ---> Nicotinic acetylcholine receptor
-Acetylcholine receptor protein epsilon chain     ---> Nicotinic acetylcholine receptor
-Histamine H(\d) receptor                         ---> Histamine H$1 receptor
-Fibronectin receptor.*                           ---> Fibronectin receptor
-Excitatory amino acid transporter(?: \d)?        ---> Excitatory amino acid transporter
-Cytochrome P450 (\d+)[A-Z]\d+                    ---> Cytochrome P450 $1
-Voltage-gated potassium channel                  ---> Voltage-gated potassium channel
-Mu(?-type)? opioid receptor                      ---> μ/δ/κ opioid receptor
-Delta(?-type)? opioid receptor                   ---> μ/δ/κ opioid receptor
-Kappa(?-type)? opioid receptor                   ---> μ/δ/κ opioid receptor
-Phosphodiesterase(?: \d)?                        ---> Phosphodiesterase
-Norepinephrine transporter                       ---> Norepinephrine transporter
-Cholinesterases; ACHE & BCHE inhibitor           ---> Cholinesterase && Acetylcholinesterase
-Purinergic receptor P2X\d*                       ---> Purinergic receptor P2X
-Purinergic receptor P2Y\d*                       ---> Purinergic receptor P2Y
-Sodium channel alpha subunit                     ---> Sodium channel

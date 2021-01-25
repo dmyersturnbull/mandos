@@ -6,6 +6,8 @@ from __future__ import annotations
 import abc
 import logging
 import time
+from urllib.error import HTTPError
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Sequence, Union, FrozenSet
 
@@ -47,14 +49,16 @@ class QueryingPubchemApi(PubchemApi):
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
         data = dict(
-            timestamp_fetch_started=MandosUtils.get_complete_timestamp(),
-            lookup=inchikey,
+            meta=dict(
+                timestamp_fetch_started=datetime.now(timezone.utc).astimezone().isoformat(),
+                from_lookup=inchikey,
+            )
         )
         t0 = time.monotonic_ns()
         cid = self._fetch_compound(inchikey)
         if cid is None:
             return None
-        data.update(self._fetch_display_data(cid))
+        data["record"] = self._fetch_display_data(cid)["Record"]
         external_table_names = {
             "related:pubchem:related_compounds_with_annotation": "compound",
             "drug:clinicaltrials.gov:clinical_trials": "clinicaltrials",
@@ -63,6 +67,7 @@ class QueryingPubchemApi(PubchemApi):
             "tox:chemidplus:acute_effects": "chemidplus",
             "dis:ctd:associated_disorders_and_diseases": "ctd_chemical_disease",
             "lit:pubchem:depositor_provided_pubmed_citations": "pubmed",
+            "patent:depositor_provided_patent_identifiers": "patent",
             "bio:rcsb_pdb:protein_bound_3d_structures": "pdb",
             "bio:dgidb:drug_gene_interactions": "dgidb",
             "bio:ctd:chemical_gene_interactions": "ctdchemicalgene",
@@ -82,11 +87,16 @@ class QueryingPubchemApi(PubchemApi):
             table: self._fetch_external_link_set(cid, table)
             for table in external_link_set_names.values()
         }
-        data["misc_data"] = self._fetch_misc_data(cid)
-        data["classifications"] = self._fetch_hierarchies(cid)
-        data["timestamp_fetch_finished"] = MandosUtils.get_complete_timestamp()
+        # get index==0 because we only have 1 compound
+        data["structure"] = self._fetch_misc_data(cid)["PC_Compounds"][0]
+        del [data["structure"]["props"]]  # redundant with props section in record
+        data["classifications"] = self._fetch_hierarchies(cid)["hierarchies"]
         t1 = time.monotonic_ns()
-        data["fetch_nanos_taken"] = str(t1 - t0)
+        data["meta"]["timestamp_fetch_finished"] = (
+            datetime.now(timezone.utc).astimezone().isoformat()
+        )
+        data["meta"]["fetch_nanos_taken"] = str(t1 - t0)
+        self._strip_by_key_in_place(data, "DisplayControls")
         return PubchemData(NestedDotDict(data))
 
     def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:
@@ -109,8 +119,8 @@ class QueryingPubchemApi(PubchemApi):
         cid = self._fetch_cid(inchikey)
         if cid is None:
             return None
-        data = self._fetch_display_data(cid)
-        data = PubchemData(data)
+        data = dict(record=self._fetch_display_data(cid)["Record"])
+        data = PubchemData(NestedDotDict(data))
         return data.parent_or_self
 
     def _fetch_cid(self, inchikey: str) -> Optional[int]:
@@ -156,9 +166,41 @@ class QueryingPubchemApi(PubchemApi):
         return NestedDotDict(orjson.loads(data))
 
     def _fetch_hierarchies(self, cid: int) -> NestedDotDict:
-        url = f"{self._classifications}?format=json&search_uid_type=cid&search_uid={cid}&search_type=list"
-        data = self._query(url)
-        return NestedDotDict(orjson.loads(data))
+        hids = {
+            "MeSH Tree": 1,
+            "ChEBI Ontology": 2,
+            "KEGG: Phytochemical Compounds": 5,
+            "KEGG: Drug": 14,
+            "KEGG: USP": 15,
+            "KEGG: Major components of natural products": 69,
+            "KEGG: Target-based Classification of Drugs": 22,
+            "KEGG: OTC drugs": 25,
+            "KEGG: Drug Classes": 96,
+            "CAMEO Chemicals": 86,
+            "WHO ATC Classification System": 79,
+            "Guide to PHARMACOLOGY Target Classification": 92,
+            "ChEMBL Target Tree": 87,
+            "EPA CPDat Classification": 99,
+            "FDA Pharm Classes": 78,
+            "ChemIDplus": 84,
+        }
+        hids = [1, 2, 5, 69, 79, 84, 99, 1112354]
+        build_up = []
+        for hid in hids:
+            url = f"{self._classifications}?format=json&hid={hid}&search_uid_type=cid&search_uid={cid}&search_type=list&response_type=display"
+            try:
+                data = orjson.loads(self._query(url))
+                logger.debug(f"Found data for classifier {hid}, compound {cid}")
+                data = data["Hierarchies"]["Hierarchy"][0]
+            except HTTPError:
+                logger.debug(f"No data for classifier {hid}, compound {cid}")
+                data = {}
+            build_up.append(data)
+        # These list all of the child nodes for each node
+        # Some of them are > 1000 items -- they're HUGE
+        # We don't expect to need to navigate to children
+        self._strip_by_key_in_place(build_up, "ChildID")
+        return NestedDotDict(dict(hierarchies=build_up))
 
     def _fetch_external_table(self, cid: int, table: str) -> Sequence[dict]:
         url = self._external_table_url(cid, table)
@@ -187,6 +229,17 @@ class QueryingPubchemApi(PubchemApi):
             if query_type not in allowed:
                 raise ValueError(f"Can't query {inchi} with type {query_type}")
             return f"{query_type}/{inchi}"
+
+    def _strip_by_key_in_place(self, data: Union[dict, list], bad_key: str) -> None:
+        if isinstance(data, list):
+            for x in data:
+                self._strip_by_key_in_place(x, bad_key)
+        elif isinstance(data, dict):
+            for k, v in list(data.items()):
+                if k == bad_key:
+                    del data[k]
+                elif isinstance(v, (list, dict)):
+                    self._strip_by_key_in_place(v, bad_key)
 
 
 class CachingPubchemApi(PubchemApi):

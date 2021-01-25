@@ -9,6 +9,7 @@ import re
 from datetime import date, datetime
 from typing import Mapping, Optional, Sequence, Union, FrozenSet, Any, Dict
 from typing import Tuple as Tup
+from urllib.parse import unquote as url_unescape
 
 import orjson
 from pocketutils.core.exceptions import MultipleMatchesError
@@ -19,7 +20,7 @@ from pocketutils.tools.string_tools import StringTools
 from mandos.model.query_utils import JsonNavigator, Fns, FilterFn
 from mandos.model.pubchem_support import (
     ComputedProperty,
-    CodeTypes,
+    Codes,
     CoOccurrenceType,
     ClinicalTrial,
     GhsCode,
@@ -32,6 +33,7 @@ from mandos.model.pubchem_support import (
     CoOccurrence,
     DrugGeneInteraction,
     CompoundGeneInteraction,
+    Bioactivity,
 )
 
 logger = logging.getLogger("mandos")
@@ -70,13 +72,13 @@ class PubchemDataView(metaclass=abc.ABCMeta):
 
     @property
     def cid(self) -> int:
-        if self._data["Record.RecordType"] != "CID":
+        if self._data["record.RecordType"] != "CID":
             raise ValueError(
                 "RecordType for {} is {}".format(
-                    self._data["Record.RecordNumber"], self._data["Record.RecordType"]
+                    self._data["record.RecordNumber"], self._data["record.RecordType"]
                 )
             )
-        return self._data["Record.RecordNumber"]
+        return self._data["record.RecordNumber"]
 
     @property
     def _toc(self) -> JsonNavigator:
@@ -96,7 +98,7 @@ class PubchemDataView(metaclass=abc.ABCMeta):
 
     @property
     def _nav(self) -> JsonNavigator:
-        return JsonNavigator.create(self._data) / "Record"
+        return JsonNavigator.create(self._data) / "record"
 
     @property
     def _refs(self) -> Mapping[int, str]:
@@ -153,8 +155,84 @@ class RelatedRecords(PubchemMiniDataView):
             // ["String"]
             // Fns.require_only()
         )
-        parent = parent / Fns.extract_group_1(r"CID (\d+) +.*") / int // Fns.request_only()
-        return self.cid if parent.get is None else parent.get
+        parent = parent / Fns.extract_group_1(r"CID (\d+) +.*") // Fns.request_only()
+        return self.cid if parent.get is None else int(parent.get)
+
+
+class NamesAndIdentifiers(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Names and Identifiers"
+
+    @property
+    def inchikey(self) -> str:
+        return self.descriptor("InChI Key")
+
+    @property
+    def inchi(self) -> str:
+        return self.descriptor("InChI")
+
+    @property
+    def molecular_formula(self) -> str:
+        return (
+            self._toc
+            / "Molecular Formula"
+            / "Information"
+            / self._has_ref("PubChem")
+            / "Value"
+            / "StringWithMarkup"
+            / "Markup"
+            // ["String"]
+            // Fns.require_only()
+            // Fns.require_only()
+        ).get
+
+    def descriptor(self, key: str) -> str:
+        return (
+            self._toc
+            / "Computed Descriptors"
+            / "Section"
+            % "TOCHeading"
+            / key
+            / "Information"
+            / self._has_ref("PubChem")
+            / "Value"
+            / "StringWithMarkup"
+            / "Markup"
+            // ["String"]
+            // Fns.require_only()
+            // Fns.require_only()
+        ).get
+
+    @property
+    def create_date(self) -> date:
+        return (
+            self._toc
+            / "Create Date"
+            / "Information"
+            / self._has_ref("PubChem")
+            / "Value"
+            // ["DateISO8601"]
+            // Fns.require_only()
+            / date.fromisoformat
+            // Fns.require_only()
+        ).get
+
+    @property
+    def modify_date(self) -> date:
+        return (
+            self._toc
+            / "Modify Date"
+            / "Information"
+            / self._has_ref("PubChem")
+            / "Value"
+            // ["DateISO8601"]
+            // Fns.require_only()
+            / date.fromisoformat
+            // Fns.require_only()
+        ).get
 
 
 class ChemicalAndPhysicalProperties(PubchemMiniDataView):
@@ -163,18 +241,6 @@ class ChemicalAndPhysicalProperties(PubchemMiniDataView):
     @property
     def _whoami(self) -> str:
         return "Chemical and Physical Properties"
-
-    @property
-    def inchikey(self) -> str:
-        return self.single_property("InChI Key").req_is(str)
-
-    @property
-    def inchi(self) -> str:
-        return self.single_property("InChI").req_is(str)
-
-    @property
-    def formula(self) -> str:
-        return self.single_property("InChI Key").req_is(str)
 
     @property
     def xlogp3(self) -> str:
@@ -197,6 +263,10 @@ class ChemicalAndPhysicalProperties(PubchemMiniDataView):
     @property
     def charge(self) -> int:
         return self.single_property("Formal Charge", "PubChem").value
+
+    @property
+    def complexity_rating(self) -> int:
+        return self.single_property("Complexity", "PubChem").value
 
     def single_property(self, key: str, ref: Optional[str] = "PubChem") -> ComputedProperty:
         return CommonTools.only(
@@ -319,7 +389,7 @@ class DrugAndMedicationInformation(PubchemDataView):
         ).to_set
 
     @property
-    def dea_schedule(self) -> Optional[CodeTypes.DeaSchedule]:
+    def dea_schedule(self) -> Optional[Codes.DeaSchedule]:
         return (
             self.mini
             / "DEA Controlled Substances"
@@ -330,7 +400,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             // ["String"]
             // Fns.require_only()
             / Fns.extract_group_1(r" *Schedule ([IV]+).*")
-            / CodeTypes.DeaSchedule
+            / Codes.DeaSchedule
             // Fns.request_only()
         ).get
 
@@ -360,7 +430,7 @@ class DrugAndMedicationInformation(PubchemDataView):
                 trial["phase"],
                 trial["status"],
                 frozenset(trial["interventions"].split("|")),
-                frozenset([int(z) for z in trial["cids"].split("|")]),
+                frozenset([Codes.PubchemCompoundId.of(z) for z in trial["cids"].split("|")]),
                 source,
             )
             objs.append(obj)
@@ -416,6 +486,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             // ["URL"]
             // Fns.require_only()
             / Fns.extract_group_1(Patterns.pubchem_compound_url)
+            / url_unescape
             / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
         ).to_set
 
@@ -486,6 +557,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             // ["URL"]
             // Fns.require_only()
             / Fns.extract_group_1(Patterns.pubchem_compound_url)
+            / url_unescape
             / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
         ).to_set
 
@@ -539,12 +611,11 @@ class Toxicity(PubchemMiniDataView):
             // Fns.request_only()
             // Fns.split_and_flatten_nonnulls(";", skip_nulls=True)
         ).contents
-        return frozenset(
-            {
-                v.strip().lower().replace("\n", " ").replace("\r", " ").replace("\t", " ")
-                for v in values
-            }
-        )
+        vals = {
+            v.strip().lower().replace("\n", " ").replace("\r", " ").replace("\t", " ")
+            for v in values
+        }
+        return frozenset({v for v in vals if v != "nan"})
 
 
 class AssociatedDisordersAndDiseases(PubchemMiniDataView):
@@ -560,8 +631,8 @@ class AssociatedDisordersAndDiseases(PubchemMiniDataView):
             self._tables
             / "ctd_chemical_disease"
             // ["diseasename", "directevidence", "dois"]
-            / [Fns.identity, Fns.identity, Fns.n_bar_items]
-            // AssociatedDisorder
+            / [Fns.identity, Fns.identity, Fns.n_bar_items()]
+            // Fns.construct(AssociatedDisorder)
         ).to_set
 
 
@@ -574,7 +645,7 @@ class Literature(PubchemMiniDataView):
 
     @property
     def depositor_pubmed_articles(self) -> FrozenSet[PubmedEntry]:
-        def split_mesh_headings(s: str) -> FrozenSet[CodeTypes.MeshHeading]:
+        def split_mesh_headings(s: str) -> FrozenSet[Codes.MeshHeading]:
             # this is a nightmare
             # these fields are comma-delimited strings, but there are commas within each
             # all of the examples I've seen with this are for chem name cis/trans
@@ -597,12 +668,12 @@ class Literature(PubchemMiniDataView):
             bits.append(current_bit)
             return frozenset({b.strip() for b in bits if b.strip() != ""})
 
-        def split_mesh_subheadings(s: Optional[str]) -> FrozenSet[CodeTypes.MeshSubheading]:
+        def split_mesh_subheadings(s: Optional[str]) -> FrozenSet[Codes.MeshSubheading]:
             if s is None:
                 return Misc.empty_frozenset
             return frozenset({k.strip() for k in s.split(",") if k.strip() != ""})
 
-        def split_mesh_codes(s: Optional[str]) -> FrozenSet[CodeTypes.MeshCode]:
+        def split_mesh_codes(s: Optional[str]) -> FrozenSet[Codes.MeshCode]:
             if s is None:
                 return Misc.empty_frozenset
             z = [bit.split(" ")[0] for bit in s.split(",")]
@@ -627,8 +698,8 @@ class Literature(PubchemMiniDataView):
             return datetime.strptime(str(s).strip(), "%Y%m%d").date()
 
         keys = {
-            "pmid": Fns.req_is_int,
-            "articletype": Fns.req_is_str,
+            "pmid": Codes.PubmedId.of,
+            "articletype": Fns.req_is(str),
             "pmidsrcs": split_sources,
             "meshheadings": split_mesh_headings,
             "meshsubheadings": split_mesh_subheadings,
@@ -679,11 +750,11 @@ class Literature(PubchemMiniDataView):
             articles = [NestedDotDict(k) for k in evidence["Article"]]
             pubs = {
                 Publication(
-                    pmid=pub.req_as("PMID", int),
+                    pmid=Codes.PubmedId.of(pub["PMID"]),
                     pub_date=datetime.strptime(pub["PublicationDate"].strip(), "%Y-%m-%d").date(),
-                    is_review=pub["IsReview"],
+                    is_review=bool(pub["IsReview"]),
                     title=pub["Title"].strip(),
-                    journal=pub["Journal"],
+                    journal=pub["Journal"].strip(),
                     relevance_score=pub.req_as("RelevanceScore", int),
                 )
                 for pub in articles
@@ -704,28 +775,53 @@ class Literature(PubchemMiniDataView):
 
     def _guess_neighbor(self, kind: CoOccurrenceType, neighbor_id: str) -> str:
         if kind is CoOccurrenceType.chemical:
-            return CodeTypes.PubchemCompoundId(neighbor_id)
+            return Codes.PubchemCompoundId(neighbor_id)
         elif kind is CoOccurrenceType.gene and neighbor_id.startswith("EC:"):
-            return CodeTypes.EcNumber(neighbor_id)
+            return Codes.EcNumber(neighbor_id)
         elif kind is CoOccurrenceType.gene:
-            return CodeTypes.GeneId(neighbor_id)
+            return Codes.GeneId(neighbor_id)
         elif kind is CoOccurrenceType.disease:
-            return CodeTypes.MeshCode(neighbor_id)
+            return Codes.MeshCode(neighbor_id)
         else:
             raise ValueError(f"Could not find ID type for {kind} ID {neighbor_id}")
+
+
+class Patents(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Patents"
+
+    @property
+    def associated_disorders_and_diseases(self) -> FrozenSet[AssociatedDisorder]:
+        return (
+            self._tables
+            / "patent"
+            // ["diseasename", "directevidence", "dois"]
+            / [Fns.identity, Fns.identity, Fns.n_bar_items()]
+            // Fns.construct(AssociatedDisorder)
+        ).to_set
+
+
+class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
+    """"""
+
+    @property
+    def _whoami(self) -> str:
+        return "Biomolecular Interactions and Pathways"
 
     @property
     def drug_gene_interactions(self) -> FrozenSet[DrugGeneInteraction]:
         # the order of this dict is crucial
         keys = {
-            "genename": Fns.str_id_or_none,
-            "geneclaimname": Fns.str_id_or_none,
-            "interactionclaimsource": Fns.req_is_str_or_none,
-            "interactiontypes": Fns.split_bars("|"),
-            "pmids": Fns.split_bars(","),
-            "dois": Fns.split_bars("|"),
+            "genename": Fns.identity(),
+            "geneclaimname": Fns.req_is(str, True),
+            "interactionclaimsource": Fns.req_is(str, True),
+            "interactiontypes": Fns.split("|"),
+            "pmids": Fns.split(","),
+            "dois": Fns.split("|"),
         }
-        z = self._tables / "dgidb" // list(keys.keys()) / list(keys.values())
         return (
             self._tables
             / "dgidb"
@@ -739,10 +835,10 @@ class Literature(PubchemMiniDataView):
         # the order of this dict is crucial
         # YES, the | used in pmids really is different from the , used in DrugGeneInteraction
         keys = {
-            "genesymbol": CodeTypes.GenecardSymbol,
-            "taxid": Fns.req_is_int_or_none,
-            "interaction": Fns.split_bars("|"),
-            "pmids": Fns.split_bars("|"),
+            "genesymbol": Codes.GenecardSymbol,
+            "interaction": Fns.split("|"),
+            "taxname": Fns.req_is(str, True),
+            "pmids": Fns.split("|"),
         }
         return (
             self._tables
@@ -754,23 +850,73 @@ class Literature(PubchemMiniDataView):
 
     @property
     def drugbank_interactions(self) -> FrozenSet[DrugbankInteraction]:
-        raise NotImplementedError()
+        keys = {
+            "genesymbol": Codes.GenecardSymbol,
+            "drugaction": Fns.req_is(str),
+            "targetid": Fns.req_is(str),
+            "targetname": Fns.req_is(str),
+            "generalfunc": Fns.req_is(str),
+            "specificfunc": Fns.req_is(str),
+            "pmids": Fns.split(","),
+            "dois": Fns.split("|"),
+        }
+        return (
+            self._tables
+            / "drugbank"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(DrugbankInteraction)
+        ).to_set
+
+    @property
+    def drugbank_legal_groups(self) -> FrozenSet[str]:
+        return (
+            self._tables
+            / "drugbank"
+            // ["druggroup"]
+            // Fns.require_only()
+            / Fns.split_and_flatten_nonnulls(";")
+        ).to_set
 
     @property
     def drugbank_ddis(self) -> FrozenSet[DrugbankDdi]:
-        raise NotImplementedError()
+        keys = {
+            "dbid2": Codes.DrugbankCompoundId,
+            "cid2": Codes.PubchemCompoundId,
+            "name": Fns.req_is(str),
+            "descr": Fns.req_is(str),
+        }
+        return (
+            self._tables
+            / "drugbankddi"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(DrugbankDdi)
+        ).to_set
 
-    @property
-    def bioassay(self) -> FrozenSet[DrugbankDdi]:
-        raise NotImplementedError()
 
-
-class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
+class BiologicalTestResults(PubchemMiniDataView):
     """"""
 
     @property
     def _whoami(self) -> str:
-        return "Biomolecular Interactions and Pathways"
+        return "Biological Test Results"
+
+    @property
+    def bioactivity(self) -> FrozenSet[Bioactivity]:
+        keys = {
+            "dbid2": Codes.DrugbankCompoundId.of,
+            "cid2": Codes.PubchemCompoundId.of,
+            "name": Fns.req_is(str),
+            "descr": Fns.req_is(str),
+        }
+        return (
+            self._tables
+            / "bioactivity"
+            // list(keys.keys())
+            / list(keys.values())
+            // Fns.construct(DrugbankDdi)
+        ).to_set
 
 
 class Classification(PubchemMiniDataView):
@@ -879,6 +1025,7 @@ __all__ = [
     "Toxicity",
     "AssociatedDisordersAndDiseases",
     "Literature",
+    "NamesAndIdentifiers",
     "BiomolecularInteractionsAndPathways",
     "Classification",
 ]

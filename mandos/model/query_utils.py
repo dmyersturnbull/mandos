@@ -27,6 +27,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 logger = logging.getLogger("mandos")
 
+empty_frozenset = frozenset([])
+
 
 @dataclass(frozen=True)
 class FilterFn:
@@ -64,7 +66,7 @@ class Fns:
         """
 
         def construct(things: Iterable[str]) -> Optional[str]:
-            x = list(things)
+            x = [s.strip() for s in things]
             return tp(*x)
 
         return construct
@@ -72,7 +74,7 @@ class Fns:
     @classmethod
     def join_nonnulls(cls) -> Callable[[Iterable[str]], Optional[str]]:
         def opt_join(things: Iterable[str]) -> Optional[str]:
-            x = list(things)
+            x = [s.strip() for s in things]
             return None if len(x) == 0 else ";".join(x)
 
         return opt_join
@@ -87,7 +89,7 @@ class Fns:
                 if thing is not None and thing != float("NaN") or not skip_nulls:
                     # let it fail if skip_nulls is False
                     for bit in str(thing).split(sep):
-                        results.add(bit)
+                        results.add(bit.strip())
             return results
 
         return split_flat
@@ -95,7 +97,7 @@ class Fns:
     @classmethod
     def request_only(cls) -> Callable[[Iterable[str]], Optional[str]]:
         def only_nonreq(things: Iterable[str]) -> Optional[str]:
-            things = list(things)
+            things = [s.strip() for s in things]
             if len(things) > 1:
                 raise ValueError(f"{len(things)} items in {things}")
             elif len(things) == 0:
@@ -110,7 +112,7 @@ class Fns:
         cls, min_val: Optional[int] = None, max_val: Optional[int] = None
     ) -> Callable[[str], int]:
         def roman_to_arabic(s: str) -> int:
-            return StringTools.roman_to_arabic(s, min_val=min_val, max_val=max_val)
+            return StringTools.roman_to_arabic(s.strip(), min_val=min_val, max_val=max_val)
 
         return roman_to_arabic
 
@@ -137,61 +139,51 @@ class Fns:
     @classmethod
     def lowercase_unless_acronym(cls) -> Callable[[str], str]:
         def lowercase_unless_acronym(s: str) -> str:
+            s = s.strip()
             return s if s.isupper() else s.lower()
 
         return lowercase_unless_acronym
 
     @classmethod
     def split_bars_to_int(cls, sep: str = "||") -> Callable[[Optional[str]], FrozenSet[int]]:
-        return lambda value: frozenset([] if value is None else [int(s) for s in value.split(sep)])
+        def split_bars_to_int(value: str) -> FrozenSet[int]:
+            return frozenset([int(x) for x in cls.split(sep)(value)])
+
+        return split_bars_to_int
 
     @classmethod
-    def split_bars(cls, sep: str = "||") -> Callable[[Optional[str]], FrozenSet[str]]:
-        return lambda value: frozenset([] if value is None else str(value).split(sep))
+    def split(cls, sep: str = "||") -> Callable[[Optional[str]], FrozenSet[str]]:
+        def split_bars(value: str) -> FrozenSet[str]:
+            if value is None:
+                return empty_frozenset
+            return frozenset([s.strip() for s in value.split(sep)])
 
-    @staticmethod
-    def n_bar_items(sep: str = "||") -> Callable[[Optional[str]], int]:
-        return lambda value: 0 if value is None else len(set(value.split(sep)))
+        return split_bars
 
-    @staticmethod
-    def not_null(value):
-        return value is not None
+    @classmethod
+    def n_bar_items(cls, sep: str = "||") -> Callable[[Optional[str]], int]:
+        def n_bar_items(value: str) -> int:
+            return len(cls.split(sep)(value))
 
-    @staticmethod
-    def identity(value):
-        return value
+        return n_bar_items
 
-    @staticmethod
-    def req_is_str(value):
-        if not isinstance(value, str):
-            raise ValueError(f"{value} is a {type(value)}, not str")
-        return value
+    @classmethod
+    def not_null(cls) -> Callable[[Any], bool]:
+        return lambda value: value is not None
 
-    @staticmethod
-    def req_is_int(value):
-        if not isinstance(value, int):
-            raise ValueError(f"{value} is a {type(value)}, not int")
-        return value
+    @classmethod
+    def identity(cls) -> Callable[[T], T]:
+        return lambda value: value
 
-    @staticmethod
-    def str_id_or_none(value):
-        if value is None:
-            return None
-        elif isinstance(value, (int, str)):
-            return str(value)
-        raise ValueError(f"{value} is a {type(value)}, not int or str")
+    @classmethod
+    def req_is(cls, type_, nullable: bool = False, then_convert=None) -> Callable[[str], str]:
+        def req_is(value):
+            if not isinstance(value, type_):
+                raise ValueError(f"{value} is a {type(value)}, not {type_}")
+            return value if then_convert is None else then_convert(value)
 
-    @staticmethod
-    def req_is_int_or_none(value):
-        if value is not None and not isinstance(value, int):
-            raise ValueError(f"{value} is a {type(value)}, not int")
-        return value
-
-    @staticmethod
-    def req_is_str_or_none(value):
-        if value is not None and not isinstance(value, str):
-            raise ValueError(f"{value} is a {type(value)}, not str")
-        return value
+        req_is.__name__ = f"req_is_{type_}" + ("_or_null" if nullable else "")
+        return req_is
 
 
 def _get_conversion_fn(fn: Union[None, str, Callable[[Any], Any]]) -> Callable[[Any], Any]:

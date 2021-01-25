@@ -8,7 +8,7 @@ from mandos.pubchem_api import (
     CachingPubchemApi,
 )
 from mandos.model.pubchem_support import (
-    CodeTypes,
+    Codes,
     CoOccurrenceType,
     AtcCode,
     Publication,
@@ -23,7 +23,8 @@ class TestPubchemData:
 
 class TestPubchemApi:
     def test(self):
-        querier = CachingPubchemApi(Path("."), QueryingPubchemApi(), compress=False)
+        path = Path(__file__).parent / "resources" / "pchem_store"
+        querier = CachingPubchemApi(path, QueryingPubchemApi(), compress=False)
         x = querier.fetch_data("PIQVDUKEQYOJNR-VZXSFKIWSA-N")
         assert x.cid == 446220
         assert x.parent_or_self == 446220
@@ -34,25 +35,13 @@ class TestPubchemApi:
         assert props.computed is not None
         assert 0 < len(props.computed) < 40
         drug = x.drug_and_medication_information
-        assert (
-            drug.indication_summary_drugbank
-            == "For the introduction of local (topical) anesthesia of accessible mucous membranes of the oral, laryngeal and nasal cavities."
-        )
+        assert drug.indication_summary_drugbank == "Cocaine has indications."
         assert drug.classes == {"Central Nervous System Stimulants"}
-        assert (
-            drug.indication_summary_livertox
-            == "Cocaine is a benzoid acid ester that that was originally used as a local anesthetic, but is no longer used because of its potent addictive qualities. When given in high doses systemically, cocaine has mood elevating effects that have led to its widescale abuse. High doses of cocaine can be associated with toxic reactions including hyperthermia, rhabdomyolysis, shock and acute liver injury which can be severe and even fatal."
-        )
+        assert drug.indication_summary_livertox == "Cocaine is a benzoid acid ester."
         # assert drug.clinical_trials == set()
         pharm = x.pharmacology_and_biochemistry
-        assert (
-            pharm.summary_drugbank_text
-            == "Cocaine is a local anesthetic indicated for the introduction of local (topical) anesthesia of accessible mucous membranes of the oral, laryngeal and nasal cavities."
-        )
-        assert (
-            pharm.summary_ncit_text
-            == "Cocaine is a tropane alkaloid with central nervous systems (CNS) stimulating and local anesthetic activity. Cocaine binds to the dopamine, serotonin, and norepinephrine transport proteins and inhibits the re-uptake of dopamine, serotonin, and norepinephrine into pre-synaptic neurons. This leads to an accumulation of the respective neurotransmitters in the synaptic cleft and may result in increased postsynaptic receptor activation. The mechanism of action through which cocaine exerts its local anesthetic effects is by binding to and blocking the voltage-gated sodium channels in the neuronal cell membrane. By stabilizing neuronal membranes, cocaine inhibits the initiation and conduction of nerve impulses and produces a reversible loss of sensation."
-        )
+        assert pharm.summary_drugbank_text == "Cocaine is a local anesthetic indicated for things."
+        assert pharm.summary_ncit_text == "Cocaine is a tropane alkaloid."
         assert pharm.summary_ncit_links == frozenset(
             {"dopamine", "serotonin", "norepinephrine", "cocaine"}
         )
@@ -110,13 +99,12 @@ class TestPubchemApi:
             }
         )
         lit = x.literature
-        assert lit.chemical_cooccurrences
-        assert lit.gene_cooccurrences
-        assert lit.disease_cooccurrences
-        dgis = lit.drug_gene_interactions
-        assert dgis
-        cgis = lit.compound_gene_interactions
-        assert cgis == frozenset({})
+        chem_co = lit.chemical_cooccurrences
+        assert frozenset([c.strip_pubs() for c in chem_co]) == frozenset({})
+        assert lit.gene_cooccurrences == frozenset({})
+        assert lit.disease_cooccurrences == frozenset({})
+        assert lit.drug_gene_interactions == frozenset({})
+        assert lit.compound_gene_interactions == frozenset({})
 
 
 if __name__ == "__main__":

@@ -1,15 +1,16 @@
 # Mandos
 
-[![Version status](https://img.shields.io/pypi/status/mandos)](https://pypi.org/project/mandos/)
+[![Version status](https://img.shields.io/pypi/status/mandos?label=status)](https://pypi.org/project/mandos)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mandos)](https://pypi.org/project/mandos/)
-[![Docker](https://img.shields.io/docker/v/dmyersturnbull/mandos?color=green&label=DockerHub)](https://hub.docker.com/repository/docker/dmyersturnbull/mandos)
-[![GitHub release (latest SemVer including pre-releases)](https://img.shields.io/github/v/release/dmyersturnbull/mandos?include_prereleases&label=GitHub)](https://github.com/dmyersturnbull/mandos/releases)
-[![Latest version on PyPi](https://badge.fury.io/py/mandos.svg)](https://pypi.org/project/mandos/)
-[![Documentation status](https://readthedocs.org/projects/mandos-chem/badge/?version=latest&style=flat-square)](https://mandos-chem.readthedocs.io/en/stable/)
-[![Build & test](https://github.com/dmyersturnbull/mandos/workflows/Build%20&%20test/badge.svg)](https://github.com/dmyersturnbull/mandos/actions)
-[![Maintainability](https://api.codeclimate.com/v1/badges/aa7c12d45ad794e45e55/maintainability)](https://codeclimate.com/github/dmyersturnbull/mandos/maintainability)
-[![Coverage](https://coveralls.io/repos/github/dmyersturnbull/mandos/badge.svg?branch=master&service=github)](https://coveralls.io/github/dmyersturnbull/mandos?branch=master)
+[![Python version compatibility](https://img.shields.io/pypi/pyversions/mandos?label=Python)](https://pypi.org/project/mandos)
+[![Version on Docker Hub](https://img.shields.io/docker/v/dmyersturnbull/mandos?color=green&label=Docker%20Hub)](https://hub.docker.com/repository/docker/dmyersturnbull/mandos)
+[![Version on Github](https://img.shields.io/github/v/release/dmyersturnbull/mandos?include_prereleases&label=GitHub)](https://github.com/dmyersturnbull/mandos/releases)
+[![Version on PyPi](https://img.shields.io/pypi/v/mandos?label=PyPi)](https://pypi.org/project/mandos)  
+[![Build (Actions)](https://img.shields.io/github/workflow/status/dmyersturnbull/mandos/Build%20&%20test?label=Tests)](https://github.com/dmyersturnbull/mandos/actions)
+[![Documentation status](https://readthedocs.org/projects/mandos/badge)](https://mandos.readthedocs.io/en/stable/)
+[![Coverage (coveralls)](https://coveralls.io/repos/github/dmyersturnbull/mandos/badge.svg?branch=main&service=github)](https://coveralls.io/github/dmyersturnbull/mandos?branch=main)
+[![Maintainability (Code Climate)](https://api.codeclimate.com/v1/badges/aa7c12d45ad794e45e55/maintainability)](https://codeclimate.com/github/dmyersturnbull/mandos/maintainability)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/?branch=main)
 
 A cheminformatics tool that extracts and summarizes knowledge about compounds from 20+ sources.
 It then outputs that knowledge in a consistent, human-readable and machine-readable format.

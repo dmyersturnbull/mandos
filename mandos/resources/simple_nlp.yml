@@ -1,0 +1,55 @@
+---
+tokens: ['\s']
+
+options:
+  convert_greek: true
+  convert_numbers: true
+
+blocks:
+-
+  range: U+0030..U+0039
+  block: Basic Latin
+  comment: '0-9'
+-
+  range: U+0041..U+005A
+  block: Basic Latin
+  comment: 'uppercase A-Z'
+-
+  range: U+0061..U+007A
+  block: Basic Latin
+  comment: 'lowercase a-z'
+-
+  range: U+00C0..U+00FF
+  block: Latin-1 Supplement
+  comment: 'accented letters, plus multiplication and division signs'
+-
+  range: U+0100..U+017F
+  block: atin Extended A
+  comment: 'accented letters'
+-
+  range: U+0180..U+024F
+  block: Latin Extended B
+  comment: 'accented letters (uncommon)'
+-
+  range: U+1E00..U+1EFF
+  block: Latin Extended Additional
+  comment: 'accented letters (uncommon)'
+
+stop_words: [
+  "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "you're", "you've",
+  "you'll", "you'd", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself",
+  "she", "she's", "her", "hers", "herself", "it", "it's", "its", "itself", "they", "them", "their",
+  "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "that'll", "these",
+  "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having",
+  "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until",
+  "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through",
+  "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on",
+  "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where",
+  "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no",
+  "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just",
+  "don", "don't", "should", "should've", "now", "d", "ll", "m", "o", "re", "ve", "y", "ain", "aren",
+  "aren't", "couldn", "couldn't", "didn", "didn't", "doesn", "doesn't", "hadn", "hadn't", "hasn",
+  "hasn't", "haven", "haven't", "isn", "isn't", "ma", "mightn", "mightn't", "mustn", "mustn't",
+  "needn", "needn't", "shan", "shan't", "shouldn", "shouldn't", "wasn", "wasn't", "weren", "weren't",
+  "won", "won't", "wouldn", "wouldn't"
+]

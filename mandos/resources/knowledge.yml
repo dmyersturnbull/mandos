@@ -1,0 +1,131 @@
+---
+params:
+-
+  key: meta.seed
+  type: int
+  default: '0'
+-
+  key: meta.is_testing
+  type: '?bool'
+-
+  key: meta.cache.path
+  type: '?path'
+-
+  key: meta.cache.gzip
+  type: bool
+  default: 'true'
+-
+  key: meta.query.chembl_timeout_sec
+  type: float
+  default: '1.0'
+-
+  key: meta.query.pubchem_timeout_sec
+  type: float
+  default: '2.0'
+-
+  key: meta.query.pubchem_min_delay
+  type: float
+  default: '0.25'
+-
+  key: meta.query.pubchem_max_delay
+  type: float
+  default: '0.25'
+-
+  key: chembl.moa.require_taxon
+  type: bool
+  default: 'true'
+-
+  key: chembl.moa.taxon
+  type: int
+  default: '7742'
+-
+  key: chembl.moa.target_traversal_strategy
+  type: path
+  default: 'resources/strategies/strategy0.txt'
+-
+  key: chembl.moa.target_name_patterns
+  type: path
+  default: 'resources/strategies/target_patterns.txt'
+-
+  key: chembl.activity.require_taxon
+  type: bool
+  default: 'true'
+-
+  key: chembl.activity.taxon
+  type: int
+  default: '7742'
+-
+  key: chembl.activity.allowed_assay_types
+  type: '{str}'
+  default: '{B}'
+-
+  key: chembl.activity.allowed_relations
+  type: '{str}'
+  default: '{<,<=,=}'
+-
+  key: chembl.activity.allowed_target_types
+  type: '{str}'
+  default: ALL
+-
+  key: chembl.activity.banned_flags
+  type: '{str}'
+  default: '{potential missing data,potential transcription error,outside typical range}'
+-
+  key: chembl.activity.require_confidence_score
+  type: bool
+  default: 'true'
+-
+  key: chembl.activity.min_target_confidence_score
+  type: int
+  default: '4'
+-
+  key: chembl.activity.require_pchembl
+  type: bool
+  default: 'true'
+-
+  key: chembl.activity.min_pchembl
+  type: float
+  default: '6.0'
+-
+  key: chembl.activity.target_traversal_strategy
+  type: path
+  default: 'resources/strategies/strategy0.txt'
+-
+  key: chembl.moa.target_name_patterns
+  type: path
+  default: 'resources/strategies/target_patterns.txt'
+-
+  key: chembl.trial.min_phase
+  type: int
+  default: '3'
+-
+  key: pubchem.use_parent_molecule
+  type: bool
+  default: 'true'
+-
+  key: pubchem.nlp_strategy
+  type: class
+  default: 'mandos.model.nlp.CompressToUtf8'
+
+sources:
+-
+  meta_ref: ChEMBL
+  ref: ChEMBL
+  name: ChEMBL MoA
+  description: Mechanism of action annotations from ChEMBL
+  params: ['chembl.moa.*']
+  target: mandos.search.mechanism_search.MechanismSearch
+-
+  meta_ref: ChEMBL
+  ref: ChEMBL
+  name: ChEMBL activity
+  description: Activity annotations from ChEMBL
+  params: ['chembl.activity.*']
+  target: mandos.search.activity_search.ActivitySearch
+-
+  meta_ref: ChEMBL
+  ref: ChEMBL
+  name: ChEMBL trials
+  description: Clinical trial annotations from ChEMBL
+  params: ['chembl.trial.*']
+  target: mandos.search.indication_search.IndicationSearch

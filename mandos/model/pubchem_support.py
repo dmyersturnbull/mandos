@@ -5,13 +5,14 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Union, Optional, FrozenSet, Sequence
 
-import pandas as pd
+from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import MandosResources
 from mandos.model.query_utils import Fns
 
-hazards = pd.read_csv(MandosResources.path("hazards.tab"), sep="\t")
-hazards = dict(hazards.set_index("code").T.to_dict())
+hazards = {
+    d["code"]: d for d in NestedDotDict.read_toml(MandosResources.path("hazards.toml"))["signals"]
+}
 
 
 @dataclass(frozen=True, repr=True, eq=True, order=True)

@@ -541,7 +541,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / "Value"
             / "StringWithMarkup"
             >> "String"
-            >> Fns.join_nonnulls()
+            >> Fns.join_nonnulls(sep=" /// ")
         ).get
 
     def _get_moa_links(self, ref: str) -> FrozenSet[str]:
@@ -564,7 +564,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
     @property
     def biochem_reactions(self) -> FrozenSet[str]:
         # TODO from multiple sources
-        return (self._tables / "pathwayreaction" >> "name").to_set
+        return frozenset({s.strip() for s in (self._tables / "pathwayreaction" >> "name").to_set})
 
 
 class SafetyAndHazards(PubchemMiniDataView):
@@ -870,13 +870,11 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
 
     @property
     def drugbank_legal_groups(self) -> FrozenSet[str]:
-        return (
-            self._tables
-            / "drugbank"
-            // ["druggroup"]
-            // Fns.require_only()
-            / Fns.split_and_flatten_nonnulls(";")
-        ).to_set
+        q = set()
+        for x in (self._tables / "drugbank" // ["druggroup"] // Fns.require_only()).to_set:
+            for y in x.split(";"):
+                q.add(y.strip())
+        return frozenset(q)
 
     @property
     def drugbank_ddis(self) -> FrozenSet[DrugbankDdi]:
@@ -904,19 +902,7 @@ class BiologicalTestResults(PubchemMiniDataView):
 
     @property
     def bioactivity(self) -> FrozenSet[Bioactivity]:
-        keys = {
-            "dbid2": Codes.DrugbankCompoundId.of,
-            "cid2": Codes.PubchemCompoundId.of,
-            "name": Fns.req_is(str),
-            "descr": Fns.req_is(str),
-        }
-        return (
-            self._tables
-            / "bioactivity"
-            // list(keys.keys())
-            / list(keys.values())
-            // Fns.construct(DrugbankDdi)
-        ).to_set
+        raise NotImplementedError()
 
 
 class Classification(PubchemMiniDataView):
@@ -1003,6 +989,10 @@ class PubchemData(PubchemDataView):
     @property
     def biomolecular_interactions_and_pathways(self) -> BiomolecularInteractionsAndPathways:
         return BiomolecularInteractionsAndPathways(self._data)
+
+    @property
+    def biological_test_results(self) -> BiologicalTestResults:
+        return BiologicalTestResults(self._data)
 
     @property
     def classification(self) -> Classification:

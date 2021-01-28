@@ -11,7 +11,9 @@ from mandos.model.pubchem_support import (
     Codes,
     CoOccurrenceType,
     AtcCode,
-    Publication,
+    CompoundGeneInteraction,
+    DrugbankDdi,
+    DrugGeneInteraction,
     CoOccurrence,
 )
 
@@ -24,7 +26,7 @@ class TestPubchemData:
 class TestPubchemApi:
     def test(self):
         path = Path(__file__).parent / "resources" / "pchem_store"
-        querier = CachingPubchemApi(path, QueryingPubchemApi(), compress=False)
+        querier = CachingPubchemApi(path, None, compress=False)
         x = querier.fetch_data("PIQVDUKEQYOJNR-VZXSFKIWSA-N")
         assert x.cid == 446220
         assert x.parent_or_self == 446220
@@ -40,11 +42,12 @@ class TestPubchemApi:
         assert drug.indication_summary_livertox == "Cocaine is a benzoid acid ester."
         # assert drug.clinical_trials == set()
         pharm = x.pharmacology_and_biochemistry
-        assert pharm.summary_drugbank_text == "Cocaine is a local anesthetic indicated for things."
-        assert pharm.summary_ncit_text == "Cocaine is a tropane alkaloid."
-        assert pharm.summary_ncit_links == frozenset(
-            {"dopamine", "serotonin", "norepinephrine", "cocaine"}
+        assert (
+            pharm.summary_drugbank_text
+            == "From DrugBank Pharmacology: Cocaine is a local anesthetic."
         )
+        assert pharm.summary_ncit_text == "From NCIt: Cocaine is a tropane alkaloid."
+        assert pharm.summary_ncit_links == frozenset({"cocaineish", "somencitthing"})
         assert pharm.mesh == frozenset(
             {"Dopamine Uptake Inhibitors", "Anesthetics, Local", "Vasoconstrictor Agents"}
         )
@@ -71,40 +74,158 @@ class TestPubchemApi:
                 AtcCode(code="N01", name="Anesthetics"),
             }
         )
-        assert pharm.moa_summary_drugbank_links == frozenset(
-            {"norepinephrine", "serotonin", "cocaine", "dopamine"}
+        assert pharm.moa_summary_drugbank_links == frozenset({"drugbankmoacocaine"})
+        assert pharm.moa_summary_drugbank_text == "From DrugBank MOA: Cocaine anesthesia."
+        assert pharm.moa_summary_hsdb_links == frozenset(
+            {"fromhsdb:jwh133", "fromhsdb: hydrochloride"}
         )
         assert (
-            pharm.moa_summary_drugbank_text
-            == "Cocaine produces anesthesia by inhibiting excitation of nerve endings or by blocking conduction in peripheral nerves. This is achieved by reversibly binding to and inactivating sodium channels. Sodium influx through these channels is necessary for the depolarization of nerve cell membranes and subsequent propagation of impulses along the course of the nerve. Cocaine is the only local anesthetic with vasoconstrictive properties. This is a result of its blockade of norepinephrine reuptake in the autonomic nervous system. Cocaine binds differentially to the dopamine, serotonin, and norepinephrine transport proteins and directly prevents the re-uptake of dopamine, serotonin, and norepinephrine into pre-synaptic neurons. Its effect on dopamine levels is most responsible for the addictive property of cocaine."
+            pharm.moa_summary_hsdb_text
+            == "From HSDB / lit: Cocaine is something. /// And something else."
         )
-        # possible copyright issues with these ones, but they're correct
-        assert pharm.moa_summary_hsdb_links
-        assert pharm.moa_summary_hsdb_text
-        assert pharm.biochem_reactions == frozenset(
-            {"Metabolism", "Biological oxidations", "Phase I - Functionalization of compounds"}
-        )
+        assert pharm.biochem_reactions == frozenset({"Metabolism", "Biological oxidations"})
         safety = x.safety_and_hazards
-        assert {g.code for g in safety.ghs_codes} == {"H331", "H317", "H311", "H301"}
+        assert {g.code for g in safety.ghs_codes} == {"H311", "H301"}
         tox = x.toxicity
         assert tox.acute_effects == frozenset(
             {
-                "autonomic nervous system: sympathomimetic",
-                "behavioral: altered sleep time (including change in righting " "reflex)",
+                "an effect",
                 "behavioral: convulsions or effect on seizure threshold",
                 "behavioral: excitement",
-                "behavioral: general anesthetic",
-                "cardiac: pulse rate",
-                "lungs, thorax, or respiration: respiratory stimulation",
             }
         )
         lit = x.literature
         chem_co = lit.chemical_cooccurrences
-        assert frozenset([c.strip_pubs() for c in chem_co]) == frozenset({})
-        assert lit.gene_cooccurrences == frozenset({})
-        assert lit.disease_cooccurrences == frozenset({})
-        assert lit.drug_gene_interactions == frozenset({})
-        assert lit.compound_gene_interactions == frozenset({})
+        assert frozenset([c.strip_pubs() for c in chem_co]) == frozenset(
+            {
+                CoOccurrence(
+                    neighbor_id="681",
+                    neighbor_name="Dopamine",
+                    kind=CoOccurrenceType.chemical,
+                    article_count=4991,
+                    query_article_count=37869,
+                    neighbor_article_count=104868,
+                    score=144197,
+                    publications=frozenset(),
+                )
+            }
+        )
+        # TODO: test pubs
+        gene_co = lit.gene_cooccurrences
+        assert frozenset([c.strip_pubs() for c in gene_co]) == frozenset(
+            {
+                CoOccurrence(
+                    neighbor_id="slc6a3",
+                    neighbor_name="solute carrier family 6 member 3",
+                    kind=CoOccurrenceType.gene,
+                    article_count=1142,
+                    query_article_count=9031,
+                    neighbor_article_count=6295,
+                    score=49087,
+                    publications=frozenset(),
+                )
+            }
+        )
+        disease_co = lit.disease_cooccurrences
+        assert frozenset([c.strip_pubs() for c in disease_co]) == frozenset(
+            {
+                CoOccurrence(
+                    neighbor_id="D010146",
+                    neighbor_name="Pain",
+                    kind=CoOccurrenceType.disease,
+                    article_count=524,
+                    query_article_count=24423,
+                    neighbor_article_count=159582,
+                    score=12499,
+                    publications=frozenset(),
+                ),
+                CoOccurrence(
+                    neighbor_id="D019966",
+                    neighbor_name="Substance-Related Disorders",
+                    kind=CoOccurrenceType.disease,
+                    article_count=8944,
+                    query_article_count=24423,
+                    neighbor_article_count=43314,
+                    score=287471,
+                    publications=frozenset(),
+                ),
+            }
+        )
+        bio = x.biomolecular_interactions_and_pathways
+        assert bio.drug_gene_interactions == frozenset(
+            {
+                DrugGeneInteraction(
+                    gene_name="OPRK1",
+                    gene_claim_id="P41145",
+                    source="TdgClinicalTrial",
+                    interactions=frozenset(),
+                    pmids=frozenset(),
+                    dois=frozenset(),
+                ),
+                DrugGeneInteraction(
+                    gene_name="DRD3",
+                    gene_claim_id="P35462",
+                    source="TEND",
+                    interactions=frozenset(),
+                    pmids=frozenset(),
+                    dois=frozenset(),
+                ),
+                DrugGeneInteraction(
+                    gene_name="SCN1A",
+                    gene_claim_id="BE0004901",
+                    source="DrugBank",
+                    interactions=frozenset({"inhibitor"}),
+                    pmids=frozenset({Codes.PubmedId("9876137"), Codes.PubmedId("2155033")}),
+                    dois=frozenset(
+                        {
+                            Codes.Doi("10.1016/s0006-3495(90)82574-1"),
+                            Codes.Doi("10.1016/s0006-3495(99)77192-4"),
+                        }
+                    ),
+                ),
+                DrugGeneInteraction(
+                    gene_name="CNR1",
+                    gene_claim_id="CNR1",
+                    source="PharmGKB",
+                    interactions=frozenset(),
+                    pmids=frozenset(),
+                    dois=frozenset(),
+                ),
+            }
+        )
+        assert bio.compound_gene_interactions == frozenset(
+            {
+                CompoundGeneInteraction(
+                    gene_name=Codes.GeneId("CHRNB2"),
+                    interactions=frozenset(
+                        {"CHRNB2 protein results in increased susceptibility to Cocaine"}
+                    ),
+                    tax_name="Mus musculus",
+                    pmids=frozenset(),
+                ),
+                CompoundGeneInteraction(
+                    gene_name=Codes.GeneId("CHURC1"),
+                    interactions=frozenset(
+                        {"Cocaine results in decreased expression of CHURC1 mRNA"}
+                    ),
+                    tax_name="Homo sapiens",
+                    pmids=frozenset({Codes.PubmedId("16710320"), Codes.PubmedId("15009677")}),
+                ),
+            }
+        )
+        assert bio.drugbank_legal_groups == frozenset({"approved", "illicit"})
+        assert bio.drugbank_ddis == frozenset(
+            {
+                DrugbankDdi(
+                    drug_drugbank_id=Codes.DrugbankCompoundId("DB00007"),
+                    drug_pubchem_id=Codes.PubchemCompoundId("657181"),
+                    drug_drugbank_name="Leuprolide",
+                    description="The risk or severity of QTc prolongation.",
+                )
+            }
+        )
+        test = x.biological_test_results
+        # assert test.bioactivity == frozenset({})
 
 
 if __name__ == "__main__":

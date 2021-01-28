@@ -1,0 +1,156 @@
+[[params]]
+key = "meta.seed"
+type = "int"
+default = "0"
+
+[[params]]
+key = "meta.is_testing"
+type = "?bool"
+
+[[params]]
+key = "meta.cache.path"
+type = "?path"
+
+[[params]]
+key = "meta.cache.gzip"
+type = "bool"
+default = "true"
+
+[[params]]
+key = "meta.query.chembl_timeout_sec"
+type = "float"
+default = "1.0"
+
+[[params]]
+key = "meta.query.pubchem_timeout_sec"
+type = "float"
+default = "2.0"
+
+[[params]]
+key = "meta.query.pubchem_min_delay"
+type = "float"
+default = "0.25"
+
+[[params]]
+key = "meta.query.pubchem_max_delay"
+type = "float"
+default = "0.25"
+
+[[params]]
+key = "chembl.moa.require_taxon"
+type = "bool"
+default = "true"
+
+[[params]]
+key = "chembl.moa.taxon"
+type = "int"
+default = "7742"
+
+[[params]]
+key = "chembl.moa.target_traversal_strategy"
+type = "path"
+default = "resources/strategies/strategy0.txt"
+
+[[params]]
+key = "chembl.moa.target_name_patterns"
+type = "path"
+default = "resources/strategies/target_patterns.txt"
+
+[[params]]
+key = "chembl.activity.require_taxon"
+type = "bool"
+default = "true"
+
+[[params]]
+key = "chembl.activity.taxon"
+type = "int"
+default = "7742"
+
+[[params]]
+key = "chembl.activity.allowed_assay_types"
+type = "{str}"
+default = "{B}"
+
+[[params]]
+key = "chembl.activity.allowed_relations"
+type = "{str}"
+default = "{<,<=,=}"
+
+[[params]]
+key = "chembl.activity.allowed_target_types"
+type = "{str}"
+default = "ALL"
+
+[[params]]
+key = "chembl.activity.banned_flags"
+type = "{str}"
+default = "{potential missing data,potential transcription error,outside typical range}"
+
+[[params]]
+key = "chembl.activity.require_confidence_score"
+type = "bool"
+default = "true"
+
+[[params]]
+key = "chembl.activity.min_target_confidence_score"
+type = "int"
+default = "4"
+
+[[params]]
+key = "chembl.activity.require_pchembl"
+type = "bool"
+default = "true"
+
+[[params]]
+key = "chembl.activity.min_pchembl"
+type = "float"
+default = "6.0"
+
+[[params]]
+key = "chembl.activity.target_traversal_strategy"
+type = "path"
+default = "resources/strategies/strategy0.txt"
+
+[[params]]
+key = "chembl.moa.target_name_patterns"
+type = "path"
+default = "resources/strategies/target_patterns.txt"
+
+[[params]]
+key = "chembl.trial.min_phase"
+type = "int"
+default = "3"
+
+[[params]]
+key = "pubchem.use_parent_molecule"
+type = "bool"
+default = "true"
+
+[[params]]
+key = "pubchem.nlp_strategy"
+type = "class"
+default = "mandos.model.nlp.CompressToUtf8"
+
+[[sources]]
+meta_ref = "ChEMBL"
+ref = "ChEMBL"
+name = "ChEMBL MoA"
+description = "Mechanism of action annotations from ChEMBL"
+params = [ "chembl.moa.*" ]
+target = "mandos.search.mechanism_search.MechanismSearch"
+
+[[sources]]
+meta_ref = "ChEMBL"
+ref = "ChEMBL"
+name = "ChEMBL activity"
+description = "Activity annotations from ChEMBL"
+params = [ "chembl.activity.*" ]
+target = "mandos.search.activity_search.ActivitySearch"
+
+[[sources]]
+meta_ref = "ChEMBL"
+ref = "ChEMBL"
+name = "ChEMBL trials"
+description = "Clinical trial annotations from ChEMBL"
+params = [ "chembl.trial.*" ]
+target = "mandos.search.indication_search.IndicationSearch"

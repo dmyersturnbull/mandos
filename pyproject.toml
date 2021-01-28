@@ -10,48 +10,6 @@ requires = ["poetry>=1.1,<2", "virtualenv==20.0.33", "wheel>=0.36,<1.0"]
 build-backend = "poetry.masonry.api"
 
 
-#########################################################################################
-# Tyrannosaurus
-#########################################################################################
-
-[tool.tyrannosaurus.options]
-align = true
-
-[tool.tyrannosaurus.sources]
-status             = "'Development'"
-date               = "'${today}'"
-copyright          = "'Copyright 2020–2021'"
-version            = "tool.poetry.version"
-release            = "tool.poetry.version"
-pyversions         = "tool.poetry.dependencies"
-devdeps            = "tool.poetry.dev-dependencies"
-linelength         = "tool.black.line-length"
-authors = [
-    "Douglas Myers-Turnbull <github:dmyersturnbull,orcid:0000-0003-3610-4808>",
-]
-maintainers = "tool.tyrannosaurus.sources.authors"
-
-[tool.tyrannosuarus.paths]
-recipe             = "'recipes/${name}/meta.yml'"
-environment        = "'environment.yml'"
-
-[tool.tyrannosaurus.targets]
-pyproject    = true
-init         = true
-tox          = true
-docs         = true
-recipes      = true
-environment  = true
-license      = true
-authors      = true
-github       = true
-travis       = true
-dockerfile   = true
-readme       = true
-changelog    = true
-citation     = true
-codemeta     = true
-
 
 #########################################################################################
 # Poetry metadata
@@ -111,6 +69,7 @@ tomlkit                        = ">=0.7, <1.0"
 typer                          = ">=0.3, <1.0"
 orjson                         = ">=3.4, <4.0"
 pocketutils                    = ">=0.4, <0.5"
+pyyaml                         = ">=5.4, <6.0"
 typeddfs                       = ">=0.4, <0.5"
 
 
@@ -130,15 +89,72 @@ sphinx-autoapi           = "^1"
 sphinx-rtd-theme         = ">=0.5, <1.0"
 sphinxcontrib-mermaid    = ">=0.5, <1.0"
 
-
 [tool.poetry.extras]
-dev = [
-    "pre-commit", "pre-commit-hooks",
-    "black", "bandit",
-    "pytest", "coverage", "pytest-cov",
-    "flake8", "flake8-docstrings", "flake8-bugbear",
-    "sphinx", "sphinx-autoapi"
+all = []
+
+
+#########################################################################################
+# Tyrannosaurus
+#########################################################################################
+
+[tool.tyrannosaurus.options]
+align = true
+sort  = true
+
+[tool.tyrannosaurus.sources]
+metavm             = "'ubuntu-20.04'"
+metavmbox          = "'ubuntu/focal64'"
+pymetaversion      = "'3.9'"
+pycompatversions   = "tool.poetry.dependencies"
+pytoxversions      = "tool.poetry.dependencies"
+status             = "'Development'"
+date               = "'${today}'"
+copyright          = "'Copyright 2020–2021'"
+version            = "tool.poetry.version"
+release            = "tool.poetry.version"
+devdeps            = "tool.poetry.dev-dependencies"
+precommitvr        = "tool.poetry.dev-dependencies"
+precommitconfigvr  = "tool.poetry.dev-dependencies"
+linelength         = "tool.black.line-length"
+authors = [
+    "Douglas Myers-Turnbull <github:dmyersturnbull,orcid:0000-0003-3610-4808>",
 ]
+maintainers = "tool.tyrannosaurus.sources.authors"
+
+[tool.tyrannosuarus.paths]
+recipe             = "'recipes/${name}/meta.yml'"
+environment        = "'environment.yml'"
+
+[tool.tyrannosaurus.targets]
+pyproject    = true
+init         = true
+tox          = true
+docs         = true
+recipes      = true
+environment  = true
+license      = true
+authors      = true
+github       = true
+travis       = true
+dockerfile   = true
+readme       = true
+changelog    = true
+citation     = true
+codemeta     = true
+
+
+#########################################################################################
+# Testing
+#########################################################################################
+
+# This will be used in a future version of pytest:
+#[tool.pytest]
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)7s] %(name)s: %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y%m%d %H:%M:%S"
 
 
 #########################################################################################

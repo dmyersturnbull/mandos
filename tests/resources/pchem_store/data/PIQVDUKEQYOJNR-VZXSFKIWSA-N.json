@@ -82,7 +82,7 @@
 								"Value": {
 									"StringWithMarkup": [
 										{
-											"String": "Cocaine is a tropane alkaloid Yup.",
+											"String": "From ChEBI: Cocaine is a tropane alkaloid.",
 											"Markup": [
 												{
 													"Start": 0,
@@ -154,14 +154,20 @@
 								"Value": {
 									"StringWithMarkup": [
 										{
-											"String": "Coaine is just ground-up plant leaves.",
+											"String": "From Drugbank RecordDescription: Cocaine is ground-up plant leaves.",
 											"Markup": [
 												{
 													"Start": 308,
 													"Length": 7,
-													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/Cocaine",
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/norepinephrine",
 													"Type": "PubChem Internal Link",
 													"Extra": "CID-446220"
+												},
+												{
+													"Start": 308,
+													"Length": 7,
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/SomeDrugbankThing",
+													"Type": "PubChem Internal Link"
 												},
 												{
 													"Start": 261,
@@ -206,7 +212,7 @@
 								"Value": {
 									"StringWithMarkup": [
 										{
-											"String": "Cocaine is a tropane alkaloid.",
+											"String": "From NCIt: Cocaine is a tropane alkaloid.",
 											"Markup": [
 												{
 													"Start": 0,
@@ -1244,7 +1250,7 @@
 								"Value": {
 									"StringWithMarkup": [
 										{
-											"String": "Cocaine is a local anesthetic indicated for things.",
+											"String": "From DrugBank Pharmacology: Cocaine is a local anesthetic.",
 											"Markup": [
 												{
 													"Start": 0,
@@ -1264,14 +1270,28 @@
 								"Value": {
 									"StringWithMarkup": [
 										{
-											"String": "Cocaine is a tropane alkaloid.",
+											"String": "From NCIt: Cocaine is a tropane alkaloid.",
 											"Markup": [
 												{
 													"Start": 0,
 													"Length": 7,
-													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/Cocaine",
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/CocaineIsh",
 													"Type": "PubChem Internal Link",
 													"Extra": "CID-446220"
+												},
+												{
+													"Start": 0,
+													"Length": 7,
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/SomeNCItthing",
+													"Type": "PubChem Internal Link",
+													"Extra": "CID-23523525"
+												},
+												{
+													"Start": 0,
+													"Length": 7,
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/ALinkThatDontBelong",
+													"Type": "SOMETHING ELSE",
+													"Extra": "CID-23523525"
 												}
 											]
 										}
@@ -1663,12 +1683,12 @@
 								"Value": {
 									"StringWithMarkup": [
 										{
-											"String": "Cocaine produces anesthesia ...",
+											"String": "From DrugBank MOA: Cocaine anesthesia.",
 											"Markup": [
 												{
 													"Start": 0,
 													"Length": 7,
-													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/Cocaine",
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/DrugBankMoaCocaine",
 													"Type": "PubChem Internal Link",
 													"Extra": "CID-446220"
 												},
@@ -1683,8 +1703,56 @@
 										}
 									]
 								}
+							},
+              {
+								"ReferenceNumber": 18,
+								"Description": "PEER REVIEWED",
+								"Reference": [
+									"PMID:21785434",
+									"Full text: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3164946",
+									"Xi ZX et al; Nat Neurosci 14 (9): 1160-6 (2011)"
+								],
+								"Value": {
+									"StringWithMarkup": [
+										{
+											"String": "From HSDB / lit: Cocaine is something.",
+											"Markup": [
+												{
+													"Start": 204,
+													"Length": 6,
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/FromHSDB:JWH133",
+													"Type": "PubChem Internal Link",
+													"Extra": "CID-6918505"
+												}
+											]
+										}
+									]
+								}
+							},
+							{
+								"ReferenceNumber": 18,
+								"Description": "PEER REVIEWED",
+								"Reference": [
+									"American Society of Health-System Pharmacists 2017; Drug Information 2017. Bethesda, MD. 2017"
+								],
+								"Value": {
+									"StringWithMarkup": [
+										{
+											"String": "And something else.",
+											"Markup": [
+												{
+													"Start": 0,
+													"Length": 21,
+													"URL": "https://pubchem.ncbi.nlm.nih.gov/compound/FromHSDB:%20hydrochloride",
+													"Type": "PubChem Internal Link",
+													"Extra": "CID-656832"
+												}
+											]
+										}
+									]
+								}
 							}
-						]
+            ]
 					},
 					{
 						"TOCHeading": "Human Metabolite Information",
@@ -3608,7 +3676,7 @@
 				"srcid": 22,
 				"cids": 446220,
 				"category": "Drug",
-				"catogorydesc": "Drug product, or related to the manufacturing of drugs; modified by veterinary, animal, or pet if indicated by source",
+				"catogorydesc": "Drug product",
 				"source": "CPCat Cassette"
 			}
 		],
@@ -3632,7 +3700,7 @@
 				"testtype": "LD50",
 				"route": "intravenous",
 				"dose": "17500 ug/kg (17.5 mg/kg)",
-				"effect": null,
+				"effect": "an effect",
 				"reference": "Journal of Laboratory and Clinical Medicine., 15(731), 1930"
 			},
 			{
@@ -3938,7 +4006,7 @@
 				"cid2": 657181,
 				"dbid2": "DB00007",
 				"name": "Leuprolide",
-				"descr": "The risk or severity of QTc prolongation can be increased when Leuprolide is combined with Cocaine."
+				"descr": "The risk or severity of QTc prolongation.."
 			}
 		],
 		"bioactivity": [
@@ -4051,6 +4119,48 @@
 				]
 			}
 		},
+    "ChemicalGeneSymbolNeighbor": {
+      "LinkDataSet": {
+        "LinkData": [
+          {
+            "ID_1": {
+              "CID": 446220
+            },
+            "ID_2": {
+              "GeneSymbol": "slc6a3"
+            },
+            "Evidence": {
+              "ChemicalGeneSymbolNeighbor": {
+                "NeighborName": "solute carrier family 6 member 3",
+                "OrderingByCooccurrenceScore": true,
+                "QueryArticleCount": 9031,
+                "NeighborArticleCount": 6295,
+                "TotalArticleCount": 32028139,
+                "EffectiveTotalArticleCount": 4602580,
+                "ArticleCount": 1142,
+                "CooccurrenceScore": 49087,
+                "Article": [
+                  {
+                    "GenericArticleId": 2817197,
+                    "RelevanceScore": 265,
+                    "PMID": 33046544,
+                    "DOI": "10.1523/jneurosci.0894-20.2020",
+                    "PublicationDate": "2020-10-12",
+                    "IsReview": false,
+                    "Title": "Chemogenetic manipulation of dopamine",
+                    "Author": "Molly Ki, Zev X",
+                    "Journal": "The Journal of neuroscience : the official journal of the Society for Neuroscience",
+                    "Citation": "2020 Oct; ?(?):",
+                    "ChemicalName": "cocaine",
+                    "GeneSymbolName": "dopamine transporter"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
 		"ChemicalDiseaseNeighbor": {
 			"LinkDataSet": {
 				"LinkData": [

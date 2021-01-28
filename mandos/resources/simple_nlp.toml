@@ -1,41 +1,44 @@
----
-tokens: ['\s']
 
-options:
-  convert_greek: true
-  convert_numbers: true
+[options]
+convert_greek = true
+convert_numbers = true
 
-blocks:
--
-  range: U+0030..U+0039
-  block: Basic Latin
-  comment: '0-9'
--
-  range: U+0041..U+005A
-  block: Basic Latin
-  comment: 'uppercase A-Z'
--
-  range: U+0061..U+007A
-  block: Basic Latin
-  comment: 'lowercase a-z'
--
-  range: U+00C0..U+00FF
-  block: Latin-1 Supplement
-  comment: 'accented letters, plus multiplication and division signs'
--
-  range: U+0100..U+017F
-  block: atin Extended A
-  comment: 'accented letters'
--
-  range: U+0180..U+024F
-  block: Latin Extended B
-  comment: 'accented letters (uncommon)'
--
-  range: U+1E00..U+1EFF
-  block: Latin Extended Additional
-  comment: 'accented letters (uncommon)'
+[[blocks]]
+range = "U+0030..U+0039"
+block = "Basic Latin"
+comment = "0-9"
 
-stop_words: [
+[[blocks]]
+range = "U+0041..U+005A"
+block = "Basic Latin"
+comment = "uppercase A-Z"
+
+[[blocks]]
+range = "U+0061..U+007A"
+block = "Basic Latin"
+comment = "lowercase a-z"
+
+[[blocks]]
+range = "U+00C0..U+00FF"
+block = "Latin-1 Supplement"
+comment = "accented letters, plus multiplication and division signs"
+
+[[blocks]]
+range = "U+0100..U+017F"
+block = "atin Extended A"
+comment = "accented letters"
+
+[[blocks]]
+range = "U+0180..U+024F"
+block = "Latin Extended B"
+comment = "accented letters (uncommon)"
+
+[[blocks]]
+range = "U+1E00..U+1EFF"
+block = "Latin Extended Additional"
+comment = "accented letters (uncommon)"
+
+stop_words = [
   "i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "you're", "you've",
   "you'll", "you'd", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself",
   "she", "she's", "her", "hers", "herself", "it", "it's", "its", "itself", "they", "them", "their",

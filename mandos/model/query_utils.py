@@ -66,16 +66,15 @@ class Fns:
         """
 
         def construct(things: Iterable[str]) -> Optional[str]:
-            x = [s.strip() for s in things]
-            return tp(*x)
+            return tp(*things)
 
         return construct
 
     @classmethod
-    def join_nonnulls(cls) -> Callable[[Iterable[str]], Optional[str]]:
+    def join_nonnulls(cls, sep: str = "; ") -> Callable[[Iterable[str]], Optional[str]]:
         def opt_join(things: Iterable[str]) -> Optional[str]:
             x = [s.strip() for s in things]
-            return None if len(x) == 0 else ";".join(x)
+            return None if len(x) == 0 else sep.join(x)
 
         return opt_join
 
@@ -97,7 +96,8 @@ class Fns:
     @classmethod
     def request_only(cls) -> Callable[[Iterable[str]], Optional[str]]:
         def only_nonreq(things: Iterable[str]) -> Optional[str]:
-            things = [s.strip() for s in things]
+            # TODO: Did I mean to excludeNone here?
+            things = [s.strip() for s in things if s is not None]
             if len(things) > 1:
                 raise ValueError(f"{len(things)} items in {things}")
             elif len(things) == 0:

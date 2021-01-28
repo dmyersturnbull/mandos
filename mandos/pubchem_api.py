@@ -48,6 +48,7 @@ class QueryingPubchemApi(PubchemApi):
     _link_db = "https://pubchem.ncbi.nlm.nih.gov/link_db/link_db_server.cgi"
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
+        logger.info(f"Downloading PubChem data for {inchikey}")
         data = dict(
             meta=dict(
                 timestamp_fetch_started=datetime.now(timezone.utc).astimezone().isoformat(),
@@ -134,7 +135,17 @@ class QueryingPubchemApi(PubchemApi):
         slash = self._query_and_type(inchikey)
         url = f"{self._pug}/compound/{slash}/JSON"
         data = self._query_json(url)
-        found = [x["id"]["id"] for x in data["PC_Compounds"]]
+        logger.error(url)
+        found = []
+        for match in data["PC_Compounds"]:
+            for c in match["props"]:
+                if (
+                    c["urn"]["label"] == "InChIKey"
+                    and c["urn"]["name"] == "Standard"
+                    and c["value"]["sval"] == inchikey
+                ):
+                    if match["id"]["id"] not in found:
+                        found.append(match["id"]["id"])
         if len(found) == 0:
             return None
         elif len(found) > 1:
@@ -184,16 +195,24 @@ class QueryingPubchemApi(PubchemApi):
             "FDA Pharm Classes": 78,
             "ChemIDplus": 84,
         }
-        hids = [1, 2, 5, 69, 79, 84, 99, 1112354]
         build_up = []
-        for hid in hids:
+        for hid in hids.values():
             url = f"{self._classifications}?format=json&hid={hid}&search_uid_type=cid&search_uid={cid}&search_type=list&response_type=display"
             try:
                 data = orjson.loads(self._query(url))
                 logger.debug(f"Found data for classifier {hid}, compound {cid}")
-                data = data["Hierarchies"]["Hierarchy"][0]
-            except HTTPError:
-                logger.debug(f"No data for classifier {hid}, compound {cid}")
+                data = data["Hierarchies"]["Hierarchy"]
+                if len(data) > 1:
+                    logger.warning(
+                        f"Multiple hierarchies for classifier {hid}, compound {cid}; using first"
+                    )
+                    data = data[0]
+                elif len(data) == 1:
+                    data = data[0]
+                else:
+                    raise KeyError("Hierarchy")
+            except (HTTPError, KeyError, LookupError) as e:
+                logger.debug(f"No data for classifier {hid}, compound {cid}: {e}")
                 data = {}
             build_up.append(data)
         # These list all of the child nodes for each node
@@ -243,18 +262,26 @@ class QueryingPubchemApi(PubchemApi):
 
 
 class CachingPubchemApi(PubchemApi):
-    def __init__(self, cache_dir: Path, querier: QueryingPubchemApi, compress: bool = True):
+    def __init__(
+        self, cache_dir: Path, querier: Optional[QueryingPubchemApi], compress: bool = True
+    ):
         self._cache_dir = cache_dir
         self._querier = querier
         self._compress = compress
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
         path = self.data_path(inchikey)
-        if not path.exists():
+        if path.exists():
+            logger.info(f"Found cached PubChem data at {path.absolute()}")
+        elif self._querier is None:
+            raise LookupError(f"Key {inchikey} not found in cache")
+        else:
+            logger.info(f"Downloading PubChem data for {inchikey} ...")
             data = self._querier.fetch_data(inchikey)
             path.parent.mkdir(parents=True, exist_ok=True)
             encoded = data.to_json()
             self._write_json(encoded, path)
+            logger.info(f"Wrote PubChem data to {path.absolute()}")
             return data
         read = self._read_json(path)
         return PubchemData(read)

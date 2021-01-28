@@ -1,0 +1,799 @@
+[[signals]]
+code = "H200"
+statement = "Unstable Explosive"
+class = "Explosives"
+category = "Unstable Explosive"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H201"
+statement = "Explosive; mass explosion hazard"
+class = "Explosives"
+category = "Div 1.1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H202"
+statement = "Explosive; severe projection hazard"
+class = "Explosives"
+category = "Div 1.2"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H203"
+statement = "Explosive; fire, blast or projection hazard"
+class = "Explosives"
+category = "Div 1.3"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H204"
+statement = "Fire or projection hazard"
+class = "Explosives"
+category = "Div 1.4"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H205"
+statement = "May mass explode in fire"
+class = "Explosives"
+category = "Div 1.5"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H206"
+statement = "Fire, blast or projection hazard; increased risk of explosion if desensitizing agent is reduced"
+class = "Desensitized explosives"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H207"
+statement = "Fire or projection hazard; increased risk of explosion if desensitizing agent is reduced"
+class = "Desensitized explosives"
+category = "Category 2"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H207"
+statement = "Fire or projection hazard; increased risk of explosion if desensitizing agent is reduced"
+class = "Desensitized explosives"
+category = "Category 3"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H208"
+statement = "Fire hazard; increased risk of explosion if desensitizing agent is reduced"
+class = "Desensitized explosives"
+category = "Category 4"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H220"
+statement = "Extremely flammable gas"
+class = "Flammable gases"
+category = "1A: Flammable gas, Pyrophoric gas, Chemically unstable gas A,B"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H221"
+statement = "Flammable gas"
+class = "Flammable gases"
+category = "1B"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H221"
+statement = "Flammable gas"
+class = "Flammable gases"
+category = "Category 2"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H222"
+statement = "Extremely flammable aerosol"
+class = "Aerosols"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H223"
+statement = "Flammable aerosol"
+class = "Aerosols"
+category = "Category 2"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H224"
+statement = "Extremely flammable liquid and vapor"
+class = "Flammable liquids"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H225"
+statement = "Highly Flammable liquid and vapor"
+class = "Flammable liquids"
+category = "Category 2"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H226"
+statement = "Flammable liquid and vapor"
+class = "Flammable liquids"
+category = "Category 3"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H227"
+statement = "Combustible liquid"
+class = "Flammable liquids"
+category = "Category 4"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H228"
+statement = "Flammable solid"
+class = "Flammable solids"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H228"
+statement = "Flammable solid"
+class = "Flammable solids"
+category = "Category 2"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H229"
+statement = "Pressurized container: may burst if heated"
+class = "Aerosols"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H229"
+statement = "Pressurized container: may burst if heated"
+class = "Aerosols"
+category = "Category 2"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H229"
+statement = "Pressurized container: may burst if heated"
+class = "Aerosols"
+category = "Category 3"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H230"
+statement = "May react explosively even in the absence of air"
+class = "Flammable gases"
+category = "1A, Chemically unstable gas A"
+signal_word = ""
+type = "physical"
+
+[[signals]]
+code = "H231"
+statement = "May react explosively even in the absence of air at elevated pressure and/or temperature"
+class = "Flammable gases"
+category = "1A, Chemically unstable gas B"
+signal_word = ""
+type = "physical"
+
+[[signals]]
+code = "H232"
+statement = "May ignite spontaneously if exposed to air"
+class = "Flammable gases"
+category = "1A, Pyrophoric gas"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H240"
+statement = "Heating may cause an explosion"
+class = "Self-reactive substances and mixtures; Organic peroxides"
+category = "Type A"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H241"
+statement = "Heating may cause a fire or explosion"
+class = "Self-reactive substances and mixtures; Organic peroxides"
+category = "Type B"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H242"
+statement = "Heating may cause a fire"
+class = "Self-reactive substances and mixtures; Organic peroxides"
+category = "Type C, D"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H242"
+statement = "Heating may cause a fire"
+class = "Self-reactive substances and mixtures; Organic peroxides"
+category = "Type E, F"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = ""
+statement = ""
+class = "Self-reactive substances and mixtures; Organic peroxides"
+category = "Type G"
+signal_word = ""
+type = "physical"
+
+[[signals]]
+code = "H250"
+statement = "Catches fire spontaneously if exposed to air"
+class = "Pyrophoric liquids; Pyrophoric solids"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H251"
+statement = "Self-heating; may catch fire"
+class = "Self-heating substances and mixtures"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H252"
+statement = "Self-heating in large quantities; may catch fire"
+class = "Self-heating substances and mixtures"
+category = "Category 2"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H260"
+statement = "In contact with water releases flammable gases which may ignite spontaneously"
+class = "Substances and mixtures which in contact with water, emit flammable gases"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H261"
+statement = "In contact with water releases flammable gas"
+class = "Substances and mixtures which in contact with water, emit flammable gases"
+category = "Category 2"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H261"
+statement = "In contact with water releases flammable gas"
+class = "Substances and mixtures which in contact with water, emit flammable gases"
+category = "Category 3"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H270"
+statement = "May cause or intensify fire; oxidizer"
+class = "Oxidizing gases"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H271"
+statement = "May cause fire or explosion; strong Oxidizer"
+class = "Oxidizing liquids; Oxidizing solids"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H272"
+statement = "May intensify fire; oxidizer"
+class = "Oxidizing liquids; Oxidizing solids"
+category = "Category 2"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H272"
+statement = "May intensify fire; oxidizer"
+class = "Oxidizing liquids; Oxidizing solids"
+category = "Category 3"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H280"
+statement = "Contains gas under pressure; may explode if heated"
+class = "Gases under pressure"
+category = "Compressed gas, Liquefied gas, Dissolved gas"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H281"
+statement = "Contains refrigerated gas; may cause cryogenic burns or injury"
+class = "Gases under pressure"
+category = "Refrigerated liquefied gas"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H282"
+statement = "Extremely flammable chemical under pressure: may explode if heated"
+class = "Chemicals under pressure"
+category = "Category 1"
+signal_word = "Danger"
+type = "physical"
+
+[[signals]]
+code = "H283"
+statement = "Flammable chemical under pressure: may explode if heated"
+class = "Chemicals under pressure"
+category = "Category 2"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H284"
+statement = "Chemical under pressure: may explode if heated"
+class = "Chemicals under pressure"
+category = "Category 3"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H290"
+statement = "May be corrosive to metals"
+class = "Corrosive to Metals"
+category = "Category 1"
+signal_word = "Warning"
+type = "physical"
+
+[[signals]]
+code = "H300"
+statement = "Fatal if swallowed"
+class = "Acute toxicity, oral"
+category = "Category 1, 2"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H301"
+statement = "Toxic if swallowed"
+class = "Acute toxicity, oral"
+category = "Category 3"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H302"
+statement = "Harmful if swallowed"
+class = "Acute toxicity, oral"
+category = "Category 4"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H303"
+statement = "May be harmful if swallowed"
+class = "Acute toxicity, oral"
+category = "Category 5"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H304"
+statement = "May be fatal if swallowed and enters airways"
+class = "Aspiration hazard"
+category = "Category 1"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H305"
+statement = "May be fatal if swallowed and enters airways"
+class = "Aspiration hazard"
+category = "Category 2"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H310"
+statement = "Fatal in contact with skin"
+class = "Acute toxicity, dermal"
+category = "Category 1, 2"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H311"
+statement = "Toxic in contact with skin"
+class = "Acute toxicity, dermal"
+category = "Category 3"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H312"
+statement = "Harmful in contact with skin"
+class = "Acute toxicity, dermal"
+category = "Category 4"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H313"
+statement = "May be harmful in contact with skin"
+class = "Acute toxicity, dermal"
+category = "Category 5"
+signal_word = ""
+type = "acute"
+
+[[signals]]
+code = "H314"
+statement = "Causes severe skin burns and eye damage"
+class = "Skin corrosion/irritation"
+category = "Category 1A, 1B, 1C"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H315"
+statement = "Causes skin irritation"
+class = "Skin corrosion/irritation"
+category = "Category 2"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H316"
+statement = "Causes mild skin irritation"
+class = "Skin corrosion/irritation"
+category = "Category 3"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H317"
+statement = "May cause an allergic skin reaction"
+class = "Sensitization, Skin"
+category = "Category 1, 1A, 1B"
+signal_word = "Warning"
+type = "allergic"
+
+[[signals]]
+code = "H318"
+statement = "Causes serious eye damage"
+class = "Serious eye damage/eye irritation"
+category = "Category 1"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H319"
+statement = "Causes serious eye irritation"
+class = "Serious eye damage/eye irritation"
+category = "Category 2A"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H320"
+statement = "Causes eye irritation"
+class = "Serious eye damage/eye irritation"
+category = "Category 2B"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H330"
+statement = "Fatal if inhaled"
+class = "Acute toxicity, inhalation"
+category = "Category 1, 2"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H331"
+statement = "Toxic if inhaled"
+class = "Acute toxicity, inhalation"
+category = "Category 3"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H332"
+statement = "Harmful if inhaled"
+class = "Acute toxicity, inhalation"
+category = "Category 4"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H333"
+statement = "May be harmful if inhaled"
+class = "Acute toxicity, inhalation"
+category = "Category 5"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H334"
+statement = "May cause allergy or asthma symptoms or breathing difficulties if inhaled"
+class = "Sensitization, respiratory"
+category = "Category 1, 1A, 1B"
+signal_word = "Danger"
+type = "allergic"
+
+[[signals]]
+code = "H335"
+statement = "May cause respiratory irritation"
+class = "Specific target organ toxicity, single exposure; Respiratory tract irritation"
+category = "Category 3"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H336"
+statement = "May cause drowsiness or dizziness"
+class = "Specific target organ toxicity, single exposure; Narcotic effects"
+category = "Category 3"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H340"
+statement = "May cause genetic defects"
+class = "Germ cell mutagenicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H341"
+statement = "Suspected of causing genetic defects"
+class = "Germ cell mutagenicity"
+category = "Category 2"
+signal_word = "Warning"
+type = "chronic"
+
+[[signals]]
+code = "H350"
+statement = "May cause cancer"
+class = "Carcinogenicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H350i"
+statement = "May cause cancer by inhalation"
+class = "Carcinogenicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H351"
+statement = "Suspected of causing cancer"
+class = "Carcinogenicity"
+category = "Category 2"
+signal_word = "Warning"
+type = "chronic"
+
+[[signals]]
+code = "H360"
+statement = "May damage fertility or the unborn child"
+class = "Reproductive toxicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H360F"
+statement = "May damage fertility"
+class = "Reproductive toxicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H360D"
+statement = "May damage the unborn child"
+class = "Reproductive toxicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H360FD"
+statement = "May damage fertility; May damage the unborn child"
+class = "Reproductive toxicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H360Fd"
+statement = "May damage fertility; Suspected of damaging the unborn child"
+class = "Reproductive toxicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H360Df"
+statement = "May damage the unborn child; Suspected of damaging fertility"
+class = "Reproductive toxicity"
+category = "Category 1A, 1B"
+signal_word = "Danger"
+type = "chronic"
+
+[[signals]]
+code = "H361"
+statement = "Suspected of damaging fertility or the unborn child"
+class = "Reproductive toxicity"
+category = "Category 2"
+signal_word = "Warning"
+type = "chronic"
+
+[[signals]]
+code = "H361f"
+statement = "Suspected of damaging fertility"
+class = "Reproductive toxicity"
+category = "Category 2"
+signal_word = "Warning"
+type = "chronic"
+
+[[signals]]
+code = "H361d"
+statement = "Suspected of damaging the unborn child"
+class = "Reproductive toxicity"
+category = "Category 2"
+signal_word = "Warning"
+type = "chronic"
+
+[[signals]]
+code = "H361fd"
+statement = "Suspected of damaging fertility; Suspected of damaging the unborn child"
+class = "Reproductive toxicity"
+category = "Category 2"
+signal_word = "Warning"
+type = "chronic"
+
+[[signals]]
+code = "H362"
+statement = "May cause harm to breast-fed children"
+class = "Reproductive toxicity, effects on or via lactation"
+category = "Additional category"
+signal_word = ""
+type = "chronic"
+
+[[signals]]
+code = "H370"
+statement = "Causes damage to organs"
+class = "Specific target organ toxicity, single exposure"
+category = "Category 1"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H371"
+statement = "May cause damage to organs"
+class = "Specific target organ toxicity, single exposure"
+category = "Category 2"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H372"
+statement = "Causes damage to organs through prolonged or repeated exposure"
+class = "Specific target organ toxicity, repeated exposure"
+category = "Category 1"
+signal_word = "Danger"
+type = "acute"
+
+[[signals]]
+code = "H373"
+statement = "Causes damage to organs through prolonged or repeated exposure"
+class = "Specific target organ toxicity, repeated exposure"
+category = "Category 2"
+signal_word = "Warning"
+type = "acute"
+
+[[signals]]
+code = "H400"
+statement = "Very toxic to aquatic life"
+class = "Hazardous to the aquatic environment, acute hazard"
+category = "Category 1"
+signal_word = "Warning"
+type = "aquatic:acute"
+
+[[signals]]
+code = "H401"
+statement = "Toxic to aquatic life"
+class = "Hazardous to the aquatic environment, acute hazard"
+category = "Category 2"
+signal_word = ""
+type = "aquatic:acute"
+
+[[signals]]
+code = "H402"
+statement = "Harmful to aquatic life"
+class = "Hazardous to the aquatic environment, acute hazard"
+category = "Category 3"
+signal_word = ""
+type = "aquatic:acute"
+
+[[signals]]
+code = "H410"
+statement = "Very toxic to aquatic life with long lasting effects"
+class = "Hazardous to the aquatic environment, long-term hazard"
+category = "Category 1"
+signal_word = "Warning"
+type = "aquatic:chronic"
+
+[[signals]]
+code = "H411"
+statement = "Toxic to aquatic life with long lasting effects"
+class = "Hazardous to the aquatic environment, long-term hazard"
+category = "Category 2"
+signal_word = ""
+type = "aquatic:chronic"
+
+[[signals]]
+code = "H412"
+statement = "Harmful to aquatic life with long lasting effects"
+class = "Hazardous to the aquatic environment, long-term hazard"
+category = "Category 3"
+signal_word = ""
+type = "aquatic:chronic"
+
+[[signals]]
+code = "H413"
+statement = "May cause long lasting harmful effects to aquatic life"
+class = "Hazardous to the aquatic environment, long-term hazard"
+category = "Category 4"
+signal_word = ""
+type = "aquatic:chronic"
+
+[[signals]]
+code = "H420"
+statement = "Harms public health and the environment by destroying ozone in the upper atmosphere"
+class = "Hazardous to the ozone layer"
+category = "Category 1"
+signal_word = "Warning"
+type = "environmental"

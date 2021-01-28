@@ -1,6 +1,7 @@
 import pytest
 
-from mandos.model.query_utils import JsonNavigator, Fns
+from mandos.model.pubchem_support._nav_fns import Fns
+from mandos.model.pubchem_support._nav import JsonNavigator
 
 
 class TestNav:

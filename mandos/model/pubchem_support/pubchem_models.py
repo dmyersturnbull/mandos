@@ -8,7 +8,7 @@ from typing import Union, Optional, FrozenSet, Sequence
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import MandosResources
-from mandos.model.query_utils import Fns
+from mandos.model.pubchem_support._nav_fns import Mapx
 
 hazards = {
     d["code"]: d for d in NestedDotDict.read_toml(MandosResources.path("hazards.toml"))["signals"]
@@ -110,7 +110,7 @@ class Codes:
 
         @property
         def value(self) -> int:
-            return Fns.roman_to_arabic(1, 5)(self)
+            return Mapx.roman_to_arabic(1, 5)(self)
 
     class GhsCode(Code):
         """"""
@@ -238,14 +238,6 @@ class AssayType(enum.Enum):
     literature = enum.auto()
 
 
-@dataclass(frozen=True, repr=True, eq=True)
-class PubchemAssay:
-    type: AssayType
-    ref: str  # e.g. "ChEMBL"
-    name: str  # e.g. "Binding affinity towards human monoclonal antibody 2E2 using [3H]cocaine"
-    made_date: date
-
-
 class Activity(enum.Enum):
     active = enum.auto()
     inactive = enum.auto()
@@ -254,13 +246,17 @@ class Activity(enum.Enum):
 
 @dataclass(frozen=True, repr=True, eq=True)
 class Bioactivity:
-    assay: PubchemAssay
+    assay_id: int
+    assay_type: AssayType
+    assay_ref: str
+    assay_name: str
+    assay_made_date: date
     gene_id: Optional[Codes.GeneId]
     tax_id: Optional[int]
     pmid: Optional[Codes.PubmedId]
-    activity: Activity
-    activity_name: str
-    activity_value: str
+    activity: Optional[Activity]
+    activity_name: Optional[str]
+    activity_value: float
     target_name: Optional[str]
 
 
@@ -351,10 +347,11 @@ __all__ = [
     "ClinicalTrial",
     "AssociatedDisorder",
     "AtcCode",
+    "AssayType",
     "DrugbankInteraction",
     "DrugbankDdi",
     "Bioactivity",
-    "PubchemAssay",
+    "Activity",
     "DrugGeneInteraction",
     "CompoundGeneInteraction",
     "GhsCode",

@@ -17,8 +17,15 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
-from mandos.model.query_utils import JsonNavigator, Fns, FilterFn
-from mandos.model.pubchem_support import (
+# noinspection PyProtectedMember
+from mandos.model.pubchem_support._nav_fns import Filter, Mapx, Flatmap
+
+# noinspection PyProtectedMember
+from mandos.model.pubchem_support._nav_model import FilterFn
+
+# noinspection PyProtectedMember
+from mandos.model.pubchem_support._nav import JsonNavigator
+from mandos.model.pubchem_support.pubchem_models import (
     ComputedProperty,
     Codes,
     CoOccurrenceType,
@@ -30,6 +37,8 @@ from mandos.model.pubchem_support import (
     DrugbankDdi,
     PubmedEntry,
     Publication,
+    AssayType,
+    Activity,
     CoOccurrence,
     DrugGeneInteraction,
     CompoundGeneInteraction,
@@ -153,9 +162,9 @@ class RelatedRecords(PubchemMiniDataView):
             / "Value"
             / "StringWithMarkup"
             // ["String"]
-            // Fns.require_only()
+            // Flatmap.require_only()
         )
-        parent = parent / Fns.extract_group_1(r"CID (\d+) +.*") // Fns.request_only()
+        parent = parent / Mapx.extract_group_1(r"CID (\d+) +.*") // Flatmap.request_only()
         return self.cid if parent.get is None else int(parent.get)
 
 
@@ -185,8 +194,8 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             / "StringWithMarkup"
             / "Markup"
             // ["String"]
-            // Fns.require_only()
-            // Fns.require_only()
+            // Flatmap.require_only()
+            // Flatmap.require_only()
         ).get
 
     def descriptor(self, key: str) -> str:
@@ -202,8 +211,8 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             / "StringWithMarkup"
             / "Markup"
             // ["String"]
-            // Fns.require_only()
-            // Fns.require_only()
+            // Flatmap.require_only()
+            // Flatmap.require_only()
         ).get
 
     @property
@@ -215,9 +224,9 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             / self._has_ref("PubChem")
             / "Value"
             // ["DateISO8601"]
-            // Fns.require_only()
+            // Flatmap.require_only()
             / date.fromisoformat
-            // Fns.require_only()
+            // Flatmap.require_only()
         ).get
 
     @property
@@ -229,9 +238,9 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             / self._has_ref("PubChem")
             / "Value"
             // ["DateISO8601"]
-            // Fns.require_only()
+            // Flatmap.require_only()
             / date.fromisoformat
-            // Fns.require_only()
+            // Flatmap.require_only()
         ).get
 
 
@@ -348,7 +357,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             / "Value"
             / "StringWithMarkup"
             >> "String"
-            >> Fns.join_nonnulls()
+            >> Flatmap.join_nonnulls()
         ).get
 
     @property
@@ -361,7 +370,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             / "Value"
             / "StringWithMarkup"
             >> "String"
-            >> Fns.join_nonnulls()
+            >> Flatmap.join_nonnulls()
         ).get
 
     @property
@@ -398,10 +407,10 @@ class DrugAndMedicationInformation(PubchemDataView):
             / "Value"
             / "StringWithMarkup"
             // ["String"]
-            // Fns.require_only()
-            / Fns.extract_group_1(r" *Schedule ([IV]+).*")
+            // Flatmap.require_only()
+            / Mapx.extract_group_1(r" *Schedule ([IV]+).*")
             / Codes.DeaSchedule
-            // Fns.request_only()
+            // Flatmap.request_only()
         ).get
 
     @property
@@ -454,7 +463,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / "Value"
             / "StringWithMarkup"
             >> "String"
-            >> Fns.join_nonnulls()
+            >> Flatmap.join_nonnulls()
         ).get
 
     @property
@@ -464,11 +473,11 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / "Pharmacology"
             / "Information"
             / self._has_ref("NCI Thesaurus (NCIt)")
-            / Fns.key_equals("Name", "Pharmacology")
+            / Filter.key_equals("Name", "Pharmacology")
             / "Value"
             / "StringWithMarkup"
             >> "String"
-            >> Fns.join_nonnulls()
+            >> Flatmap.join_nonnulls()
         ).get
 
     @property
@@ -478,16 +487,16 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / "Pharmacology"
             / "Information"
             / self._has_ref("NCI Thesaurus (NCIt)")
-            / Fns.key_equals("Name", "Pharmacology")
+            / Filter.key_equals("Name", "Pharmacology")
             / "Value"
             / "StringWithMarkup"
             / "Markup"
-            / Fns.key_equals("Type", "PubChem Internal Link")
+            / Filter.key_equals("Type", "PubChem Internal Link")
             // ["URL"]
-            // Fns.require_only()
-            / Fns.extract_group_1(Patterns.pubchem_compound_url)
+            // Flatmap.require_only()
+            / Mapx.extract_group_1(Patterns.pubchem_compound_url)
             / url_unescape
-            / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
+            / Mapx.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
         ).to_set
 
     @property
@@ -507,7 +516,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / "ATC Code"
             / "Information"
             / self._has_ref("WHO Anatomical Therapeutic Chemical (ATC) Classification")
-            / Fns.key_equals("Name", "ATC Code")
+            / Filter.key_equals("Name", "ATC Code")
             / "Value"
             / "StringWithMarkup"
             >> "String"
@@ -541,7 +550,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / "Value"
             / "StringWithMarkup"
             >> "String"
-            >> Fns.join_nonnulls(sep=" /// ")
+            >> Flatmap.join_nonnulls(sep=" /// ")
         ).get
 
     def _get_moa_links(self, ref: str) -> FrozenSet[str]:
@@ -553,12 +562,12 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / "Value"
             / "StringWithMarkup"
             / "Markup"
-            / Fns.key_equals("Type", "PubChem Internal Link")
+            / Filter.key_equals("Type", "PubChem Internal Link")
             // ["URL"]
-            // Fns.require_only()
-            / Fns.extract_group_1(Patterns.pubchem_compound_url)
+            // Flatmap.require_only()
+            / Mapx.extract_group_1(Patterns.pubchem_compound_url)
             / url_unescape
-            / Fns.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
+            / Mapx.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
         ).to_set
 
     @property
@@ -584,13 +593,13 @@ class SafetyAndHazards(PubchemMiniDataView):
             / "GHS Classification"
             / "Information"
             / self._has_ref("European Chemicals Agency (ECHA)")
-            / Fns.key_equals("Name", "GHS Hazard Statements")
+            / Filter.key_equals("Name", "GHS Hazard Statements")
             / "Value"
             / "StringWithMarkup"
             // ["String"]
-            // Fns.require_only()
-            / Fns.extract_group_1(r"^(H\d+)[ :].*$")
-            // Fns.split_and_flatten_nonnulls("+")
+            // Flatmap.require_only()
+            / Mapx.extract_group_1(r"^(H\d+)[ :].*$")
+            // Mapx.split_and_flatten_nonnulls("+")  # TODO: how is this being used to flatten?
         ).get
         return frozenset([GhsCode.find(code) for code in codes])
 
@@ -608,8 +617,8 @@ class Toxicity(PubchemMiniDataView):
             self._tables
             / "chemidplus"
             // ["effect"]
-            // Fns.request_only()
-            // Fns.split_and_flatten_nonnulls(";", skip_nulls=True)
+            // Flatmap.request_only()
+            // Mapx.split_and_flatten_nonnulls(";", skip_nulls=True)
         ).contents
         vals = {
             v.strip().lower().replace("\n", " ").replace("\r", " ").replace("\t", " ")
@@ -631,8 +640,8 @@ class AssociatedDisordersAndDiseases(PubchemMiniDataView):
             self._tables
             / "ctd_chemical_disease"
             // ["diseasename", "directevidence", "dois"]
-            / [Fns.identity, Fns.identity, Fns.n_bar_items()]
-            // Fns.construct(AssociatedDisorder)
+            / [Mapx.req_is(str), Mapx.req_is(str), Mapx.n_bar_items()]
+            // Flatmap.construct(AssociatedDisorder)
         ).to_set
 
 
@@ -692,14 +701,9 @@ class Literature(PubchemMiniDataView):
                 return None
             return StringTools.strip_brackets_and_quotes(s.strip()).strip()
 
-        def get_date(s: Optional[str]) -> Optional[date]:
-            if s is None:
-                return None
-            return datetime.strptime(str(s).strip(), "%Y%m%d").date()
-
         keys = {
             "pmid": Codes.PubmedId.of,
-            "articletype": Fns.req_is(str),
+            "articletype": Mapx.req_is(str),
             "pmidsrcs": split_sources,
             "meshheadings": split_mesh_headings,
             "meshsubheadings": split_mesh_subheadings,
@@ -708,14 +712,14 @@ class Literature(PubchemMiniDataView):
             "articletitle": get_text,
             "articleabstract": get_text,
             "articlejourname": get_text,
-            "articlepubdate": get_date,
+            "articlepubdate": Mapx.int_date(),
         }
         entries = (
             self._tables
             / "pubmed"
             // list(keys.keys())
             / list(keys.values())
-            // Fns.construct(PubmedEntry)
+            // Flatmap.construct(PubmedEntry)
         ).to_set
         return entries
 
@@ -799,8 +803,8 @@ class Patents(PubchemMiniDataView):
             self._tables
             / "patent"
             // ["diseasename", "directevidence", "dois"]
-            / [Fns.identity, Fns.identity, Fns.n_bar_items()]
-            // Fns.construct(AssociatedDisorder)
+            / [Mapx.req_is(str), Mapx.req_is(str), Mapx.n_bar_items()]
+            // Flatmap.construct(AssociatedDisorder)
         ).to_set
 
 
@@ -815,19 +819,19 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
     def drug_gene_interactions(self) -> FrozenSet[DrugGeneInteraction]:
         # the order of this dict is crucial
         keys = {
-            "genename": Fns.identity(),
-            "geneclaimname": Fns.req_is(str, True),
-            "interactionclaimsource": Fns.req_is(str, True),
-            "interactiontypes": Fns.split("|"),
-            "pmids": Fns.split(","),
-            "dois": Fns.split("|"),
+            "genename": Mapx.req_is(str, nullable=True),
+            "geneclaimname": Mapx.req_is(str, nullable=True),
+            "interactionclaimsource": Mapx.req_is(str, nullable=True),
+            "interactiontypes": Mapx.split("|", nullable=True),
+            "pmids": Mapx.split(",", nullable=True),
+            "dois": Mapx.split("|", nullable=True),
         }
         return (
             self._tables
             / "dgidb"
             // list(keys.keys())
             / list(keys.values())
-            // Fns.construct(DrugGeneInteraction)
+            // Flatmap.construct(DrugGeneInteraction)
         ).to_set
 
     @property
@@ -836,42 +840,42 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
         # YES, the | used in pmids really is different from the , used in DrugGeneInteraction
         keys = {
             "genesymbol": Codes.GenecardSymbol,
-            "interaction": Fns.split("|"),
-            "taxname": Fns.req_is(str, True),
-            "pmids": Fns.split("|"),
+            "interaction": Mapx.split("|", nullable=True),
+            "taxname": Mapx.req_is(str, True),
+            "pmids": Mapx.split("|", nullable=True),
         }
         return (
             self._tables
             / "ctdchemicalgene"
             // list(keys.keys())
             / list(keys.values())
-            // Fns.construct(CompoundGeneInteraction)
+            // Flatmap.construct(CompoundGeneInteraction)
         ).to_set
 
     @property
     def drugbank_interactions(self) -> FrozenSet[DrugbankInteraction]:
         keys = {
             "genesymbol": Codes.GenecardSymbol,
-            "drugaction": Fns.req_is(str),
-            "targetid": Fns.req_is(str),
-            "targetname": Fns.req_is(str),
-            "generalfunc": Fns.req_is(str),
-            "specificfunc": Fns.req_is(str),
-            "pmids": Fns.split(","),
-            "dois": Fns.split("|"),
+            "drugaction": Mapx.req_is(str),
+            "targetid": Mapx.req_is(str),
+            "targetname": Mapx.req_is(str),
+            "generalfunc": Mapx.req_is(str),
+            "specificfunc": Mapx.req_is(str),
+            "pmids": Mapx.split(","),
+            "dois": Mapx.split("|"),
         }
         return (
             self._tables
             / "drugbank"
             // list(keys.keys())
             / list(keys.values())
-            // Fns.construct(DrugbankInteraction)
+            // Flatmap.construct(DrugbankInteraction)
         ).to_set
 
     @property
     def drugbank_legal_groups(self) -> FrozenSet[str]:
         q = set()
-        for x in (self._tables / "drugbank" // ["druggroup"] // Fns.require_only()).to_set:
+        for x in (self._tables / "drugbank" // ["druggroup"] // Flatmap.require_only()).to_set:
             for y in x.split(";"):
                 q.add(y.strip())
         return frozenset(q)
@@ -881,15 +885,15 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
         keys = {
             "dbid2": Codes.DrugbankCompoundId,
             "cid2": Codes.PubchemCompoundId,
-            "name": Fns.req_is(str),
-            "descr": Fns.req_is(str),
+            "name": Mapx.req_is(str),
+            "descr": Mapx.req_is(str),
         }
         return (
             self._tables
             / "drugbankddi"
             // list(keys.keys())
             / list(keys.values())
-            // Fns.construct(DrugbankDdi)
+            // Flatmap.construct(DrugbankDdi)
         ).to_set
 
 
@@ -902,7 +906,29 @@ class BiologicalTestResults(PubchemMiniDataView):
 
     @property
     def bioactivity(self) -> FrozenSet[Bioactivity]:
-        raise NotImplementedError()
+        keys = {
+            "aid": Mapx.req_is(int),
+            "aidtype": (lambda s: AssayType[s.lower().strip()]),
+            "aidsrcname": Mapx.req_is(str),
+            "aidname": Mapx.req_is(str),
+            "aidmdate": Mapx.int_date(),
+            "geneid": Mapx.str_to(Codes.GeneId, nullable=True, flex_type=True),
+            "taxid": Mapx.str_to(str, flex_type=True, nullable=True),
+            "pmid": lambda s: None
+            if s is None
+            else Codes.PubmedId(StringTools.strip_off_end(str(s), ".0")),
+            "activity": (lambda s: None if s is None else Activity[s.lower()]),
+            "acname": Mapx.str_to(str, nullable=True),
+            "acvalue": (lambda x: None if x is None else float(x)),
+            "targetname": Mapx.req_is(str, nullable=True),
+        }
+        return (
+            self._tables
+            / "bioactivity"
+            // list(keys.keys())
+            / list(keys.values())
+            // Flatmap.construct(Bioactivity)
+        ).to_set
 
 
 class Classification(PubchemMiniDataView):

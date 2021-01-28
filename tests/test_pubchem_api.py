@@ -3,11 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from mandos.pubchem_api import (
-    QueryingPubchemApi,
-    CachingPubchemApi,
-)
-from mandos.model.pubchem_support import (
+from mandos.pubchem_api import CachingPubchemApi
+from mandos.model.pubchem_support.pubchem_models import (
     Codes,
     CoOccurrenceType,
     AtcCode,
@@ -15,6 +12,9 @@ from mandos.model.pubchem_support import (
     DrugbankDdi,
     DrugGeneInteraction,
     CoOccurrence,
+    Activity,
+    AssayType,
+    Bioactivity,
 )
 
 
@@ -225,7 +225,38 @@ class TestPubchemApi:
             }
         )
         test = x.biological_test_results
-        # assert test.bioactivity == frozenset({})
+        assert test.bioactivity == frozenset(
+            {
+                Bioactivity(
+                    assay_id=127361,
+                    assay_type=AssayType.confirmatory,
+                    assay_ref="ChEMBL",
+                    assay_name="Binding affinity towards human monoclonal antibody 2E2 using [3H]cocaine",
+                    assay_made_date=date(2018, 9, 8),
+                    gene_id=None,
+                    tax_id=None,
+                    pmid=Codes.PubmedId("14695827"),
+                    activity=Activity.active,
+                    activity_name="Ki",
+                    activity_value=0.0035,
+                    target_name=None,
+                ),
+                Bioactivity(
+                    assay_id=127359,
+                    assay_type=AssayType.confirmatory,
+                    assay_ref="ChEMBL",
+                    assay_name="Dissociation Constant for human monoclonal antibody 2E2 with [3H]cocaine",
+                    assay_made_date=date(2018, 9, 8),
+                    gene_id=None,
+                    tax_id=None,
+                    pmid=Codes.PubmedId("14695827"),
+                    activity=Activity.active,
+                    activity_name="Kd",
+                    activity_value=0.0044,
+                    target_name=None,
+                ),
+            }
+        )
 
 
 if __name__ == "__main__":

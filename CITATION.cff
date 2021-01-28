@@ -4,12 +4,12 @@ title: mandos
 version: 0.2.0
 abstract: Get the biological targets of compounds.
 authors:
-    -
-        family-names: Myers-Turnbull
-        given-names: Douglas
-        orcid: 0000-0003-3610-4808
+  -
+    family-names: Myers-Turnbull
+    given-names: Douglas
+    orcid: 0000-0003-3610-4808
 keywords:
-    - cheminformatics
-    - chembl
-    - pubchem
+  - cheminformatics
+  - chembl
+  - pubchem
 date-released: 2020-08-18

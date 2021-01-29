@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import abc
 import logging
+import re
 import time
 from urllib.error import HTTPError
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional, Sequence, Union, FrozenSet
+from typing import Optional, Sequence, Union, FrozenSet, Mapping
 
 import io
 import gzip
@@ -22,6 +23,10 @@ from mandos import MandosUtils
 from mandos.model.pubchem_data import PubchemData
 
 logger = logging.getLogger("mandos")
+
+
+class PubchemCompoundNotFound(LookupError):
+    """"""
 
 
 class PubchemApi(metaclass=abc.ABCMeta):
@@ -38,8 +43,19 @@ class PubchemApi(metaclass=abc.ABCMeta):
 
 
 class QueryingPubchemApi(PubchemApi):
-    def __init__(self):
-        self._query = QueryExecutor(0.22, 0.25)
+    def __init__(
+        self,
+        chem_data: bool = False,
+        extra_tables: bool = False,
+        classifiers: bool = False,
+        extra_classifiers: bool = False,
+        query: Optional[QueryExecutor] = None,
+    ):
+        self._use_chem_data = chem_data
+        self._use_extra_tables = extra_tables
+        self._use_classifiers = classifiers
+        self._use_extra_classifiers = extra_classifiers
+        self._query = QueryExecutor(0.22, 0.25) if query is None else query
 
     _pug = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
     _pug_view = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view"
@@ -48,57 +64,27 @@ class QueryingPubchemApi(PubchemApi):
     _link_db = "https://pubchem.ncbi.nlm.nih.gov/link_db/link_db_server.cgi"
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
+        # Dear God this is terrible
+        # Here are the steps:
+        # 1. Download HTML for the InChI key and scrape the CID
+        # 2. Download the "display" JSON data from the CID
+        # 3. Look for a Parent-type related compound. If it exists, download its display data
+        # 4. Download the structural data and append it
+        # 5. Download the external table CSVs and append them
+        # 6. Download the link sets and append them
+        # 7. Download the classifiers (hierarchies) and append them
+        # 8. Attach metadata about how we found this.
+        # 9. Return the stupid, stupid result as a massive JSON struct.
         logger.info(f"Downloading PubChem data for {inchikey}")
-        data = dict(
-            meta=dict(
-                timestamp_fetch_started=datetime.now(timezone.utc).astimezone().isoformat(),
-                from_lookup=inchikey,
+        cid = self._scrape_cid(inchikey)
+        try:
+            data = self._fetch_data(cid, inchikey)
+        except HTTPError:
+            raise PubchemCompoundNotFound(
+                f"Failed finding pubchem compound (JSON) from cid {cid}, inchikey {inchikey}"
             )
-        )
-        t0 = time.monotonic_ns()
-        cid = self._fetch_compound(inchikey)
-        if cid is None:
-            return None
-        data["record"] = self._fetch_display_data(cid)["Record"]
-        external_table_names = {
-            "related:pubchem:related_compounds_with_annotation": "compound",
-            "drug:clinicaltrials.gov:clinical_trials": "clinicaltrials",
-            "pharm:pubchem:reactions": "pathwayreaction",
-            "uses:cpdat:uses": "cpdat",
-            "tox:chemidplus:acute_effects": "chemidplus",
-            "dis:ctd:associated_disorders_and_diseases": "ctd_chemical_disease",
-            "lit:pubchem:depositor_provided_pubmed_citations": "pubmed",
-            "patent:depositor_provided_patent_identifiers": "patent",
-            "bio:rcsb_pdb:protein_bound_3d_structures": "pdb",
-            "bio:dgidb:drug_gene_interactions": "dgidb",
-            "bio:ctd:chemical_gene_interactions": "ctdchemicalgene",
-            "bio:drugbank:drugbank_interactions": "drugbank",
-            "bio:drugbank:drug_drug_interactions": "drugbankddi",
-            "bio:pubchem:bioassay_results": "bioactivity",
-        }
-        external_link_set_names = {
-            "lit:pubchem:chemical_cooccurrences_in_literature": "ChemicalNeighbor",
-            "lit:pubchem:gene_cooccurrences_in_literature": "ChemicalGeneSymbolNeighbor",
-            "lit:pubchem:disease_cooccurrences_in_literature": "ChemicalDiseaseNeighbor",
-        }
-        data["external_tables"] = {
-            table: self._fetch_external_table(cid, table) for table in external_table_names.values()
-        }
-        data["link_sets"] = {
-            table: self._fetch_external_link_set(cid, table)
-            for table in external_link_set_names.values()
-        }
-        # get index==0 because we only have 1 compound
-        data["structure"] = self._fetch_misc_data(cid)["PC_Compounds"][0]
-        del [data["structure"]["props"]]  # redundant with props section in record
-        data["classifications"] = self._fetch_hierarchies(cid)["hierarchies"]
-        t1 = time.monotonic_ns()
-        data["meta"]["timestamp_fetch_finished"] = (
-            datetime.now(timezone.utc).astimezone().isoformat()
-        )
-        data["meta"]["fetch_nanos_taken"] = str(t1 - t0)
-        self._strip_by_key_in_place(data, "DisplayControls")
-        return PubchemData(NestedDotDict(data))
+        data = self._get_parent(cid, inchikey, data)
+        return data
 
     def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:
         slash = self._query_and_type(inchi)
@@ -116,116 +102,201 @@ class QueryingPubchemApi(PubchemApi):
                 return frozenset(resp.req_list_as("IdentifierList.CID", int))
         raise TimeoutError(f"Search for {inchi} using key {key} timed out")
 
-    def _fetch_compound(self, inchikey: Union[int, str]) -> Optional[int]:
-        cid = self._fetch_cid(inchikey)
-        if cid is None:
-            return None
-        data = dict(record=self._fetch_display_data(cid)["Record"])
-        data = PubchemData(NestedDotDict(data))
-        return data.parent_or_self
-
-    def _fetch_cid(self, inchikey: str) -> Optional[int]:
-        # The PubChem API docs LIE!!
-        # Using ?cids_type=parent DOES NOT give the parent
+    def _scrape_cid(self, inchikey: str) -> int:
+        # This is awful
+        # Every attempt to get the actual, correct, unique CID corresponding to the inchikey
+        # failed with every proper PubChem API
+        # We can't use <pug_view>/data/compound/<inchikey> -- we can only use a CID there
+        # I found it with a PUG API
+        # https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/GJSURZIOUXUGAL-UHFFFAOYSA-N/record/JSON
+        # But that returns multiple results!!
+        # There's no apparent way to find out which one is real
+        # I tried then querying each found CID, getting the display data, and looking at their parents
+        # Unfortunately, we end up with multiple contradictory parents
+        # Plus, that's insanely slow -- we have to get the full JSON data for each parent
+        # Every worse -- the PubChem API docs LIE!!
+        # Using ?cids_type=parent DOES NOT GIVE THE PARENT compound
         # Ex: https://pubchem.ncbi.nlm.nih.gov/compound/656832
         # This is cocaine HCl, which has cocaine (446220) as a parent
         # https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/656832/JSON
         # gives 656832 back again
         # same thing when querying by inchikey
-        slash = self._query_and_type(inchikey)
-        url = f"{self._pug}/compound/{slash}/JSON"
-        data = self._query_json(url)
-        logger.error(url)
-        found = []
-        for match in data["PC_Compounds"]:
-            for c in match["props"]:
-                if (
-                    c["urn"]["label"] == "InChIKey"
-                    and c["urn"]["name"] == "Standard"
-                    and c["value"]["sval"] == inchikey
-                ):
-                    if match["id"]["id"] not in found:
-                        found.append(match["id"]["id"])
-        if len(found) == 0:
-            return None
-        elif len(found) > 1:
-            logger.warning(
-                f"Found {len(found)} CIDs for {inchikey}: {found}. Using first ({found[0]})."
+        # Ultimately, I found that I can get HTML containing the CID from an inchikey
+        # From there, we'll just have to download its "display" data and get the parent, then download that data
+        url = f"https://pubchem.ncbi.nlm.nih.gov/compound/{inchikey}"
+        pat = re.compile(
+            r'<meta property="og:url" content="https://pubchem\.ncbi\.nlm\.nih\.gov/compound/(\d+)">'
+        )
+        try:
+            html = self._query(url)
+        except HTTPError:
+            raise PubchemCompoundNotFound(
+                f"Failed finding pubchem compound (HTML) from inchikey {inchikey}"
             )
-        found = found[0]["cid"]
-        assert isinstance(found, int), f"Type of {found} is {type(found)}"
-        return found
+        match = pat.search(html)
+        if match is None:
+            raise PubchemCompoundNotFound(
+                f"Something is wrong with the HTML from {url}; og:url not found"
+            )
+        return int(match.group(1))
+
+    def _get_parent(self, cid: int, inchikey: str, data: PubchemData) -> PubchemData:
+        # guard with is not None: we're not caching, so don't do it twice
+        if data.parent_or_none is None:
+            return data
+        try:
+            data = self._fetch_data(data.parent_or_none, inchikey)
+        except HTTPError:
+            raise PubchemCompoundNotFound(
+                f"Failed finding pubchem parent compound (JSON)"
+                f"for cid {data.parent_or_none}, child cid {cid}, inchikey {inchikey}"
+            )
+
+    def _fetch_data(self, cid: int, inchikey: str) -> PubchemData:
+        when_started = datetime.now(timezone.utc).astimezone()
+        t0 = time.monotonic_ns()
+        data = self._fetch_core_data(cid)
+        t1 = time.monotonic_ns()
+        when_finished = datetime.now(timezone.utc).astimezone()
+        data["meta"] = self._get_metadata(inchikey, when_started, when_finished, t0, t1)
+        self._strip_by_key_in_place(data, "DisplayControls")
+        return PubchemData(NestedDotDict(data))
+
+    def _fetch_core_data(self, cid: int) -> dict:
+        return dict(
+            record=self._fetch_display_data(cid),
+            structure=self._fetch_structure_data(cid),
+            external_tables=self._fetch_external_tables(cid),
+            link_sets=self._fetch_external_linksets(cid),
+            classifications=self._fetch_hierarchies(cid),
+        )
+
+    def _get_metadata(self, inchikey: str, started: datetime, finished: datetime, t0: int, t1: int):
+        return dict(
+            timestamp_fetch_started=started.isoformat(),
+            timestamp_fetch_finished=finished.isoformat(),
+            from_lookup=inchikey,
+            fetch_nanos_taken=str(t1 - t0),
+        )
 
     def _fetch_display_data(self, cid: int) -> Optional[NestedDotDict]:
         url = f"{self._pug_view}/data/compound/{cid}/JSON/?response_type=display"
-        return self._query_json(url)
+        return self._query_json(url)["Record"]
 
-    def _fetch_misc_data(self, cid: int) -> Optional[NestedDotDict]:
+    def _fetch_structure_data(self, cid: int) -> NestedDotDict:
+        if not self._use_chem_data:
+            return NestedDotDict({})
         url = f"{self._pug}/compound/cid/{cid}/JSON"
-        return self._query_json(url)
-
-    def _query_json(self, url: str) -> NestedDotDict:
-        data = self._query(url)
-        data = NestedDotDict(orjson.loads(data))
-        if "Fault" in data:
-            raise ValueError(f"Request failed ({data.get('Code')}) on {url}: {data.get('Message')}")
+        data = self._query_json(url)["PC_Compounds"][0]
+        del [data["structure"]["props"]]  # redundant with props section in record
         return data
 
-    def _fetch_external_link_set(self, cid: int, table: str) -> NestedDotDict:
-        url = f"{self._link_db}?format=JSON&type={table}&operation=GetAllLinks&id_1={cid}"
-        data = self._query(url)
-        return NestedDotDict(orjson.loads(data))
+    def _fetch_external_tables(self, cid: int) -> Mapping[str, str]:
+        return {
+            ext_table: self._fetch_external_table(cid, ext_table)
+            for ext_table in self._tables_to_use.values()
+        }
+
+    def _fetch_external_linksets(self, cid: int) -> Mapping[str, str]:
+        return {
+            table: self._fetch_external_linkset(cid, table)
+            for table in self._linksets_to_use.values()
+        }
 
     def _fetch_hierarchies(self, cid: int) -> NestedDotDict:
-        hids = {
-            "MeSH Tree": 1,
-            "ChEBI Ontology": 2,
-            "KEGG: Phytochemical Compounds": 5,
-            "KEGG: Drug": 14,
-            "KEGG: USP": 15,
-            "KEGG: Major components of natural products": 69,
-            "KEGG: Target-based Classification of Drugs": 22,
-            "KEGG: OTC drugs": 25,
-            "KEGG: Drug Classes": 96,
-            "CAMEO Chemicals": 86,
-            "WHO ATC Classification System": 79,
-            "Guide to PHARMACOLOGY Target Classification": 92,
-            "ChEMBL Target Tree": 87,
-            "EPA CPDat Classification": 99,
-            "FDA Pharm Classes": 78,
-            "ChemIDplus": 84,
-        }
-        build_up = []
-        for hid in hids.values():
-            url = f"{self._classifications}?format=json&hid={hid}&search_uid_type=cid&search_uid={cid}&search_type=list&response_type=display"
+        build_up = {}
+        for hname, hid in self._hierarchies_to_use.items():
             try:
-                data = orjson.loads(self._query(url))
-                logger.debug(f"Found data for classifier {hid}, compound {cid}")
-                data = data["Hierarchies"]["Hierarchy"]
-                if len(data) > 1:
-                    logger.warning(
-                        f"Multiple hierarchies for classifier {hid}, compound {cid}; using first"
-                    )
-                    data = data[0]
-                elif len(data) == 1:
-                    data = data[0]
-                else:
-                    raise KeyError("Hierarchy")
+                build_up[hname] = self._fetch_hierarchy(cid, hid)
             except (HTTPError, KeyError, LookupError) as e:
                 logger.debug(f"No data for classifier {hid}, compound {cid}: {e}")
-                data = {}
-            build_up.append(data)
         # These list all of the child nodes for each node
         # Some of them are > 1000 items -- they're HUGE
         # We don't expect to need to navigate to children
         self._strip_by_key_in_place(build_up, "ChildID")
-        return NestedDotDict(dict(hierarchies=build_up))
+        return NestedDotDict(build_up)
 
     def _fetch_external_table(self, cid: int, table: str) -> Sequence[dict]:
         url = self._external_table_url(cid, table)
         data = self._query(url)
         df: pd.DataFrame = pd.read_csv(io.StringIO(data))
         return list(df.T.to_dict().values())
+
+    def _fetch_external_linkset(self, cid: int, table: str) -> NestedDotDict:
+        url = f"{self._link_db}?format=JSON&type={table}&operation=GetAllLinks&id_1={cid}"
+        data = self._query(url)
+        return NestedDotDict(orjson.loads(data))
+
+    def _fetch_hierarchy(self, cid: int, hid: int) -> Sequence[dict]:
+        url = f"{self._classifications}?format=json&hid={hid}&search_uid_type=cid&search_uid={cid}&search_type=list&response_type=display"
+        data: Sequence[dict] = orjson.loads(self._query(url))["Hierarchies"]
+        # underneath Hierarchies is a list of Hierarchy
+        logger.debug(f"Found data for classifier {hid}, compound {cid}")
+        if len(data) == 0:
+            raise LookupError(f"Failed getting hierarchy {hid}")
+        return data
+
+    @property
+    def _tables_to_use(self) -> Mapping[str, str]:
+        dct = {
+            "drug:clinicaltrials.gov:clinical_trials": "clinicaltrials",
+            "pharm:pubchem:reactions": "pathwayreaction",
+            "uses:cpdat:uses": "cpdat",
+            "tox:chemidplus:acute_effects": "chemidplus",
+            "dis:ctd:associated_disorders_and_diseases": "ctd_chemical_disease",
+            "lit:pubchem:depositor_provided_pubmed_citations": "pubmed",
+            "bio:dgidb:drug_gene_interactions": "dgidb",
+            "bio:ctd:chemical_gene_interactions": "ctdchemicalgene",
+            "bio:drugbank:drugbank_interactions": "drugbank",
+            "bio:drugbank:drug_drug_interactions": "drugbankddi",
+            "bio:pubchem:bioassay_results": "bioactivity",
+        }
+        if self._use_extra_tables:
+            dct.update(
+                {
+                    "patent:depositor_provided_patent_identifiers": "patent",
+                    "bio:rcsb_pdb:protein_bound_3d_structures": "pdb",
+                    "related:pubchem:related_compounds_with_annotation": "compound",
+                }
+            )
+        return dct
+
+    @property
+    def _linksets_to_use(self) -> Mapping[str, str]:
+        return {
+            "lit:pubchem:chemical_cooccurrences_in_literature": "ChemicalNeighbor",
+            "lit:pubchem:gene_cooccurrences_in_literature": "ChemicalGeneSymbolNeighbor",
+            "lit:pubchem:disease_cooccurrences_in_literature": "ChemicalDiseaseNeighbor",
+        }
+
+    @property
+    def _hierarchies_to_use(self) -> Mapping[str, int]:
+        if not self._use_classifiers:
+            return {}
+        dct = {
+            "MeSH Tree": 1,
+            "ChEBI Ontology": 2,
+            "WHO ATC Classification System": 79,
+            "Guide to PHARMACOLOGY Target Classification": 92,
+            "ChEMBL Target Tree": 87,
+        }
+        if self._use_extra_classifiers:
+            dct.update(
+                {
+                    "KEGG: Phytochemical Compounds": 5,
+                    "KEGG: Drug": 14,
+                    "KEGG: USP": 15,
+                    "KEGG: Major components of natural products": 69,
+                    "KEGG: Target-based Classification of Drugs": 22,
+                    "KEGG: OTC drugs": 25,
+                    "KEGG: Drug Classes": 96,
+                    "CAMEO Chemicals": 86,
+                    "EPA CPDat Classification": 99,
+                    "FDA Pharm Classes": 78,
+                    "ChemIDplus": 84,
+                }
+            )
+        return dct
 
     def _external_table_url(self, cid: int, collection: str) -> str:
         return (
@@ -238,6 +309,13 @@ class QueryingPubchemApi(PubchemApi):
             + str(cid)
             + " }]}}"
         ).replace(" ", "%22")
+
+    def _query_json(self, url: str) -> NestedDotDict:
+        data = self._query(url)
+        data = NestedDotDict(orjson.loads(data))
+        if "Fault" in data:
+            raise ValueError(f"Request failed ({data.get('Code')}) on {url}: {data.get('Message')}")
+        return data
 
     def _query_and_type(self, inchi: Union[int, str], req_full: bool = False) -> str:
         allowed = ["cid", "inchi", "smiles"] if req_full else ["cid", "inchi", "inchikey", "smiles"]
@@ -333,4 +411,5 @@ __all__ = [
     "PubchemApi",
     "CachingPubchemApi",
     "QueryingPubchemApi",
+    "PubchemCompoundNotFound",
 ]

@@ -17,6 +17,7 @@ from chembl_webresource_client.new_client import new_client as Chembl
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.chembl_api import ChemblApi
+from mandos.pubchem_api import CachingPubchemApi, QueryingPubchemApi
 from mandos.model import Search, Triple
 from mandos.model.caches import TaxonomyFactories
 from mandos.model.settings import DEFAULT_TAXONOMY_CACHE, Settings
@@ -144,7 +145,11 @@ class Commands:
         else:
             settings = Settings.load(NestedDotDict(config))
         settings.set()
+        cache = CachingPubchemApi(settings.pubchem_cache_path, QueryingPubchemApi())
         compounds = list(compounds)
+        # TODO
+        for compound in compounds:
+            cache.fetch_data(compound)
         api = ChemblApi.wrap(Chembl)
         taxonomy = TaxonomyFactories.from_uniprot(settings.taxonomy_cache_path).load(settings.taxon)
         hits = what.clazz(api, settings, taxonomy).find_all(compounds)

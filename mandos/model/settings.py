@@ -52,7 +52,6 @@ class Settings:
     random_seed: int
     n_bootstrap_samples: int
     cache_path: Path
-    chembl_cache_path: Path
     n_retries: int
     fast_save: bool
     timeout_sec: int
@@ -64,16 +63,22 @@ class Settings:
     stop_words: Path
     convert_greek: bool
 
+    @property
+    def chembl_cache_path(self) -> Path:
+        return self.cache_path / "chembl"
+
+    @property
+    def pubchem_cache_path(self) -> Path:
+        return self.cache_path
+
     @classmethod
     def load(cls, data: NestedDotDict) -> Settings:
         #  117571
         mandos_home = data.get_as("mandos.cache_path", Path, DEFAULT_MANDOS_CACHE)
-        chembl_cache_path = data.get_as("chembl.cache_path", Path, mandos_home / "chembl")
         default_target_types = [s.name for s in TargetType.all_types()]
         return Settings(
             is_testing=data.get_as("is_testing", bool, False),
             cache_path=mandos_home,
-            chembl_cache_path=chembl_cache_path,
             random_seed=data.get_as("mandos.random_seed", int, 0),
             traversal_strategy=data.get_as("mandos.chembl.target.traversal_strategy", str, None),
             allowed_target_types=frozenset(

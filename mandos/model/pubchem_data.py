@@ -374,7 +374,7 @@ class DrugAndMedicationInformation(PubchemDataView):
         ).get
 
     @property
-    def classes(self) -> FrozenSet[str]:
+    def livertox_classes(self) -> FrozenSet[str]:
         return (
             self.mini
             / "Drug Classes"
@@ -1023,6 +1023,10 @@ class PubchemData(PubchemDataView):
     @property
     def classification(self) -> Classification:
         return Classification(self._data)
+
+    @property
+    def parent_or_none(self) -> Optional[int]:
+        return self.related_records.parent
 
     @property
     def parent_or_self(self) -> int:

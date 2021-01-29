@@ -38,7 +38,7 @@ class TestPubchemApi:
         assert 0 < len(props.computed) < 40
         drug = x.drug_and_medication_information
         assert drug.indication_summary_drugbank == "Cocaine has indications."
-        assert drug.classes == {"Central Nervous System Stimulants"}
+        assert drug.livertox_classes == {"Central Nervous System Stimulants"}
         assert drug.indication_summary_livertox == "Cocaine is a benzoid acid ester."
         # assert drug.clinical_trials == set()
         pharm = x.pharmacology_and_biochemistry

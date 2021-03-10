@@ -10,7 +10,7 @@
 [![Documentation status](https://readthedocs.org/projects/mandos/badge)](https://mandos.readthedocs.io/en/stable)
 [![Build (GitHub Actions)](https://img.shields.io/github/workflow/status/dmyersturnbull/mandos/Build%20&%20test?label=Build%20&%20test)](https://github.com/dmyersturnbull/mandos/actions)
 [![Test coverage (coveralls)](https://coveralls.io/repos/github/dmyersturnbull/mandos/badge.svg?branch=main&service=github)](https://coveralls.io/github/dmyersturnbull/mandos?branch=main)
-![Maintainability (Code Climate)](https://api.codeclimate.com/v1/badges/aa7c12d45ad794e45e55/maintainability)](https://codeclimate.com/github/dmyersturnbull/mandos/maintainability)
+[![Maintainability (Code Climate)](https://api.codeclimate.com/v1/badges/aa7c12d45ad794e45e55/maintainability)](https://codeclimate.com/github/dmyersturnbull/mandos/maintainability)
 [![CodeFactor](https://www.codefactor.io/repository/github/dmyersturnbull/mandos/badge)](https://www.codefactor.io/repository/github/dmyersturnbull/mandos)
 [![Code Quality (Scrutinizer)](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/?branch=main)  
 [![Created with Tyrannosaurus](https://img.shields.io/badge/Created_with-Tyrannosaurus-0000ff.svg)](https://github.com/dmyersturnbull/mandos)

@@ -1,7 +1,7 @@
 import pytest
 
-from mandos import MandosResources
-from mandos.model.caches import TaxonomyFactories
+from mandos.model import MandosResources
+from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.model.taxonomy import Taxon, Taxonomy, _Taxon
 
 

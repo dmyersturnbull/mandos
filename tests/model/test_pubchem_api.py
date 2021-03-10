@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from mandos.pubchem_api import CachingPubchemApi
+from mandos.model.pubchem_api import CachingPubchemApi
 from mandos.model.pubchem_support.pubchem_models import (
     Codes,
     CoOccurrenceType,

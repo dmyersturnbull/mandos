@@ -1,6 +1,6 @@
 import pytest
 
-from mandos.model.pubchem_support._nav_fns import Fns
+from mandos.model.pubchem_support._nav_fns import Filter, Flatmap
 from mandos.model.pubchem_support._nav import JsonNavigator
 
 
@@ -11,7 +11,7 @@ class TestNav:
 
     def test_filter(self):
         nav = JsonNavigator.create([dict(a="x", b="y"), dict(a="123", b="456")])
-        a = nav / Fns.key_equals("b", "y") // "a" // Fns.require_only()
+        a = nav / Filter.key_equals("b", "y") // "a" // Flatmap.require_only()
         assert a.contents == ["x"]
 
     def test_mod(self):

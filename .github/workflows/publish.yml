@@ -3,14 +3,12 @@
 name: Publish on release creation
 on:
   release:
-    types:
-      - published
+    types: [published]
   repository_dispatch:
-    types:
-      - release-made
+    types: [release-made]
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -28,13 +26,10 @@ jobs:
         run: |
           poetry build
           poetry install
-      - name: Build the Docker image
-        run: |
-          docker build .
-      - name: Attach artifacts to the Github release
+      - name: Attach artifacts to the GitHub release
         uses: skx/github-action-publish-binaries@master
         with:
-          args: 'dist/*'
+          args: "dist/*"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to PyPi

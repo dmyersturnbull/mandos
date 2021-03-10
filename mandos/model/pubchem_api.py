@@ -19,13 +19,12 @@ import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 
-from mandos import MandosUtils
-from mandos.model.pubchem_data import PubchemData
+from mandos.model.pubchem_support.pubchem_data import PubchemData
 
 logger = logging.getLogger("mandos")
 
 
-class PubchemCompoundNotFound(LookupError):
+class PubchemCompoundLookupError(LookupError):
     """"""
 
 
@@ -80,16 +79,15 @@ class QueryingPubchemApi(PubchemApi):
         try:
             data = self._fetch_data(cid, inchikey)
         except HTTPError:
-            raise PubchemCompoundNotFound(
+            raise PubchemCompoundLookupError(
                 f"Failed finding pubchem compound (JSON) from cid {cid}, inchikey {inchikey}"
             )
         data = self._get_parent(cid, inchikey, data)
         return data
 
     def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:
-        slash = self._query_and_type(inchi)
         req = self._query(
-            f"{self._pug}/compound/similarity/{slash}/{inchi}/JSON?Threshold={min_tc}",
+            f"{self._pug}/compound/similarity/inchikey/{inchi}/JSON?Threshold={min_tc}",
             method="post",
         )
         key = orjson.loads(req)["Waiting"]["ListKey"]
@@ -130,12 +128,12 @@ class QueryingPubchemApi(PubchemApi):
         try:
             html = self._query(url)
         except HTTPError:
-            raise PubchemCompoundNotFound(
-                f"Failed finding pubchem compound (HTML) from inchikey {inchikey}"
+            raise PubchemCompoundLookupError(
+                f"Failed finding pubchem compound (HTML) from inchikey {inchikey} [url: {url}]"
             )
         match = pat.search(html)
         if match is None:
-            raise PubchemCompoundNotFound(
+            raise PubchemCompoundLookupError(
                 f"Something is wrong with the HTML from {url}; og:url not found"
             )
         return int(match.group(1))
@@ -145,9 +143,9 @@ class QueryingPubchemApi(PubchemApi):
         if data.parent_or_none is None:
             return data
         try:
-            data = self._fetch_data(data.parent_or_none, inchikey)
+            return self._fetch_data(data.parent_or_none, inchikey)
         except HTTPError:
-            raise PubchemCompoundNotFound(
+            raise PubchemCompoundLookupError(
                 f"Failed finding pubchem parent compound (JSON)"
                 f"for cid {data.parent_or_none}, child cid {cid}, inchikey {inchikey}"
             )
@@ -317,16 +315,6 @@ class QueryingPubchemApi(PubchemApi):
             raise ValueError(f"Request failed ({data.get('Code')}) on {url}: {data.get('Message')}")
         return data
 
-    def _query_and_type(self, inchi: Union[int, str], req_full: bool = False) -> str:
-        allowed = ["cid", "inchi", "smiles"] if req_full else ["cid", "inchi", "inchikey", "smiles"]
-        if isinstance(inchi, int):
-            return f"cid/{inchi}"
-        else:
-            query_type = MandosUtils.get_query_type(inchi).name.lower()
-            if query_type not in allowed:
-                raise ValueError(f"Can't query {inchi} with type {query_type}")
-            return f"{query_type}/{inchi}"
-
     def _strip_by_key_in_place(self, data: Union[dict, list], bad_key: str) -> None:
         if isinstance(data, list):
             for x in data:
@@ -352,7 +340,7 @@ class CachingPubchemApi(PubchemApi):
         if path.exists():
             logger.info(f"Found cached PubChem data at {path.absolute()}")
         elif self._querier is None:
-            raise LookupError(f"Key {inchikey} not found in cache")
+            raise PubchemCompoundLookupError(f"Key {inchikey} not found in cache")
         else:
             logger.info(f"Downloading PubChem data for {inchikey} ...")
             data = self._querier.fetch_data(inchikey)
@@ -411,5 +399,5 @@ __all__ = [
     "PubchemApi",
     "CachingPubchemApi",
     "QueryingPubchemApi",
-    "PubchemCompoundNotFound",
+    "PubchemCompoundLookupError",
 ]

@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from functools import total_ordering
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Set, Union
+from typing import List, Mapping, Optional, Sequence, Set
 
 import pandas as pd
 from typeddfs import TypedDfs
@@ -155,7 +155,6 @@ class Taxonomy:
 
         Args:
             by_id:
-            by_name:
         """
         # constructor provided for consistency with the members
         self._by_id = dict(by_id)

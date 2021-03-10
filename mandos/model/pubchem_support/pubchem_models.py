@@ -7,7 +7,7 @@ from typing import Union, Optional, FrozenSet, Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import MandosResources
+from mandos.utils import MandosResources
 from mandos.model.pubchem_support._nav_fns import Mapx
 
 hazards = {
@@ -64,6 +64,16 @@ class Codes:
         """
         GeneCard, UniProt gene name, etc.
         e.g. 'slc1a2'
+        """
+
+    class ClinicaltrialId(Code):
+        """
+        From clinicaltrials.gov
+        """
+
+    class GenericDiseaseCode(Code):
+        """
+        From clinicaltrials.gov; pure int
         """
 
     class GenecardSymbol(GeneId):
@@ -144,8 +154,10 @@ class CoOccurrenceType(enum.Enum):
 
 @dataclass(frozen=True, repr=True, eq=True)
 class ClinicalTrial:
+    ctid: Codes.ClinicaltrialId
     title: str
     conditions: FrozenSet[str]
+    disease_ids: FrozenSet[Codes.ClinicaltrialId]
     phase: str
     status: str
     interventions: FrozenSet[str]
@@ -160,8 +172,27 @@ class ClinicalTrial:
             "Phase 2": 2,
             "Phase 1": 1,
             "Early Phase 1": 1,
+            "Phase 2/Phase 3": 2,
             "N/A": 0,
-        }.get(self.status, 0)
+        }.get(self.phase, 0)
+
+    @property
+    def known_status(self) -> str:
+        return {
+            "Unknown status": "unknown",
+            "Completed": "completed",
+            "Terminated": "stopped",
+            "Suspended": "stopped",
+            "Withdrawn": "stopped",
+            "Not yet recruiting": "ongoing",
+            "Recruiting": "ongoing",
+            "Enrolling by invitation": "ongoing",
+            "Active, not recruiting": "ongoing",
+            "Available": "completed",
+            "No longer available": "completed",
+            "Temporarily not available": "completed",
+            "Approved for marketing": "completed",
+        }.get(self.status, "unknown")
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -193,7 +224,9 @@ class GhsCode:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class AssociatedDisorder:
-    disease: str
+    gid: str
+    disease_id: Codes.MeshCode
+    disease_name: str
     evidence_type: str
     n_refs: int
 

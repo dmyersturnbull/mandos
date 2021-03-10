@@ -6,13 +6,16 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, ChemblCompound, Search
+from mandos.model.chembl_api import ChemblApi
+from mandos.model.chembl_support import ChemblCompound
+from mandos.model.chembl_support.chembl_utils import ChemblUtils
+from mandos.search.chembl import ChemblHit, ChemblSearch
 
 logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True)
-class IndicationHit(AbstractHit):
+class IndicationHit(ChemblHit):
     """
     An indication with a MESH term.
     """
@@ -21,11 +24,15 @@ class IndicationHit(AbstractHit):
 
     @property
     def predicate(self) -> str:
-        return f"phase-{self.max_phase} indication"
+        return f"phase-{self.max_phase} trial"
 
 
-class IndicationSearch(Search[IndicationHit]):
+class IndicationSearch(ChemblSearch[IndicationHit]):
     """"""
+
+    def __init__(self, chembl_api: ChemblApi, min_phase: int):
+        super().__init__(chembl_api)
+        self.min_phase = min_phase
 
     def find(self, lookup: str) -> Sequence[IndicationHit]:
         """
@@ -38,12 +45,12 @@ class IndicationSearch(Search[IndicationHit]):
         """
         # 'atc_classifications': ['S01HA01', 'N01BC01', 'R02AD03', 'S02DA02']
         # 'indication_class': 'Anesthetic (topical)'
-        ch = self.get_compound_dot_dict(lookup)
-        compound = self.compound_dot_dict_to_obj(ch)
+        ch = ChemblUtils(self.api).get_compound_dot_dict(lookup)
+        compound = ChemblUtils(self.api).compound_dot_dict_to_obj(ch)
         inds = self.api.drug_indication.filter(parent_molecule_chembl_id=compound.chid)
         hits = []
         for ind in inds:
-            if ind.req_as("max_phase_for_ind", int) >= self.config.min_phase:
+            if ind.req_as("max_phase_for_ind", int) >= self.min_phase:
                 hits.append(self.process(lookup, compound, ind))
         return hits
 

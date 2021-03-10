@@ -6,13 +6,15 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, ChemblCompound, Search
+from mandos.model.chembl_support.chembl_utils import ChemblUtils
+from mandos.model.chembl_support import ChemblCompound
+from mandos.search.chembl import ChemblSearch, ChemblHit
 
 logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True)
-class AtcHit(AbstractHit):
+class AtcHit(ChemblHit):
     """
     An ATC code found for a compound.
     """
@@ -24,7 +26,7 @@ class AtcHit(AbstractHit):
         return f"has ATC L-{self.level} code"
 
 
-class AtcSearch(Search[AtcHit]):
+class AtcSearch(ChemblSearch[AtcHit]):
     """"""
 
     def find(self, lookup: str) -> Sequence[AtcHit]:
@@ -38,8 +40,8 @@ class AtcSearch(Search[AtcHit]):
         """
         # 'atc_classifications': ['S01HA01', 'N01BC01', 'R02AD03', 'S02DA02']
         # 'indication_class': 'Anesthetic (topical)'
-        ch = self.get_compound_dot_dict(lookup)
-        compound = self.compound_dot_dict_to_obj(ch)
+        ch = ChemblUtils(self.api).get_compound_dot_dict(lookup)
+        compound = ChemblUtils(self.api).compound_dot_dict_to_obj(ch)
         hits = []
         if "atc_classifications" in ch:
             for atc in ch["atc_classifications"]:

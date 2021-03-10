@@ -1,13 +1,14 @@
 import pytest
 
-from mandos.cli import Commands, What
+from mandos.cli import Commands
+from mandos.search.chembl.go_search import GoType
 
-from . import get_test_resource
+from .. import get_test_resource
 
 
 class TestGoSearch:
     def test_find(self):
-        df, triples = Commands.search_for(What.go_fn_moa, get_test_resource("inchis.txt"), None)
+        df, triples = Commands.go_search(get_test_resource("inchis.txt"), GoType.function)
         assert len(df) == 20
         assert len(triples) == 20
         # TODO not very complete

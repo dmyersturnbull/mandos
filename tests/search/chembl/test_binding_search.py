@@ -1,13 +1,13 @@
 import pytest
 
-from mandos.cli import Commands, What
+from mandos.cli import Commands
 
-from . import get_test_resource
+from .. import get_test_resource
 
 
 class TestActivitySearch:
     def test_find(self):
-        df, triples = Commands.search_for(What.activity, get_test_resource("inchis.txt"), None)
+        df, triples = Commands.binding(get_test_resource("inchis.txt"))
         # TODO double-check
         assert len(df) == 4
         assert len(triples) == 1

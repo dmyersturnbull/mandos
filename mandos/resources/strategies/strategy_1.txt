@@ -1,0 +1,5 @@
+
+selectivity_group         <- protein_complex_group
+selectivity_group         <- protein_family
+protein_complex_group     -> protein_complex_group
+protein_family            -> protein_family

@@ -6,13 +6,11 @@ from __future__ import annotations
 
 import abc
 import logging
-from typing import Any, Callable, Iterator, Mapping, Optional, Sequence, Set, List, Union, Iterable
+from typing import Any, Callable, Iterator, Mapping, Optional, Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 logger = logging.getLogger("mandos")
-
-from mandos import MandosResources
 
 
 class ChemblFilterQuery(metaclass=abc.ABCMeta):

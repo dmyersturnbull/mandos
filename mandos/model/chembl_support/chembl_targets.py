@@ -6,6 +6,7 @@ from __future__ import annotations
 import abc
 import enum
 import logging
+import re
 from dataclasses import dataclass
 from typing import Optional, Sequence, Set
 from typing import Tuple as Tup
@@ -13,7 +14,7 @@ from typing import Tuple as Tup
 from urllib3.util.retry import MaxRetryError
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.chembl_api import ChemblApi
+from mandos.model.chembl_api import ChemblApi
 
 logger = logging.getLogger(__package__)
 
@@ -59,6 +60,16 @@ class TargetType(enum.Enum):
         return set(TargetType)  # here for symmetry
 
     @property
+    def is_traversable(self) -> bool:
+        return self in {
+            TargetType.single_protein,
+            TargetType.protein_family,
+            TargetType.protein_complex,
+            TargetType.protein_complex_group,
+            TargetType.selectivity_group,
+        }
+
+    @property
     def is_protein(self) -> bool:
         return self in {
             TargetType.single_protein,
@@ -70,20 +81,6 @@ class TargetType(enum.Enum):
     @property
     def is_unknown(self) -> bool:
         return self == TargetType.unknown
-
-    @property
-    def is_strange(self) -> bool:
-        return self in {
-            TargetType.selectivity_group,
-            TargetType.protein_protein_interaction,
-            TargetType.nucleic_acid,
-            TargetType.chimeric_protein,
-            TargetType.metal,
-            TargetType.small_molecule,
-            TargetType.subcellular,
-            TargetType.protein_nucleic_acid_complex,
-            TargetType.unknown,
-        }
 
 
 class TargetRelationshipType(enum.Enum):
@@ -102,6 +99,7 @@ class DagTargetLinkType:
     source_type: TargetType
     rel_type: TargetRelationshipType
     dest_type: TargetType
+    words: Optional[Set[str]]
 
     @classmethod
     def cross(
@@ -114,20 +112,42 @@ class DagTargetLinkType:
         for source in source_types:
             for rel in rel_types:
                 for dest in dest_types:
-                    st.add(DagTargetLinkType(source, rel, dest))
+                    st.add(DagTargetLinkType(source, rel, dest, None))
         return st
+
+    def matches(
+        self,
+        source: TargetType,
+        rel: TargetRelationshipType,
+        target: TargetType,
+        target_name: Optional[str],
+    ) -> bool:
+        if self.words is None:
+            words_match = True
+        else:
+            words_match = False
+            for choice in self.words:
+                if any((word == choice for word in re.compile(r"[ \-_]+").split(target_name))):
+                    words_match = True
+                    break
+        return (
+            self.source_type == source
+            and self.rel_type == rel
+            and self.dest_type == target
+            and words_match
+        )
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class DagTarget:
     depth: int
     is_end: bool
-    target: Target
+    target: ChemblTarget
     link_type: Optional[DagTargetLinkType]
 
 
 @dataclass(frozen=True, order=True, repr=True)
-class Target(metaclass=abc.ABCMeta):
+class ChemblTarget(metaclass=abc.ABCMeta):
     """
     A target from ChEMBL, from the ``target`` table.
     ChEMBL targets form a DAG via the ``target_relation`` table using links of type "SUPERSET OF" and "SUBSET OF".
@@ -155,7 +175,7 @@ class Target(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @classmethod
-    def find(cls, chembl: str) -> Target:
+    def find(cls, chembl: str) -> ChemblTarget:
         """
 
         Args:
@@ -178,7 +198,7 @@ class Target(metaclass=abc.ABCMeta):
 
     def links(
         self, rel_types: Set[TargetRelationshipType]
-    ) -> Sequence[Tup[Target, TargetRelationshipType]]:
+    ) -> Sequence[Tup[ChemblTarget, TargetRelationshipType]]:
         """
         Gets adjacent targets in the DAG.
 
@@ -219,6 +239,12 @@ class Target(metaclass=abc.ABCMeta):
     def _traverse(
         cls, source: DagTarget, permitting: Set[DagTargetLinkType], results: Set[DagTarget]
     ) -> None:
+        # recursive method called from traverse
+        # this got really complex
+        # basically, we just want to:
+        # for each link (relationship) to another target:
+        # for every allowed link type (DagTargetLinkType), try:
+        # if the link type is acceptable, add the found target and associated link type, and break
         # all good if we've already traversed this
         if source.target.chembl in {s.target.chembl for s in results}:
             return
@@ -226,12 +252,23 @@ class Target(metaclass=abc.ABCMeta):
         # do not traverse yet -- we just want to find these links
         link_candidates = source.target.links({q.rel_type for q in permitting})
         links = []
-        for link, rel_type in link_candidates:
-            link_type = DagTargetLinkType(source.target.type, rel_type, link.type)
-            if link_type in permitting:
-                # purposely use the invalid value None for is_root
-                linked = DagTarget(source.depth + 1, None, link, link_type)
-                links.append(linked)
+        for linked_target, rel_type in link_candidates:
+            # try out all of the link types that could match
+            # getting to the link_target by way of any of them is fine
+            # although the DagTarget takes the link_type, we'll just go ahead and break if we find one acceptable link
+            # the links are already sorted, so that should be fine
+            # (otherwise, we just end up with redundant targets)
+            for permitted in permitting:
+                if permitted.matches(
+                    source.target.type, rel_type, linked_target.type, linked_target.name
+                ):
+                    link_type = DagTargetLinkType(
+                        source.target.type, rel_type, linked_target.type, permitted.words
+                    )
+                    # purposely use the invalid value None for is_root
+                    linked = DagTarget(source.depth + 1, None, linked_target, link_type)
+                    links.append(linked)
+                    break
         # now, we'll add our own (breadth-first, remember)
         # we know whether we're at an "end" node by whether we found any links
         # note that this is an invariant of the node (and permitted link types): it doesn't depend on traversal order
@@ -252,7 +289,7 @@ class TargetFactory:
     """
 
     @classmethod
-    def find(cls, chembl: str, api: ChemblApi) -> Target:
+    def find(cls, chembl: str, api: ChemblApi) -> ChemblTarget:
         """
 
         Args:
@@ -264,7 +301,7 @@ class TargetFactory:
         """
 
         @dataclass(frozen=True, order=True, repr=True)
-        class _Target(Target):
+        class _Target(ChemblTarget):
             @classmethod
             def api(cls) -> ChemblApi:
                 return api
@@ -276,7 +313,7 @@ class TargetFactory:
 __all__ = [
     "TargetType",
     "TargetRelationshipType",
-    "Target",
+    "ChemblTarget",
     "DagTarget",
     "TargetFactory",
     "DagTargetLinkType",

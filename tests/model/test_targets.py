@@ -1,7 +1,12 @@
 import pytest
 
-from mandos.chembl_api import ChemblApi, ChemblEntrypoint
-from mandos.model.targets import Target, TargetFactory, TargetRelationshipType, TargetType
+from mandos.model.chembl_api import ChemblApi, ChemblEntrypoint
+from mandos.model.chembl_support.chembl_targets import (
+    ChemblTarget,
+    TargetFactory,
+    TargetRelationshipType,
+    TargetType,
+)
 
 
 class TestTargets:
@@ -13,7 +18,7 @@ class TestTargets:
         )
         api = ChemblApi.mock({"target": ChemblEntrypoint.mock({"DAT": dat})})
         target = TargetFactory.find("DAT", api)
-        assert isinstance(target, Target)
+        assert isinstance(target, ChemblTarget)
         assert target.type == TargetType.single_protein
         assert target.name == "dopamine transporter"
         assert target.chembl == "CHEMBL4444"

@@ -110,7 +110,7 @@ Filtering by organism
 
 
 First, targets are restricted to the specified UniProt taxon.
-You can choose another taxon by passing ``-tax <id>`` (or ``-tax <name>``,
+You can choose another taxon by passing ``--tax <id>`` (or ``--tax <name>``,
 for subsets of vertebrata).
 By default, this is Euteleostomi, which diverged 430 megaannum (Ma) ago.
 This is a good choice if you want to approximate humans.

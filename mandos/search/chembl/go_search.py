@@ -8,8 +8,9 @@ from typing import Sequence, Type, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, Search
-from mandos.search.chembl.protein_search import ProteinHit, ProteinSearch
+from mandos.model.chembl_api import ChemblApi
+from mandos.search.chembl import ChemblHit, ChemblSearch
+from mandos.search.chembl.binding_search import BindingSearch, BindingHit
 
 logger = logging.getLogger("mandos")
 
@@ -27,41 +28,38 @@ class GoType(enum.Enum):
 
 
 @dataclass(frozen=True, order=True, repr=True)
-class GoHit(AbstractHit, metaclass=abc.ABCMeta):
+class GoHit(ChemblHit, metaclass=abc.ABCMeta):
     """
     A mechanism entry for a compound.
     """
 
     go_type: str
-    protein_hit: ProteinHit
+    binding: BindingHit
 
     @property
     def predicate(self) -> str:
         return f"has GO {self.go_type} term"
 
 
-class GoSearch(Search[GoHit], metaclass=abc.ABCMeta):
+class GoSearch(ChemblSearch[GoHit]):
     """
     Search for GO terms.
     """
 
-    @property
-    def go_type(self) -> GoType:
-        raise NotImplementedError()
-
-    @property
-    def protein_search(self) -> Type[ProteinSearch]:
-        raise NotImplementedError()
+    def __init__(self, chembl_api: ChemblApi, go_type: GoType, binding_search: BindingSearch):
+        super().__init__(chembl_api)
+        self.go_type = go_type
+        self.binding_search = binding_search
 
     def find(self, compound: str) -> Sequence[GoHit]:
-        matches = self.protein_search(self.api, self.config, self.tax).find(compound)
+        matches = self.binding_search.find(compound)
         terms = []
         for match in matches:
             target = self.api.target.get(match.object_id)
             terms.extend(self._process(match, target))
         return terms
 
-    def _process(self, match: ProteinHit, target: NestedDotDict) -> Sequence[GoHit]:
+    def _process(self, match: BindingHit, target: NestedDotDict) -> Sequence[GoHit]:
         terms = set()
         if target.get("target_components") is not None:
             for comp in target["target_components"]:
@@ -81,30 +79,10 @@ class GoSearch(Search[GoHit], metaclass=abc.ABCMeta):
                     object_id=xref_id,
                     object_name=xref_name,
                     go_type=self.go_type.name,
-                    protein_hit=match,
+                    binding=match,
                 )
             )
         return hits
 
 
-class GoSearchFactory:
-    @classmethod
-    def create(
-        cls, go_type: Union[str, GoType], protein_search: Type[ProteinSearch]
-    ) -> Type[GoSearch]:
-        go_type = GoType.of(go_type)
-
-        class X(GoSearch):
-            @property
-            def go_type(self) -> GoType:
-                return go_type
-
-            @property
-            def protein_search(self) -> Type[ProteinSearch]:
-                return protein_search
-
-        X.__name__ = f"Go{go_type.name.capitalize()}From{protein_search.search_name}Search"
-        return X
-
-
-__all__ = ["GoHit", "GoSearch", "GoSearchFactory", "GoType"]
+__all__ = ["GoHit", "GoSearch", "GoType"]

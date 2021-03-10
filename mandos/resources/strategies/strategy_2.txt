@@ -1,4 +1,5 @@
-single_protein            -> protein_complex         words:"subunit","chain"
+
+single_protein            -> protein_complex         words:subunit|chain
 protein_complex           -> protein_complex
 protein_complex           ~~ protein_complex_group
 protein_complex_group     -> protein_complex_group

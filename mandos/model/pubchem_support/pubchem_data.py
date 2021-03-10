@@ -434,7 +434,9 @@ class DrugAndMedicationInformation(PubchemDataView):
         for trial in trials:
             source = self._refs[int(trial["srcid"])]
             obj = ClinicalTrial(
+                Codes.ClinicaltrialId.of(trial["ctid"]),
                 trial["title"],
+                frozenset([Codes.GenericDiseaseCode.of(z) for z in trial["diseaseids"].split("|")]),
                 frozenset(trial["conditions"].split("|")),
                 trial["phase"],
                 trial["status"],
@@ -639,8 +641,8 @@ class AssociatedDisordersAndDiseases(PubchemMiniDataView):
         return (
             self._tables
             / "ctd_chemical_disease"
-            // ["diseasename", "directevidence", "dois"]
-            / [Mapx.req_is(str), Mapx.req_is(str), Mapx.n_bar_items()]
+            // ["gid", "diseaseextid", "diseasename", "directevidence", "dois"]
+            / [str, Codes.MeshCode.of, Mapx.req_is(str), Mapx.req_is(str), Mapx.n_bar_items()]
             // Flatmap.construct(AssociatedDisorder)
         ).to_set
 
@@ -979,6 +981,10 @@ class PubchemData(PubchemDataView):
     @property
     def title_and_summary(self) -> TitleAndSummary:
         return TitleAndSummary(self._data)
+
+    @property
+    def names_and_identifiers(self) -> NamesAndIdentifiers:
+        return NamesAndIdentifiers(self._data)
 
     @property
     def chemical_and_physical_properties(self) -> ChemicalAndPhysicalProperties:

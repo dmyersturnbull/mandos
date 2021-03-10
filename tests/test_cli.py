@@ -1,7 +1,7 @@
 import pytest
 from typer.testing import CliRunner
 
-from mandos.cli import Commands, What, cli
+from mandos.cli import Commands, cli
 
 from . import get_test_resource
 
@@ -16,7 +16,7 @@ class TestCli:
     def test_search(self):
         runner = CliRunner()
         path = get_test_resource("inchis.txt")
-        result = runner.invoke(cli, ["search", "atc", str(path)])
+        result = runner.invoke(cli, ["chembl:atc", str(path)])
         if result.exception is not None:
             raise result.exception
         assert result.stdout == ""

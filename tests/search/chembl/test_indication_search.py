@@ -1,13 +1,16 @@
 import pytest
 
-from mandos.cli import Commands, What
+from mandos.cli import Commands, Searcher
+from mandos.model.chembl_api import ChemblApi
+from chembl_webresource_client.new_client import new_client as Chembl
+from mandos.search.chembl.indication_search import IndicationSearch
 
-from . import get_test_resource
+from .. import get_test_resource
 
 
 class TestIndicationSearch:
     def test_find(self):
-        df, triples = Commands.search_for(What.trial, get_test_resource("inchis.txt"), None)
+        df, triples = Commands.trials(get_test_resource("inchis.txt"))
         assert len(df) == 6
         assert len(triples) == 6
         assert {t.compound_name.lower() for t in triples} == {"alprazolam"}
@@ -30,7 +33,8 @@ class TestIndicationSearch:
         assert {t.predicate for t in triples} == {"phase-4 indication", "phase-3 indication"}
 
     def test_cocaine_hcl(self):
-        df, triples = Commands.search_for(What.trial, ["CHEMBL529437"], None)
+        api = ChemblApi.wrap(Chembl)
+        df, triples = Searcher(IndicationSearch(api, min_phase=3)).search_for(["CHEMBL529437"])
         assert len(df) == 1
         assert len(triples) == 1
         assert triples[0].compound_name.lower() == "cocaine"

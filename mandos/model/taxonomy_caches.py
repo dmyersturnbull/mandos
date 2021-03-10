@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 from pocketutils.core.hashers import Hasher
 
-from mandos import MandosResources
+from mandos.model import MandosResources
 from mandos.model.taxonomy import Taxonomy
 
 logger = logging.getLogger(__package__)

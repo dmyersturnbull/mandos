@@ -19,11 +19,7 @@ build-backend = "poetry.masonry.api"
 name = "mandos"
 version = "0.2.0"
 description = "Get the biological targets of compounds."
-include = [
-    "README.md",
-    "LICENSE.txt",
-    "CHANGES.md"
-]
+include = []
 authors = ["Douglas Myers-Turnbull"]
 maintainers = ["Douglas Myers-Turnbull"]
 license = "Apache-2.0"
@@ -63,18 +59,17 @@ mandos = "mandos.cli:cli"
 python                         = ">=3.9, <4"
 chembl-webresource-client      = "^0.10"
 pandas                         = ">=1.2, <2.0"
-numpy                          = ">=1.19, <2.0"
-requests                       = ">=2.24, <3.0"
+numpy                          = ">=1.20, <2.0"
+requests                       = ">=2.25, <3.0"
 tomlkit                        = ">=0.7, <1.0"
 typer                          = ">=0.3, <1.0"
-orjson                         = ">=3.4, <4.0"
+orjson                         = ">=3.5, <4.0"
 pocketutils                    = ">=0.4, <0.5"
-pyyaml                         = ">=5.4, <6.0"
-typeddfs                       = ">=0.4, <0.5"
+typeddfs                       = ">=0.5, <0.7"
 
 
 [tool.poetry.dev-dependencies]
-pre-commit               = ">=2.9, <3.0"
+pre-commit               = ">=2.11, <3.0"
 pre-commit-hooks         = ">=3.4, <4.0"
 bandit                   = ">=1.7, <2.0"
 black                    = {git = "https://github.com/psf/black.git", rev="f07832eac44e"}
@@ -86,6 +81,7 @@ flake8-docstrings        = "^1"
 flake8-bugbear           = "^20"
 sphinx                   = "^3"
 sphinx-autoapi           = "^1"
+sphinx-copybutton        = ">=0.3, <1.0"
 sphinx-rtd-theme         = ">=0.5, <1.0"
 sphinxcontrib-mermaid    = ">=0.5, <1.0"
 

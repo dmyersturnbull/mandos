@@ -5,9 +5,13 @@ from typing import Sequence, TypeVar
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import AbstractHit, ChemblCompound, Search
-from mandos.model.targets import Target, TargetFactory
-from mandos.search.chembl.target_traversal_strategy import (
+from mandos.model.chembl_api import ChemblApi
+from mandos.model.chembl_support import ChemblCompound
+from mandos.model.chembl_support.chembl_targets import ChemblTarget, TargetFactory
+from mandos.model.chembl_support.chembl_utils import ChemblUtils
+from mandos.model.taxonomy import Taxonomy
+from mandos.search.chembl import ChemblHit, ChemblSearch
+from mandos.search.chembl.target_traversal import (
     TargetTraversalStrategies,
     TargetTraversalStrategy,
 )
@@ -16,7 +20,7 @@ logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True)
-class ProteinHit(AbstractHit, metaclass=abc.ABCMeta):
+class ProteinHit(ChemblHit, metaclass=abc.ABCMeta):
     """
     A protein target entry for a compound.
     """
@@ -25,10 +29,15 @@ class ProteinHit(AbstractHit, metaclass=abc.ABCMeta):
 H = TypeVar("H", bound=ProteinHit, covariant=True)
 
 
-class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
+class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
     """
     Abstract search.
     """
+
+    def __init__(self, chembl_api: ChemblApi, taxonomy: Taxonomy, traversal_strategy: str):
+        super().__init__(chembl_api)
+        self.taxonomy = taxonomy
+        self._traversal_strategy = TargetTraversalStrategies.by_name(traversal_strategy, self.api)
 
     def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
         logger.info(
@@ -41,16 +50,10 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
 
     @property
     def traversal_strategy(self) -> TargetTraversalStrategy:
-        if self.config.traversal_strategy is None:
-            return self.default_traversal_strategy
-        return TargetTraversalStrategies.by_name(self.config.traversal_strategy, self.api)
-
-    @property
-    def default_traversal_strategy(self) -> TargetTraversalStrategy:
-        raise NotImplementedError()
+        return self._traversal_strategy
 
     def should_include(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: Target
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
     ) -> bool:
         """
         Filter based on the returned (activity/mechanism) data.
@@ -69,7 +72,7 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     def to_hit(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, best_target: Target
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, best_target: ChemblTarget
     ) -> Sequence[H]:
         """
         Gets the desired data as a NestedDotDict from the data from a single element
@@ -102,7 +105,7 @@ class ProteinSearch(Search[H], metaclass=abc.ABCMeta):
         Returns:e
 
         """
-        form = self.get_compound(lookup)
+        form = ChemblUtils(self.api).get_compound(lookup)
         results = self.query(form)
         hits = []
         for result in results:

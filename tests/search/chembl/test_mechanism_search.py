@@ -1,13 +1,13 @@
 import pytest
 
-from mandos.cli import Commands, What
+from mandos.cli import Commands
 
-from . import get_test_resource
+from .. import get_test_resource
 
 
 class TestMechanismSearch:
     def test_find(self):
-        df, triples = Commands.search_for(What.mechanism, get_test_resource("inchis.txt"), None)
+        df, triples = Commands.moa(get_test_resource("inchis.txt"))
         assert len(df) == 1
         assert len(triples) == 1
         assert triples[0].compound_name.lower() == "alprazolam"

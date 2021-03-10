@@ -3,11 +3,9 @@ from typing import Mapping
 import pytest
 from chembl_webresource_client.new_client import new_client as Chembl
 
-from mandos.chembl_api import ChemblApi, ChemblEntrypoint
-from mandos.model.targets import (
+from mandos.model.chembl_support.chembl_targets import (
     DagTarget,
     DagTargetLinkType,
-    Target,
     TargetFactory,
     TargetRelationshipType,
     TargetType,
@@ -61,12 +59,19 @@ class TestTargets:
             TargetType.single_protein,
             TargetRelationshipType.subset_of,
             TargetType.protein_complex_group,
+            None,
         )
         assert vals["CHEMBL4296058"].link_type == DagTargetLinkType(
-            TargetType.single_protein, TargetRelationshipType.subset_of, TargetType.protein_complex
+            TargetType.single_protein,
+            TargetRelationshipType.subset_of,
+            TargetType.protein_complex,
+            None,
         )
         assert vals["CHEMBL4296059"].link_type == DagTargetLinkType(
-            TargetType.single_protein, TargetRelationshipType.subset_of, TargetType.protein_complex
+            TargetType.single_protein,
+            TargetRelationshipType.subset_of,
+            TargetType.protein_complex,
+            None,
         )
 
     def test_traverse_gabaa_up_mouse_2(self):
@@ -84,6 +89,7 @@ class TestTargets:
                 TargetType.protein_complex,
                 TargetRelationshipType.overlaps_with,
                 TargetType.protein_complex_group,
+                None,
             )
         )
         accepted = target.traverse(link_types)
@@ -109,12 +115,19 @@ class TestTargets:
             TargetType.single_protein,
             TargetRelationshipType.subset_of,
             TargetType.protein_complex_group,
+            None,
         )
         assert vals["CHEMBL4296058"].link_type == DagTargetLinkType(
-            TargetType.single_protein, TargetRelationshipType.subset_of, TargetType.protein_complex
+            TargetType.single_protein,
+            TargetRelationshipType.subset_of,
+            TargetType.protein_complex,
+            None,
         )
         assert vals["CHEMBL4296059"].link_type == DagTargetLinkType(
-            TargetType.single_protein, TargetRelationshipType.subset_of, TargetType.protein_complex
+            TargetType.single_protein,
+            TargetRelationshipType.subset_of,
+            TargetType.protein_complex,
+            None,
         )
 
     def test_traverse_gabaa_up_and_down(self):

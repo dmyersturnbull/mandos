@@ -1,0 +1,12 @@
+# Sweep up and down to get single proteins, etc., accepting anything we can get
+# REL KEY: > superset of; < subset of; = equivalent to; ~ overlaps with; * any rel; $ no matching rels
+# ACCEPT KEY: - never; * always; ^ at start; $ at end
+protein_complex_group     > protein_complex_group   accept:$
+protein_complex_group     > protein_complex         accept:$
+protein_family            > protein_family          accept:$
+any                       = any                     accept:-
+protein_complex           > single_protein          accept:*
+protein_family            > single_protein          accept:*
+nucleic_acid              . N/A                     accept:*
+metal                     . N/A                     accept:*
+small_molecule            . N/A                     accept:*

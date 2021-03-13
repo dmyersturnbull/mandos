@@ -17,6 +17,8 @@ from mandos.model.pubchem_support.pubchem_models import (
     Bioactivity,
 )
 
+from .. import get_test_resource
+
 
 class TestPubchemData:
     def test(self):
@@ -25,7 +27,7 @@ class TestPubchemData:
 
 class TestPubchemApi:
     def test(self):
-        path = Path(__file__).parent / "resources" / "pchem_store"
+        path = get_test_resource("pchem_store")
         querier = CachingPubchemApi(path, None, compress=False)
         x = querier.fetch_data("PIQVDUKEQYOJNR-VZXSFKIWSA-N")
         assert x.cid == 446220

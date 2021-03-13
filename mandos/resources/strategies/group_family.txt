@@ -1,0 +1,6 @@
+# REL KEY: > superset of; < subset of; = equivalent to; ~ overlaps with; * any rel; $ no matching rels
+# ACCEPT KEY: - never; * always; ^ at start; $ at end
+any                       = any                     accept:-
+protein_family            < protein_family          accept:$
+single_protein            < protein_family          accept:$
+single_protein            . single_protein          accept:$

@@ -340,7 +340,7 @@ class CachingPubchemApi(PubchemApi):
         if path.exists():
             logger.info(f"Found cached PubChem data at {path.absolute()}")
         elif self._querier is None:
-            raise PubchemCompoundLookupError(f"Key {inchikey} not found in cache")
+            raise PubchemCompoundLookupError(f"Key {inchikey} not found cached at {path}")
         else:
             logger.info(f"Downloading PubChem data for {inchikey} ...")
             data = self._querier.fetch_data(inchikey)

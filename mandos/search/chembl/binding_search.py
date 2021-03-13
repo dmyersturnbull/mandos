@@ -7,7 +7,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
-from mandos.model.chembl_support.chembl_targets import ChemblTarget
+from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.defaults import Defaults
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
@@ -60,10 +60,6 @@ class BindingSearch(ProteinSearch[BindingHit]):
         self.min_pchembl = min_pchembl
         self.banned_flags = banned_flags
 
-    @property
-    def default_traversal_strategy(self) -> TargetTraversalStrategy:
-        return TargetTraversalStrategies.strategy0(self.api)
-
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         def set_to_regex(values) -> str:
             return "(" + "|".join([f"(?:{re.escape(v)})" for v in values]) + ")"
@@ -80,7 +76,7 @@ class BindingSearch(ProteinSearch[BindingHit]):
         return list(self.api.activity.filter(**filters))
 
     def should_include(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> bool:
         if (
             (
@@ -117,7 +113,7 @@ class BindingSearch(ProteinSearch[BindingHit]):
         return True
 
     def to_hit(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> Sequence[BindingHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal

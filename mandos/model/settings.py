@@ -23,7 +23,7 @@ class Globals:
                 "MANDOS_HOME", Path.home() / ".mandos"
             )
         )
-    config_path = mandos_path / "settings.toml"
+    settings_path = mandos_path / "settings.toml"
     chembl_cache = mandos_path / "chembl"
     taxonomy_cache = mandos_path / "taxonomy"
 
@@ -36,13 +36,15 @@ class Settings:
     cache_path: Path
     cache_gzip: bool
     chembl_n_retries: int
-    chembl_fast_save: bool
     chembl_timeout_sec: int
-    chembl_min_query_delay: float
-    chembl_max_query_delay: float
-    pubchem_use_parent_molecule: bool
-    pubchem_min_query_delay: float
-    pubchem_max_query_delay: float
+    chembl_query_delay_min: float
+    chembl_query_delay_max: float
+    chembl_fast_save: bool
+    pubchem_n_retries: int
+    pubchem_timeout_sec: float
+    pubchem_query_delay_min: float
+    pubchem_query_delay_max: float
+    pubchem_use_parent: bool
 
     @property
     def chembl_cache_path(self) -> Path:
@@ -63,21 +65,20 @@ class Settings:
     @classmethod
     def load(cls, data: NestedDotDict) -> Settings:
         #  117571
-        cache_path = data.get_as("mandos.cache_path", Path, Globals.mandos_path)
         return cls(
-            is_testing=data.get_as("is_testing", bool, False),
-            cache_path=cache_path,
+            is_testing=data.get_as("mandos.is_testing", bool, False),
+            cache_path=data.get_as("mandos.cache.path", Path, Globals.mandos_path).expanduser(),
             cache_gzip=data.get_as("mandos.cache.gzip", bool),
-            chembl_n_retries=data.get_as("mandos.chembl.n_retries", int, 1),
-            chembl_fast_save=data.get_as("mandos.chembl.fast_save", bool, True),
-            chembl_timeout_sec=data.get_as("chembl.timeout_sec", int, 1),
-            chembl_min_query_delay=data.get_as("mandos.pubchem.query_delay_sec_min", float, 0.25),
-            chembl_max_query_delay=data.get_as("mandos.pubchem.query_delay_sec_min", float, 0.25),
-            pubchem_min_query_delay=data.get_as("mandos.pubchem.query_delay_sec_min", float, 0.25),
-            pubchem_max_query_delay=data.get_as("mandos.pubchem.query_delay_sec_min", float, 0.25),
-            pubchem_use_parent_molecule=data.get_as(
-                "mandos.pubchem.use_parent_molecule", bool, True
-            ),
+            chembl_n_retries=data.get_as("mandos.query.chembl.n_retries", int, 1),
+            chembl_fast_save=data.get_as("mandos.query.chembl.fast_save", bool, True),
+            chembl_timeout_sec=data.get_as("mandos.query.chembl.timeout_sec", int, 1),
+            chembl_query_delay_min=data.get_as("mandos.query.chembl.delay_sec", float, 0.25),
+            chembl_query_delay_max=data.get_as("mandos.query.chembl.delay_sec", float, 0.25),
+            pubchem_timeout_sec=data.get_as("mandos.query.pubchem.timeout_sec", int, 1),
+            pubchem_query_delay_min=data.get_as("mandos.query.pubchem.delay_sec", float, 0.25),
+            pubchem_query_delay_max=data.get_as("mandos.query.pubchem.delay_sec", float, 0.25),
+            pubchem_n_retries=data.get_as("mandos.query.pubchem.n_retries", int, 1),
+            pubchem_use_parent=data.get_as("mandos.query.pubchem.use_parent", bool, True),
         )
 
     @property
@@ -100,12 +101,12 @@ class Settings:
         instance.TIMEOUT = self.chembl_timeout_sec
 
 
-if Globals.mandos_path.exists():
-    MANDOS_SETTINGS = Settings.from_file(Globals.mandos_path)
-    logger.info(f"Read settings at {Globals.mandos_path}")
+if Globals.settings_path.exists():
+    MANDOS_SETTINGS = Settings.from_file(Globals.settings_path)
+    logger.info(f"Read settings at {Globals.settings_path}")
 else:
     MANDOS_SETTINGS = Settings.empty()
-    logger.info(f"Using default settings (no file at {Globals.mandos_path})")
+    logger.info(f"Using default settings (no file at {Globals.settings_path})")
 MANDOS_SETTINGS.set()
 
 

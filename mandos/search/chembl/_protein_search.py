@@ -7,14 +7,15 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
-from mandos.model.chembl_support.chembl_targets import ChemblTarget, TargetFactory
+from mandos.model.chembl_support.chembl_targets import TargetFactory
+from mandos.model.chembl_support.chembl_target_graphs import (
+    ChemblTargetGraph,
+    ChemblTargetGraphFactory,
+)
 from mandos.model.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl import ChemblHit, ChemblSearch
-from mandos.search.chembl.target_traversal import (
-    TargetTraversalStrategies,
-    TargetTraversalStrategy,
-)
+from mandos.search.chembl.target_traversal import TargetTraversalStrategies, TargetTraversalStrategy
 
 logger = logging.getLogger("mandos")
 
@@ -53,7 +54,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         return self._traversal_strategy
 
     def should_include(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> bool:
         """
         Filter based on the returned (activity/mechanism) data.
@@ -72,7 +73,11 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     def to_hit(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, best_target: ChemblTarget
+        self,
+        lookup: str,
+        compound: ChemblCompound,
+        data: NestedDotDict,
+        best_target: ChemblTargetGraph,
     ) -> Sequence[H]:
         """
         Gets the desired data as a NestedDotDict from the data from a single element
@@ -128,13 +133,16 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
             logger.debug(f"target_chembl_id missing from mechanism '{data}' for compound {lookup}")
             return []
         chembl_id = data["target_chembl_id"]
-        target_obj = TargetFactory.find(chembl_id, self.api)
-        if not self.should_include(lookup, compound, data, target_obj):
+        factory = TargetFactory(self.api)
+        target_obj = factory.find(chembl_id)
+        graph_factory = ChemblTargetGraphFactory.create(self.api, factory)
+        graph = graph_factory.at_target(target_obj)
+        if not self.should_include(lookup, compound, data, graph):
             return []
         # traverse() will return the source target if it's a non-traversable type (like DNA)
         # and the subclass decided whether to filter those
         # so don't worry about that here
-        ancestors = self.traversal_strategy(target_obj)
+        ancestors = self.traversal_strategy(graph)
         lst = []
         for ancestor in ancestors:
             lst.extend(self.to_hit(lookup, compound, data, ancestor))

@@ -1,18 +1,32 @@
 from __future__ import annotations
 import abc
+import enum
 import sys
+import sre_compile
 import re
 from pathlib import Path
-from typing import Sequence, Type, Set
+from typing import Dict, Sequence, Type, Set, Union
 
 from mandos.model import MandosResources
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support.chembl_targets import (
-    DagTargetLinkType,
-    ChemblTarget,
-    TargetRelationshipType,
     TargetType,
+    ChemblTarget,
+    TargetFactory,
 )
+from mandos.model.chembl_support.chembl_target_graphs import (
+    ChemblTargetGraph,
+    TargetNode,
+    TargetEdgeReqs,
+    TargetRelType,
+)
+
+
+class Acceptance(enum.Enum):
+    always = enum.auto()
+    never = enum.auto()
+    at_start = enum.auto()
+    at_end = enum.auto()
 
 
 class TargetTraversalStrategy(metaclass=abc.ABCMeta):
@@ -22,10 +36,10 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
     def api(cls) -> ChemblApi:
         raise NotImplementedError()
 
-    def traverse(self, target: ChemblTarget) -> Sequence[ChemblTarget]:
+    def traverse(self, target: ChemblTargetGraph) -> Sequence[ChemblTargetGraph]:
         return self.__call__(target)
 
-    def __call__(self, target: ChemblTarget) -> Sequence[ChemblTarget]:
+    def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTargetGraph]:
         """
 
         Returns:
@@ -38,11 +52,17 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
     """"""
 
     @classmethod
-    def edges(cls) -> Set[DagTargetLinkType]:
+    @property
+    def edges(cls) -> Set[TargetEdgeReqs]:
         raise NotImplementedError()
 
     @classmethod
-    def read(cls, path: Path) -> Set[DagTargetLinkType]:
+    @property
+    def acceptance(cls) -> Dict[TargetEdgeReqs, Acceptance]:
+        raise NotImplementedError()
+
+    @classmethod
+    def read(cls, path: Path) -> Set[TargetEdgeReqs]:
         lines = [
             line
             for line in path.read_text(encoding="utf8").splitlines()
@@ -51,47 +71,89 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
         return cls.parse(lines)
 
     @classmethod
-    def parse(cls, lines: Sequence[str]) -> Set[DagTargetLinkType]:
-        pat_type = re.compile(r"([a-z_]+)")
-        pat_rel = re.compile(r"((?:->)|(?:<-)|(?:==)|(?:~~))")
-        pat_words = re.compile(r"(?:words: *([^|]+(?:\|[^|]+)+))?")
-        pat = re.compile(f"^ *{pat_type} *{pat_rel} *{pat_type} *{pat_words} *$")
+    def parse(cls, lines: Sequence[str]) -> Set[TargetEdgeReqs]:
+        pat_type = r"([a-z_]+)"
+        pat_rel = r"([<>~=])"
+        pat_accept = r"(?:accept:([\-*^$]?))?"
+        pat_src_words = r"(?:src:'''(.+?)''')?"
+        pat_dest_words = r"(?:dest:'''(.+?)''')?"
+        comment = r"(?:#(.*))?"
+        pat = f"^ *{pat_type} *{pat_rel} *{pat_type} *{pat_accept} * {pat_src_words} *{pat_dest_words} *{comment} *$"
+        print(pat)
+        pat = re.compile(pat)
         to_rel = {
-            "->": TargetRelationshipType.superset_of,
-            "<-": TargetRelationshipType.subset_of,
-            "~~": TargetRelationshipType.overlaps_with,
-            "==": TargetRelationshipType.equivalent_to,
+            ">": TargetRelType.superset_of,
+            "<": TargetRelType.subset_of,
+            "~": TargetRelType.overlaps_with,
+            "=": TargetRelType.equivalent_to,
+            "*": TargetRelType.any_link,
+            ".": TargetRelType.self_link,
+        }
+        to_accept = {
+            "*": Acceptance.always,
+            "-": Acceptance.never,
+            "^": Acceptance.at_start,
+            "$": Acceptance.at_end,
         }
         edges = set()
+        edge_to_acceptance: Dict[TargetEdgeReqs, Acceptance] = {}
         for line in lines:
             match = pat.fullmatch(line)
             if match is None:
                 raise AssertionError(f"Could not parse line '{line}'")
             try:
-                source = TargetType[match.group(1).lower()]
-                rel = TargetRelationshipType[to_rel[match.group(2).lower()]]
-                target = TargetType[match.group(3).lower()]
-                words = None if match.group(4) == "" else match.group(4).split("|")
-            except KeyError:
+                src_str = match.group(1).lower()
+                sources = TargetType.all_types() if src_str == "any" else [TargetType[src_str]]
+                rel = to_rel[match.group(2)]
+                dest_str = match.group(3).lower()
+                targets = TargetType.all_types() if dest_str == "any" else [TargetType[dest_str]]
+                accept = to_accept[match.group(4).lower()]
+                src_pat = (
+                    None
+                    if match.group(5) is None or match.group(5) == ""
+                    else re.compile(match.group(5))
+                )
+                dest_pat = (
+                    None
+                    if match.group(6) is None or match.group(6) == ""
+                    else re.compile(match.group(6))
+                )
+            except (KeyError, TypeError, sre_compile.error):
                 raise AssertionError(f"Could not parse line '{line}'")
-            edges.add(DagTargetLinkType(source, rel, target, words))
+            for source in sources:
+                for dest in targets:
+                    edge = TargetEdgeReqs(
+                        src_type=source,
+                        src_pattern=src_pat,
+                        rel_type=rel,
+                        dest_type=dest,
+                        dest_pattern=dest_pat,
+                    )
+                    edges.add(edge)
+                    edge_to_acceptance[edge] = accept
         return edges
 
-    def __call__(self, target: ChemblTarget) -> Sequence[ChemblTarget]:
-        """
-        Returns:
-        """
+    def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTarget]:
         if not target.type.is_traversable:
-            return [target]
+            return [target.target]
         found = target.traverse(self.edges)
-        return [f.target for f in found if f.is_end]
+        return [f.target for f in found if self.accept(f)]
+
+    def accept(self, target: TargetNode) -> bool:
+        acceptance_type = self.acceptance[target.link_reqs]
+        return (
+            acceptance_type is Acceptance.always
+            or (acceptance_type is Acceptance.at_start and target.is_start)
+            or (acceptance_type is Acceptance.at_end and target.is_end)
+        )
 
 
 class TargetTraversalStrategy0(StandardTargetTraversalStrategy, metaclass=abc.ABCMeta):
     """"""
 
     @classmethod
-    def edges(cls) -> Set[DagTargetLinkType]:
+    @property
+    def edges(cls) -> Set[TargetEdgeReqs]:
         return cls.read(MandosResources.path("strategies", "strategy0.txt"))
 
 
@@ -99,7 +161,8 @@ class TargetTraversalStrategy1(StandardTargetTraversalStrategy, metaclass=abc.AB
     """"""
 
     @classmethod
-    def edges(cls) -> Set[DagTargetLinkType]:
+    @property
+    def edges(cls) -> Set[TargetEdgeReqs]:
         return cls.read(MandosResources.path("strategies", "strategy1.txt"))
 
 
@@ -122,7 +185,8 @@ class TargetTraversalStrategy2(StandardTargetTraversalStrategy, metaclass=abc.AB
     """
 
     @classmethod
-    def edges(cls) -> Set[DagTargetLinkType]:
+    @property
+    def edges(cls) -> Set[TargetEdgeReqs]:
         return cls.read(MandosResources.path("strategies", "strategy2.txt"))
 
 
@@ -161,6 +225,7 @@ class TargetTraversalStrategies:
     def strategy2(cls, api: ChemblApi) -> TargetTraversalStrategy:
         return cls.create(TargetTraversalStrategy2, api)
 
+    # noinspection PyAbstractClass
     @classmethod
     def create(cls, clz: Type[TargetTraversalStrategy], api: ChemblApi) -> TargetTraversalStrategy:
         """

@@ -7,7 +7,7 @@ from typing import Union, Optional, FrozenSet, Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.utils import MandosResources
+from mandos.model import MandosResources
 from mandos.model.pubchem_support._nav_fns import Mapx
 
 hazards = {

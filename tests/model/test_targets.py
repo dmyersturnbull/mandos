@@ -1,11 +1,11 @@
 import pytest
 
 from mandos.model.chembl_api import ChemblApi, ChemblEntrypoint
-from mandos.model.chembl_support.chembl_targets import (
-    ChemblTarget,
-    TargetFactory,
-    TargetRelationshipType,
-    TargetType,
+from mandos.model.chembl_support.chembl_targets import TargetFactory, TargetType
+from mandos.model.chembl_support.chembl_target_graphs import (
+    ChemblTargetGraph,
+    TargetRelType,
+    ChemblTargetGraphFactory,
 )
 
 
@@ -17,8 +17,9 @@ class TestTargets:
             target_type="SINGLE_PROTEIN",
         )
         api = ChemblApi.mock({"target": ChemblEntrypoint.mock({"DAT": dat})})
-        target = TargetFactory.find("DAT", api)
-        assert isinstance(target, ChemblTarget)
+        factory = TargetFactory(api)
+        target = factory.find("DAT")
+        assert isinstance(target, ChemblTargetGraph)
         assert target.type == TargetType.single_protein
         assert target.name == "dopamine transporter"
         assert target.chembl == "CHEMBL4444"
@@ -66,13 +67,15 @@ class TestTargets:
                 "target_relation": ChemblEntrypoint.mock({}, filter_relations),
             }
         )
-        target = TargetFactory.find("CHEMBL4444", api)
-        assert len(target.links({TargetRelationshipType.subset_of})) == 2
+        factory = TargetFactory(api)
+        graph_factory = ChemblTargetGraphFactory.create(api, factory)
+        target = factory.find("CHEMBL4444")
+        assert len(graph_factory.at_target(target).links({TargetRelType.subset_of})) == 2
         # should sort by CHEMBL ID first, so 0000 will be first
-        parent, link_type = target.links({TargetRelationshipType.subset_of})[0]
-        assert parent.name == "receptor"
+        parent, link_type = graph_factory.at_target(target).links({TargetRelType.subset_of})[0]
+        assert parent.name == "graph_factory"
         assert parent.chembl == "CHEMBL0000"
-        parent, link_type = target.links({TargetRelationshipType.subset_of})[1]
+        parent, link_type = graph_factory.at_target(target).links({TargetRelType.subset_of})[1]
         assert parent.name == "monoamine transporter"
         assert parent.chembl == "CHEMBL1111"
 

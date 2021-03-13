@@ -6,13 +6,10 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
-from mandos.model.chembl_support.chembl_targets import ChemblTarget
+from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
-from mandos.search.chembl.target_traversal import (
-    TargetTraversalStrategy,
-    TargetTraversalStrategies,
-)
+from mandos.search.chembl.target_traversal import TargetTraversalStrategy, TargetTraversalStrategies
 
 logger = logging.getLogger("mandos")
 
@@ -50,15 +47,11 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         self.allowed_target_types = allowed_target_types
         self.min_confidence_score = min_confidence_score
 
-    @property
-    def default_traversal_strategy(self) -> TargetTraversalStrategy:
-        return TargetTraversalStrategies.strategy0(self.api)
-
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         return list(self.api.mechanism.filter(parent_molecule_chembl_id=parent_form.chid))
 
     def should_include(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> bool:
         if target.type.name.lower() not in {s.lower() for s in self.allowed_target_types}:
             logger.warning(f"Excluding {target} with type {target.type}")
@@ -66,7 +59,7 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         return True
 
     def to_hit(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> Sequence[MechanismHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal

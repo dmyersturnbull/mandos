@@ -1,8 +1,12 @@
-mandos.taxon = 1111
-mandos.min_pchembl = 15
-mandos.min_confidence_score = 2
-mandos.min_phase = 0
-chembl.cache_path = "~"
-chembl.n_retries = 100
-chembl.fast_save = false
-chembl.timeout_sec = 0
+[mandos.cache]
+path = "~"
+gzip = false
+
+[mandos.query.chembl]
+query_delay_sec = 0.5
+n_retries = 100
+fast_save = false
+timeout_sec = 0
+
+[mandos.query.pubchem]
+query_delay_sec = 0.5

@@ -7,7 +7,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
-from mandos.model.chembl_support.chembl_targets import ChemblTarget, TargetFactory
+from mandos.model.chembl_support.chembl_targets import TargetFactory
+from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.defaults import Defaults
 from mandos.model.taxonomy import Taxonomy
@@ -112,7 +113,7 @@ class FunctionalSearch(ChemblSearch[FunctionalHit]):
         return list(self.api.activity.filter(**filters))
 
     def should_include(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> bool:
         if (
             data.get_as("data_validity_comment", lambda s: s.lower())
@@ -126,7 +127,7 @@ class FunctionalSearch(ChemblSearch[FunctionalHit]):
         return True
 
     def to_hit(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTarget
+        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> Sequence[FunctionalHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal

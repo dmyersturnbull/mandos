@@ -4,15 +4,17 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from pathlib import Path, PurePath
-from typing import Sequence, Set, Optional
+from typing import Sequence, Set, Optional, Mapping, Any
 from typing import Tuple as Tup
 from typing import Type, Union
 
 import pandas as pd
 import typer
 from chembl_webresource_client.new_client import new_client as Chembl
+from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support.chembl_targets import TargetType
@@ -36,16 +38,45 @@ logger = logging.getLogger(__package__)
 cli = typer.Typer()
 
 
+class Utils:
+    @staticmethod
+    def split(st: str) -> Set[str]:
+        return {s.strip() for s in st.split(",")}
+
+    @staticmethod
+    def get_taxon(taxon: int) -> Taxonomy:
+        return TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path).load(taxon)
+
+    @staticmethod
+    def get_target_types(st: str) -> Set[str]:
+        st = st.strip()
+        if st == "all":
+            return {str(s) for s in TargetType.all_types()}
+        if st == "known":
+            return {str(s) for s in TargetType.all_types() if not s.is_unknown}
+        if st == "protein":
+            return {str(s) for s in TargetType.protein_types()}
+        return Utils.split(st)
+
+    @staticmethod
+    def get_params() -> Mapping[str, Any]:
+        frame = inspect.getouterframes(inspect.currentframe())[1][3]
+        # assume there aren't any varargs or kwargs -- that would be strange in a CLI
+        xx = inspect.getargvalues(frame)
+        return {a: xx.locals[a] for a in xx.args}
+
+
 class Searcher:
     def __init__(self, search: Search):
         self.what = search
+        self._params = Utils.get_params()
 
     def search(
         self,
         path: Path,
     ) -> Tup[pd.DataFrame, Sequence[Triple]]:
         """
-        Process data.
+        Performs the search, and writes data.
 
         Args:
             path: Path to the input file of one of the formats:
@@ -64,6 +95,7 @@ class Searcher:
         triples_out.write_text(
             "\n".join([Triple.tab_header(), *[t.tabs for t in triples]]), encoding="utf8"
         )
+        NestedDotDict(dict(args=self._params)).write_json(df_out.with_suffix(".metadata.json"))
         return df, triples
 
     def search_for(
@@ -71,6 +103,7 @@ class Searcher:
         compounds: Union[Sequence[str], PurePath],
     ) -> Tup[pd.DataFrame, Sequence[Triple]]:
         """
+        Performs the search. Does not write any files.
 
         Args:
             compounds:
@@ -97,27 +130,6 @@ class Searcher:
             [pd.Series({f: getattr(h, f) for f in self.what.hit_fields()}) for h in hits]
         )
         return df, triples
-
-
-class Utils:
-    @staticmethod
-    def split(st: str) -> Set[str]:
-        return {s.strip() for s in st.split(",")}
-
-    @staticmethod
-    def get_taxon(taxon: int) -> Taxonomy:
-        return TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path).load(taxon)
-
-    @staticmethod
-    def get_target_types(st: str) -> Set[str]:
-        st = st.strip()
-        if st == "all":
-            return {str(s) for s in TargetType.all_types()}
-        if st == "known":
-            return {str(s) for s in TargetType.all_types() if not s.is_unknown}
-        if st == "protein":
-            return {str(s) for s in TargetType.protein_types()}
-        return Utils.split(st)
 
 
 class Commands:
@@ -155,7 +167,7 @@ class Commands:
 
     @staticmethod
     @cli.command("chembl:mechanism")
-    def moa(
+    def mechanism(
         path: Path,
         taxon: int = 7742,
         traversal_strategy: str = "strategy0",
@@ -221,7 +233,6 @@ class Commands:
         """
         Process data.
         """
-        api = ChemblApi.wrap(Chembl)
         api = ChemblApi.wrap(Chembl)
         binding_search = BindingSearch(
             chembl_api=api,

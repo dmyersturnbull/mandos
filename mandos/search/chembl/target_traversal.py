@@ -5,15 +5,12 @@ import sys
 import sre_compile
 import re
 from pathlib import Path
-from typing import Dict, Sequence, Type, Set, Union
+from typing import Dict, Sequence, Type, Set, Optional, Mapping
+from typing import Tuple as Tup
 
 from mandos.model import MandosResources
 from mandos.model.chembl_api import ChemblApi
-from mandos.model.chembl_support.chembl_targets import (
-    TargetType,
-    ChemblTarget,
-    TargetFactory,
-)
+from mandos.model.chembl_support.chembl_targets import TargetType, ChemblTarget
 from mandos.model.chembl_support.chembl_target_graphs import (
     ChemblTargetGraph,
     TargetNode,
@@ -58,20 +55,37 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
 
     @classmethod
     @property
-    def acceptance(cls) -> Dict[TargetEdgeReqs, Acceptance]:
+    def acceptance(cls) -> Mapping[TargetEdgeReqs, Acceptance]:
         raise NotImplementedError()
 
+    def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTarget]:
+        if not target.type.is_traversable:
+            return [target.target]
+        found = target.traverse(self.edges)
+        return [f.target for f in found if self.accept(f)]
+
+    def accept(self, target: TargetNode) -> bool:
+        acceptance_type = self.acceptance[target.link_reqs]
+        return (
+            acceptance_type is Acceptance.always
+            or (acceptance_type is Acceptance.at_start and target.is_start)
+            or (acceptance_type is Acceptance.at_end and target.is_end)
+        )
+
+
+class StandardStrategyParser:
     @classmethod
-    def read(cls, path: Path) -> Set[TargetEdgeReqs]:
-        lines = [
+    def read_lines(cls, path: Path) -> Sequence[str]:
+        return [
             line
             for line in path.read_text(encoding="utf8").splitlines()
             if not line.startswith("#") and len(line.strip()) > 0
         ]
-        return cls.parse(lines)
 
     @classmethod
-    def parse(cls, lines: Sequence[str]) -> Set[TargetEdgeReqs]:
+    def parse(
+        cls, lines: Sequence[str]
+    ) -> Tup[Set[TargetEdgeReqs], Mapping[TargetEdgeReqs, Acceptance]]:
         pat_type = r"([a-z_]+)"
         pat_rel = r"([<>~=])"
         pat_accept = r"(?:accept:([\-*^$]?))?"
@@ -79,7 +93,6 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
         pat_dest_words = r"(?:dest:'''(.+?)''')?"
         comment = r"(?:#(.*))?"
         pat = f"^ *{pat_type} *{pat_rel} *{pat_type} *{pat_accept} * {pat_src_words} *{pat_dest_words} *{comment} *$"
-        print(pat)
         pat = re.compile(pat)
         to_rel = {
             ">": TargetRelType.superset_of,
@@ -131,63 +144,7 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
                     )
                     edges.add(edge)
                     edge_to_acceptance[edge] = accept
-        return edges
-
-    def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTarget]:
-        if not target.type.is_traversable:
-            return [target.target]
-        found = target.traverse(self.edges)
-        return [f.target for f in found if self.accept(f)]
-
-    def accept(self, target: TargetNode) -> bool:
-        acceptance_type = self.acceptance[target.link_reqs]
-        return (
-            acceptance_type is Acceptance.always
-            or (acceptance_type is Acceptance.at_start and target.is_start)
-            or (acceptance_type is Acceptance.at_end and target.is_end)
-        )
-
-
-class TargetTraversalStrategy0(StandardTargetTraversalStrategy, metaclass=abc.ABCMeta):
-    """"""
-
-    @classmethod
-    @property
-    def edges(cls) -> Set[TargetEdgeReqs]:
-        return cls.read(MandosResources.path("strategies", "strategy0.txt"))
-
-
-class TargetTraversalStrategy1(StandardTargetTraversalStrategy, metaclass=abc.ABCMeta):
-    """"""
-
-    @classmethod
-    @property
-    def edges(cls) -> Set[TargetEdgeReqs]:
-        return cls.read(MandosResources.path("strategies", "strategy1.txt"))
-
-
-class TargetTraversalStrategy2(StandardTargetTraversalStrategy, metaclass=abc.ABCMeta):
-    """
-    Traverse the DAG up and down, following only desired links
-    Some links from complex to complex group are "overlaps with"
-    ex: CHEMBL4296059
-    it's also rare to need going from a selectivity group "down" to complex group / family / etc.
-    usually they have a link upwards
-    so...
-    If it's a single protein, it's too risk to traverse up into complexes
-    That's because lots of proteins *occasionally* make complexes, and there are some weird ones
-    BUT We want to catch some obvious cases like GABA A subunits
-    ChEMBL calls many of these "something subunit something"
-    This is the only time we'll allow going directly from protein to complex
-    In this case, we'll also disallow links form protein to family,
-    just because we're pretty sure it's a subunit
-    But we can go from single protein to complex to complex group to family
-    """
-
-    @classmethod
-    @property
-    def edges(cls) -> Set[TargetEdgeReqs]:
-        return cls.read(MandosResources.path("strategies", "strategy2.txt"))
+        return edges, edge_to_acceptance
 
 
 class TargetTraversalStrategies:
@@ -214,16 +171,47 @@ class TargetTraversalStrategies:
         return cls.create(x, api)
 
     @classmethod
-    def strategy0(cls, api: ChemblApi) -> TargetTraversalStrategy:
-        return cls.create(TargetTraversalStrategy0, api)
+    def from_resource(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
+        path = MandosResources.path("strategies", name).with_suffix(".txt")
+        lines = StandardStrategyParser.read_lines(path)
+        return cls._from_lines(lines, api, path.stem)
 
     @classmethod
-    def strategy1(cls, api: ChemblApi) -> TargetTraversalStrategy:
-        return cls.create(TargetTraversalStrategy1, api)
+    def from_file(cls, path: Path, api: ChemblApi) -> TargetTraversalStrategy:
+        lines = StandardStrategyParser.read_lines(path)
+        return cls._from_lines(lines, api, path.stem)
 
     @classmethod
-    def strategy2(cls, api: ChemblApi) -> TargetTraversalStrategy:
-        return cls.create(TargetTraversalStrategy2, api)
+    def from_lines(
+        cls, lines: Sequence[str], api: ChemblApi, name: Optional[str]
+    ) -> TargetTraversalStrategy:
+        return cls._from_lines(lines, api, "" if name is None else name)
+
+    @classmethod
+    def _from_lines(
+        cls, lines: Sequence[str], api: ChemblApi, name: str
+    ) -> TargetTraversalStrategy:
+        edges, accept = StandardStrategyParser.parse(lines)
+
+        class Strategy(StandardTargetTraversalStrategy):
+            @classmethod
+            def edges(cls) -> Set[TargetEdgeReqs]:
+                return edges
+
+            @classmethod
+            def acceptance(cls) -> Mapping[TargetEdgeReqs, Acceptance]:
+                return accept
+
+            @classmethod
+            def api(cls) -> ChemblApi:
+                return api
+
+        Strategy.__name__ = StandardTargetTraversalStrategy.__class__.__name__ + "_" + name
+        return Strategy()
+
+    @classmethod
+    def null(cls, api: ChemblApi) -> TargetTraversalStrategy:
+        return cls.from_resource("null.txt", api)
 
     # noinspection PyAbstractClass
     @classmethod

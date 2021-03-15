@@ -1,7 +1,7 @@
 import abc
 import logging
 from dataclasses import dataclass
-from typing import Sequence, TypeVar
+from typing import Sequence, TypeVar, Mapping, Any
 
 from pocketutils.core.dot_dict import NestedDotDict
 
@@ -39,6 +39,23 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         super().__init__(chembl_api)
         self.taxonomy = taxonomy
         self._traversal_strategy = TargetTraversalStrategies.by_name(traversal_strategy, self.api)
+
+    def get_params(self) -> Mapping[str, Any]:
+        # TODO not robust
+        return {
+            key: value
+            for key, value in vars(self).items()
+            if not key.startswith("_") and key != "path"
+        }
+
+    def get_params_str(self) -> str:
+        return ", ".join([k + "=" + str(v) for k, v in self.get_params()])
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__ + "(" + self.get_params_str() + ")"
+
+    def __str__(self) -> str:
+        return self.__class__.__name__ + "(" + self.get_params_str() + ")"
 
     def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
         logger.info(

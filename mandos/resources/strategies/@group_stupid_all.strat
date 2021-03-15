@@ -1,8 +1,7 @@
 # Traverse upwards to group together
-# Only link from single protein to protein complex if the source contains "subunit" or "chain" as a word
-# REL KEY: > superset of; < subset of; = equivalent to; ~ overlaps with; * any rel; $ no matching rels
+# REL KEY: > superset of; < subset of; = equivalent to; ~ overlaps with; * any rel; . self-lin
 # ACCEPT KEY: - never; * always; ^ at start; $ at end
-single_protein            < protein_complex         accept:-   src:'''(^|\s)(?:subunit)|(?:chain)($|\s)'''
+single_protein            < protein_complex         accept:-
 protein_complex           < protein_complex         accept:-
 protein_complex           ~ protein_complex_group   accept:-
 protein_complex_group     < protein_complex_group   accept:-

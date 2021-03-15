@@ -7,7 +7,7 @@
 [![Version on GitHub](https://img.shields.io/github/v/release/dmyersturnbull/mandos?include_prereleases&label=GitHub)](https://github.com/dmyersturnbull/mandos/releases)
 [![Version on PyPi](https://img.shields.io/pypi/v/mandos)](https://pypi.org/project/mandos)
 [![Version on Conda-Forge](https://img.shields.io/conda/vn/conda-forge/mandos?label=Conda-Forge)](https://anaconda.org/conda-forge/mandos)  
-[![Documentation status](https://readthedocs.org/projects/mandos/badge)](https://mandos.readthedocs.io/en/stable)
+[![Documentation status](https://readthedocs.org/projects/mandos-chem/badge)](https://mandos-chem.readthedocs.io/en/stable)
 [![Build (GitHub Actions)](https://img.shields.io/github/workflow/status/dmyersturnbull/mandos/Build%20&%20test?label=Build%20&%20test)](https://github.com/dmyersturnbull/mandos/actions)
 [![Test coverage (coveralls)](https://coveralls.io/repos/github/dmyersturnbull/mandos/badge.svg?branch=main&service=github)](https://coveralls.io/github/dmyersturnbull/mandos?branch=main)
 [![Maintainability (Code Climate)](https://api.codeclimate.com/v1/badges/aa7c12d45ad794e45e55/maintainability)](https://codeclimate.com/github/dmyersturnbull/mandos/maintainability)
@@ -15,27 +15,46 @@
 [![Code Quality (Scrutinizer)](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/?branch=main)  
 [![Created with Tyrannosaurus](https://img.shields.io/badge/Created_with-Tyrannosaurus-0000ff.svg)](https://github.com/dmyersturnbull/mandos)
 
-A cheminformatics tool that extracts and summarizes knowledge about compounds from 20+ sources.
-It then outputs that knowledge in a consistent, human-readable and machine-readable format.
+**Fetch knowledge on chemical compounds from public databases, squeezing it all into a consistent form.**
 
-_Status: alpha. The 0.1 release is functional but only used ChEMBL._
+Mandos extracts ~30 annotation types from ~15 databases.
+Types include mechanisms of action (MoAs), binding activity, disease indications, classifications, clinical trials,
+pathways involved, legal statuses, physical properties, and co-occurring literature terms.
+Output is formatted in consistent CSV files, mainly for consumption by algorithms.
+All knowledge is a semantic triple, such as `alprazolam    inactive at    BK receptor`, plus additional data
+specific to each type (e.g. EC50 or clinical phase).
+It’s also happy to fetch annotations for compounds that are structurally similar to yours.
 
 ### 🎨 Example
 
-Running it on alprazolam:
+You can use Mandos as a Python API or command-line tool.
+To search just the mechanism of action for alprazolam:
 
 ```bash
 echo "VREFGVBLTWBCJP-UHFFFAOYSA-N" > compounds.txt
-mandos search compounds.txt --config default
+mandos chembl:mechanism compounds.txt
 ```
 
-You can extensively control the searches by providing a config file (`--config config.toml` instead of default).
-**[See the docs 📚](https://mandos-chem.readthedocs.io/en/latest/)** for more info.
+The following info is perhaps enough to get started.
+A lot of processing is done behind-the-scenes;
+**[see the docs 📚](https://mandos-chem.readthedocs.io/en/latest/)** for more.
 
-It will output one CSV file per search type full of extended information, and a summary CSV file like this one:
+**Input:** compounds.txt is a line-by-line list of 
+[InChI Keys](https://en.wikipedia.org/wiki/International_Chemical_Identifier#InChIKey)
+Pass type-specific command-line options like `--taxa vertebrata`,
+or run multiple searches with `mandos meta:all compounds.txt --config searches.toml`.
+(See: [example config file](https://github.com/dmyersturnbull/mandos/blob/main/mandos/resources/ags_example.toml))
+`mandos <type> --help` will show and briefly explain the options.
+
+**Output:** One CSV file per annotation type – 9 columns shared between all files, plus type-specific columns.
+The consistent columns are: 
+*InChI Key*, *compound ID*, *compound name*, *predicate ID*, *predicate name*, *object ID*, *object name*,
+*annotation ID*, and *source*. Additional columns include EC50, original name, species, clinical phase, etc.
+You could concatenate the files for something like the following.
+(*Columns were dropped and renamed for display.*)
 
 ```
-subj. ID  subj. name  predicate                      obj. ID       obj.name
+comp. ID  comp. name  predicate name                 object ID       object name
 --------- ----------  -----------------------------  ------------- ------------------------------
 CHEMBL661 alprazolam  positive allosteric modulator  CHEMBL2093872 GABA-A receptor; anion channel
 CHEMBL661 alprazolam  activity at                    CHEMBL2096986 Cholecystokinin receptor

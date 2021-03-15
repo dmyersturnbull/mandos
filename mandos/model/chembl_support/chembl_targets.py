@@ -11,6 +11,7 @@ from typing import Optional, Set
 from urllib3.util.retry import MaxRetryError
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos.model import CleverEnum
 from mandos.model.chembl_api import ChemblApi
 
 logger = logging.getLogger(__package__)
@@ -20,7 +21,22 @@ class TargetNotFoundError(ValueError):
     """"""
 
 
-class TargetType(enum.Enum):
+@enum.unique
+class ConfidenceLevel(CleverEnum):
+    non_curated = 0
+    non_molecular = 1
+    # SKIP 2!! There is no 2
+    non_protein = 3
+    multiple_homologous_proteins = 4
+    multiple_direct_proteins = 5
+    homologous_protein_complex_subunits = 6
+    direct_protein_complex_subunits = 7
+    homologous_single_protein = 8
+    direct_single_protein = 9
+
+
+@enum.unique
+class TargetType(CleverEnum):
     """
     Enum corresponding to the ChEMBL API field ``target.target_type``.
     """
@@ -40,13 +56,9 @@ class TargetType(enum.Enum):
     unknown = enum.auto()
 
     @classmethod
-    def of(cls, s: str) -> TargetType:
-        key = s.replace(" ", "_").replace("-", "_").lower()
-        try:
-            return TargetType[key]
-        except KeyError:
-            logger.error(f"Target type {key} not found. Using TargetType.unknown.")
-            return TargetType.unknown
+    def _unmatched_type(cls) -> TargetType:
+        # we'll allow an "unknown" value in case ChEMBL adds more types
+        return cls.unknown
 
     @classmethod
     def protein_types(cls) -> Set[TargetType]:
@@ -96,7 +108,7 @@ class TargetType(enum.Enum):
     @property
     def is_unknown(self) -> bool:
         """
-        Returns whether this is the "unkown" type.
+        Returns whether this is the "unknown" type.
         In principle, this could have a more involved meaning.
         """
         return self == TargetType.unknown

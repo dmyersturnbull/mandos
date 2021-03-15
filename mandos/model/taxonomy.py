@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from functools import total_ordering
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Set
+from typing import List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
 from typeddfs import TypedDfs
@@ -158,6 +158,9 @@ class Taxonomy:
         """
         # constructor provided for consistency with the members
         self._by_id = dict(by_id)
+        # this probably isn't actually possible
+        if len(self) == 0:
+            logger.warning(f"{self} contains 0 taxa")
 
     @classmethod
     def from_list(cls, taxa: Sequence[Taxon]) -> Taxonomy:
@@ -282,23 +285,16 @@ class Taxonomy:
             raise KeyError(f"{item} not found in {self}")
         return got
 
-    def __contains__(self, item):
-        """
+    def contains(self, item: Union[Taxon, int, str]):
+        return self.get(item) is not None
 
-        Args:
-            item:
+    def n_taxa(self) -> int:
+        return len(self._by_id)
 
-        Returns:
-
-        """
+    def __contains__(self, item: Union[Taxon, int, str]):
         return self.get(item) is not None
 
     def __len__(self) -> int:
-        """
-
-        Returns:
-
-        """
         return len(self._by_id)
 
     def __str__(self) -> str:

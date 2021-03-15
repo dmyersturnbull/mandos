@@ -35,9 +35,9 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
     Abstract search.
     """
 
-    def __init__(self, chembl_api: ChemblApi, taxonomy: Taxonomy, traversal_strategy: str):
+    def __init__(self, chembl_api: ChemblApi, taxa: Sequence[Taxonomy], traversal_strategy: str):
         super().__init__(chembl_api)
-        self.taxonomy = taxonomy
+        self.taxa = taxa
         self._traversal_strategy = TargetTraversalStrategies.by_name(traversal_strategy, self.api)
 
     def get_params(self) -> Mapping[str, Any]:
@@ -50,6 +50,12 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
 
     def get_params_str(self) -> str:
         return ", ".join([k + "=" + str(v) for k, v in self.get_params()])
+
+    def is_in_taxa(self, species: str) -> bool:
+        """
+        Returns true if the ChEMBL species is contained in any of our taxonomies.
+        """
+        return any((taxon.contains(species) for taxon in self.taxa))
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + "(" + self.get_params_str() + ")"

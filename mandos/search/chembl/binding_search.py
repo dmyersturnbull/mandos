@@ -8,7 +8,6 @@ from pocketutils.core.dot_dict import NestedDotDict
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.model.defaults import Defaults
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
 from mandos.search.chembl.target_traversal import (
@@ -45,7 +44,7 @@ class BindingSearch(ProteinSearch[BindingHit]):
     def __init__(
         self,
         chembl_api: ChemblApi,
-        tax: Taxonomy,
+        taxa: Sequence[Taxonomy],
         traversal_strategy: str,
         allowed_target_types: Set[str],
         min_confidence_score: Optional[int],
@@ -53,7 +52,7 @@ class BindingSearch(ProteinSearch[BindingHit]):
         min_pchembl: float,
         banned_flags: Set[str],
     ):
-        super().__init__(chembl_api, tax, traversal_strategy)
+        super().__init__(chembl_api, taxa, traversal_strategy)
         self.allowed_target_types = allowed_target_types
         self.min_confidence_score = min_confidence_score
         self.allowed_relations = allowed_relations
@@ -69,7 +68,7 @@ class BindingSearch(ProteinSearch[BindingHit]):
             assay_type="B",
             standard_relation__iregex=set_to_regex(self.allowed_relations),
             pchembl_value__isnull=False,
-            target_organism__isnull=None if self.taxonomy is None else False,
+            target_organism__isnull=None if len(self.taxa) == 0 else False,
         )
         # I'd rather not figure out how the API interprets None, so remove them
         filters = {k: v for k, v in filters.items() if v is not None}

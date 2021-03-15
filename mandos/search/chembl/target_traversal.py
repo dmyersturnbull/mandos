@@ -153,26 +153,29 @@ class TargetTraversalStrategies:
     """
 
     @classmethod
-    def by_name(cls, fully_qualified: str, api: ChemblApi) -> TargetTraversalStrategy:
-        """
-        For dependency injection.
+    def by_name(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
+        if MandosResources.contains("strategies", name, suffix=".strat"):
+            return cls.from_resource(name, api)
+        elif name.endswith(".strat"):
+            return cls.from_file(Path(name), api)
+        return cls.by_classname(name, api)
 
-        Args:
-            fully_qualified:
-            api:
-
-        Returns:
-
-        """
+    @classmethod
+    def by_classname(cls, fully_qualified: str, api: ChemblApi) -> TargetTraversalStrategy:
         s = fully_qualified
         mod = s[: s.rfind(".")]
         clz = s[s.rfind(".") :]
-        x = getattr(sys.modules[mod], clz)
+        try:
+            x = getattr(sys.modules[mod], clz)
+        except AttributeError:
+            raise LookupError(
+                f"Did not find strategy by fully-qualified class name {fully_qualified}"
+            )
         return cls.create(x, api)
 
     @classmethod
     def from_resource(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
-        path = MandosResources.path("strategies", name).with_suffix(".txt")
+        path = MandosResources.path("strategies", name)
         lines = StandardStrategyParser.read_lines(path)
         return cls._from_lines(lines, api, path.stem)
 

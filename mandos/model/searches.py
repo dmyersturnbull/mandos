@@ -1,10 +1,13 @@
+from __future__ import annotations
 import abc
 import dataclasses
 import logging
 import typing
 from typing import Generic, Sequence, TypeVar
 
-from mandos.model.hits import AbstractHit
+import pandas as pd
+
+from mandos.model.hits import AbstractHit, HitFrame
 from mandos.model import CompoundNotFoundError
 
 logger = logging.getLogger("mandos")
@@ -17,9 +20,27 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     Something to search and how to do it.
     """
 
+    def __init__(self, key: str):
+        self.key = key
+
+    @property
+    def search_class(self) -> str:
+        return self.__class__.__name__
+
     @property
     def search_name(self) -> str:
         return self.__class__.__name__.lower().replace("search", "")
+
+    @property
+    def data_source(self) -> str:
+        raise NotImplementedError()
+
+    def get_params(self) -> typing.Mapping[str, typing.Any]:
+        return {key: value for key, value in vars(self).items() if not key.startswith("_")}
+
+    def find_to_df(self, inchikeys: Sequence[str]) -> HitFrame:
+        hits = self.find_all(inchikeys)
+        return HitFrame([pd.Series({f: getattr(h, f) for f in self.hit_fields()}) for h in hits])
 
     def find_all(self, inchikeys: Sequence[str]) -> Sequence[H]:
         """
@@ -92,5 +113,16 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # noinspection PyUnresolvedReferences
         return cls.__orig_bases__[0]
 
+    def __repr__(self) -> str:
+        return ", ".join([k + "=" + str(v) for k, v in self.get_params()])
 
-__all__ = ["Search"]
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __eq__(self, other: Search) -> bool:
+        if not isinstance(other, self.__class__):
+            raise TypeError(f"{type(other)} not comparable")
+        return repr(self) == repr(other)
+
+
+__all__ = ["Search", "HitFrame"]

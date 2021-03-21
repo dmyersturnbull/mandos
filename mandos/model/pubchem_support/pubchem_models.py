@@ -3,11 +3,11 @@ import enum
 import re
 from dataclasses import dataclass
 from datetime import date
-from typing import Union, Optional, FrozenSet, Sequence
+from typing import Union, Optional, FrozenSet, Sequence, Mapping, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import MandosResources
+from mandos.model import MandosResources, CleverEnum
 from mandos.model.pubchem_support._nav_fns import Mapx
 
 hazards = {
@@ -152,32 +152,44 @@ class CoOccurrenceType(enum.Enum):
         raise AssertionError(f"{self} not found!!")
 
 
-@dataclass(frozen=True, repr=True, eq=True)
-class ClinicalTrial:
-    ctid: Codes.ClinicaltrialId
-    title: str
-    conditions: FrozenSet[str]
-    disease_ids: FrozenSet[Codes.ClinicaltrialId]
-    phase: str
-    status: str
-    interventions: FrozenSet[str]
-    cids: FrozenSet[Codes.PubchemCompoundId]
-    source: str
-
-    @property
-    def known_phase(self) -> int:
+class ClinicalTrialsGovUtils:
+    @classmethod
+    def phase_map(cls) -> Mapping[str, float]:
         return {
             "Phase 4": 4,
             "Phase 3": 3,
             "Phase 2": 2,
             "Phase 1": 1,
-            "Early Phase 1": 1,
-            "Phase 2/Phase 3": 2,
+            "Early Phase 1": 1.5,
+            "Phase 2/Phase 3": 2.5,
             "N/A": 0,
-        }.get(self.phase, 0)
+        }
 
-    @property
-    def known_status(self) -> str:
+    @classmethod
+    def known_phases(cls) -> Set[float]:
+        return set(cls.phase_map().values())
+
+    @classmethod
+    def resolve_statuses(cls, st: str) -> Set[str]:
+        found = set()
+        for s in st.lower().split(","):
+            s = s.strip()
+            if s == "@all":
+                match = cls.known_statuses()
+            elif s in cls.known_statuses():
+                match = {s}
+            else:
+                raise ValueError(s)
+            for m in match:
+                found.add(m)
+        return found
+
+    @classmethod
+    def known_statuses(cls) -> Set[str]:
+        return set(cls.status_map().values())
+
+    @classmethod
+    def status_map(cls) -> Mapping[str, str]:
         return {
             "Unknown status": "unknown",
             "Completed": "completed",
@@ -192,7 +204,28 @@ class ClinicalTrial:
             "No longer available": "completed",
             "Temporarily not available": "completed",
             "Approved for marketing": "completed",
-        }.get(self.status, "unknown")
+        }
+
+
+@dataclass(frozen=True, repr=True, eq=True)
+class ClinicalTrial:
+    ctid: Codes.ClinicaltrialId
+    title: str
+    conditions: FrozenSet[str]
+    disease_ids: FrozenSet[Codes.ClinicaltrialId]
+    phase: str
+    status: str
+    interventions: FrozenSet[str]
+    cids: FrozenSet[Codes.PubchemCompoundId]
+    source: str
+
+    @property
+    def mapped_phase(self) -> float:
+        return ClinicalTrialsGovUtils.phase_map().get(self.phase, 0)
+
+    @property
+    def mapped_status(self) -> str:
+        return ClinicalTrialsGovUtils.status_map().get(self.status, "unknown")
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -274,6 +307,7 @@ class AssayType(enum.Enum):
 class Activity(enum.Enum):
     active = enum.auto()
     inactive = enum.auto()
+    inconclusive = enum.auto()
     unspecified = enum.auto()
 
 
@@ -291,6 +325,7 @@ class Bioactivity:
     activity_name: Optional[str]
     activity_value: float
     target_name: Optional[str]
+    compound_name: str
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -395,4 +430,5 @@ __all__ = [
     "CoOccurrence",
     "Publication",
     "ComputedProperty",
+    "ClinicalTrialsGovUtils",
 ]

@@ -52,7 +52,11 @@ class Settings:
 
     @property
     def pubchem_cache_path(self) -> Path:
-        return self.cache_path
+        return self.cache_path / "pubchem"
+
+    @property
+    def match_cache_path(self) -> Path:
+        return self.cache_path / "match"
 
     @classmethod
     def from_file(cls, path: Path) -> Settings:
@@ -99,6 +103,9 @@ class Settings:
         instance.TOTAL_RETRIES = self.chembl_n_retries
         instance.FAST_SAVE = self.chembl_fast_save
         instance.TIMEOUT = self.chembl_timeout_sec
+        self.chembl_cache_path.mkdir(exist_ok=True, parents=True)
+        self.match_cache_path.mkdir(exist_ok=True, parents=True)
+        self.pubchem_cache_path.mkdir(exist_ok=True, parents=True)
 
 
 if Globals.settings_path.exists():

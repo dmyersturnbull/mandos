@@ -7,6 +7,8 @@ from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 
 factory = TargetFactory(Chembl)
 graph_factory = ChemblTargetGraphFactory.create(Chembl, factory)
+strat0 = TargetTraversalStrategies.by_name("@null", Chembl)
+strat1 = TargetTraversalStrategies.by_name("@group_smart_all", Chembl)
 
 
 class TestTargetTraversalStrategy1:
@@ -17,23 +19,17 @@ class TestTargetTraversalStrategy1:
 
     def test_5ht2b(self):
         target = factory.find("CHEMBL1833")
-        found = TargetTraversalStrategies.strategy1(Chembl).traverse(
-            graph_factory.at_target(target)
-        )
+        found = strat1.traverse(graph_factory.at_target(target))
         assert [f.chembl for f in found] == ["CHEMBL2096904"]
 
     def test_5ht2bc_sel_group(self):
         target = factory.find("CHEMBL2111466")
-        found = TargetTraversalStrategies.strategy1(Chembl).traverse(
-            graph_factory.at_target(target)
-        )
+        found = strat1.traverse(graph_factory.at_target(target))
         assert [f.chembl for f in found] == ["CHEMBL2096904"]
 
     def test_mu_or(self):
         target = factory.find("CHEMBL233")
-        found = TargetTraversalStrategies.strategy1(Chembl).traverse(
-            graph_factory.at_target(target)
-        )
+        found = strat1.traverse(graph_factory.at_target(target))
         assert [f.chembl for f in found] == ["CHEMBL2095181"]
 
 

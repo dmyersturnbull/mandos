@@ -7,20 +7,16 @@ from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 
 from mandos.model.chembl_api import ChemblApi
-from mandos.model import CompoundNotFoundError
+from mandos.model import CompoundNotFoundError, CleverEnum
 from mandos.model.chembl_support import ChemblCompound
 
 logger = logging.getLogger("mandos")
 
 
-class MolStructureType(enum.Enum):
+class MolStructureType(CleverEnum):
     mol = enum.auto()
     both = enum.auto()
     none = enum.auto()
-
-    @classmethod
-    def of(cls, s: str) -> MolStructureType:
-        return MolStructureType[s.lower()]
 
 
 class ChemblUtils:

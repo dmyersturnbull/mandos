@@ -4,7 +4,7 @@ import abc
 import enum
 import logging
 from dataclasses import dataclass
-from typing import Sequence, Type, Union
+from typing import Sequence, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
@@ -36,18 +36,14 @@ class GoHit(ChemblHit, metaclass=abc.ABCMeta):
     go_type: str
     binding: BindingHit
 
-    @property
-    def predicate(self) -> str:
-        return f"has GO {self.go_type} term"
-
 
 class GoSearch(ChemblSearch[GoHit]):
     """
     Search for GO terms.
     """
 
-    def __init__(self, chembl_api: ChemblApi, go_type: GoType, binding_search: BindingSearch):
-        super().__init__(chembl_api)
+    def __init__(self, key: str, api: ChemblApi, go_type: GoType, binding_search: BindingSearch):
+        super().__init__(key, api)
         self.go_type = go_type
         self.binding_search = binding_search
 
@@ -56,10 +52,10 @@ class GoSearch(ChemblSearch[GoHit]):
         terms = []
         for match in matches:
             target = self.api.target.get(match.object_id)
-            terms.extend(self._process(match, target))
+            terms.extend(self._process(compound, match, target))
         return terms
 
-    def _process(self, match: BindingHit, target: NestedDotDict) -> Sequence[GoHit]:
+    def _process(self, lookup: str, match: BindingHit, target: NestedDotDict) -> Sequence[GoHit]:
         terms = set()
         if target.get("target_components") is not None:
             for comp in target["target_components"]:
@@ -72,12 +68,16 @@ class GoSearch(ChemblSearch[GoHit]):
             hits.append(
                 GoHit(
                     None,
+                    origin_inchikey=lookup,
+                    matched_inchikey=match.matched_inchikey,
                     compound_id=match.compound_id,
-                    inchikey=match.inchikey,
-                    compound_lookup=match.compound_lookup,
                     compound_name=match.compound_name,
+                    predicate=f"GO {self.go_type.name} term (binding)",
                     object_id=xref_id,
                     object_name=xref_name,
+                    search_key=self.key,
+                    search_class=self.search_class,
+                    data_source=self.data_source,
                     go_type=self.go_type.name,
                     binding=match,
                 )

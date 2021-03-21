@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.chembl_support import ChemblCompound
 from mandos.search.chembl import ChemblSearch, ChemblHit
@@ -21,13 +22,13 @@ class AtcHit(ChemblHit):
 
     level: int
 
-    @property
-    def predicate(self) -> str:
-        return f"has ATC L-{self.level} code"
-
 
 class AtcSearch(ChemblSearch[AtcHit]):
     """"""
+
+    def __init__(self, key: str, levels: Set[int], api: ChemblApi):
+        super().__init__(key, api)
+        self.levels = levels
 
     def find(self, lookup: str) -> Sequence[AtcHit]:
         """
@@ -60,18 +61,25 @@ class AtcSearch(ChemblSearch[AtcHit]):
 
         """
         dots = NestedDotDict(self.api.atc_class.get(atc))
-        return [self._code(lookup, compound, dots, 3), self._code(lookup, compound, dots, 4)]
+        found = []
+        for level in sorted(self.levels):
+            found.append(self._code(lookup, compound, dots, level))
+        return found
 
     def _code(self, lookup: str, compound: ChemblCompound, dots: NestedDotDict, level: int):
         # 'level1': 'N', 'level1_description': 'NERVOUS SYSTEM', 'level2': 'N05', ...
         return AtcHit(
             None,
-            compound.chid,
-            compound.inchikey,
-            lookup,
-            compound.name,
+            origin_inchikey=lookup,
+            matched_inchikey=compound.inchikey,
+            compound_id=compound.chid,
+            compound_name=compound.name,
+            predicate=f"ATC L{level} code",
             object_id=dots.get(f"level{level}"),
             object_name=dots.get(f"level{level}_description"),
+            search_key=self.key,
+            search_class=self.search_name,
+            data_source=self.data_source,
             level=level,
         )
 

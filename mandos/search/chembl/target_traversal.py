@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, Sequence, Type, Set, Optional, Mapping
 from typing import Tuple as Tup
 
-from mandos.model import MandosResources
+from mandos.model import MandosResources, ReflectionUtils
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support.chembl_targets import TargetType, ChemblTarget
 from mandos.model.chembl_support.chembl_target_graphs import (
@@ -30,6 +30,7 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
     """"""
 
     @classmethod
+    @property
     def api(cls) -> ChemblApi:
         raise NotImplementedError()
 
@@ -59,12 +60,13 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
         raise NotImplementedError()
 
     def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTarget]:
-        if not target.type.is_traversable:
-            return [target.target]
         found = target.traverse(self.edges)
         return [f.target for f in found if self.accept(f)]
 
     def accept(self, target: TargetNode) -> bool:
+        if target.link_reqs is None:
+            # typically for root nodes -- we'll have a self-loop to check, too
+            return False
         acceptance_type = self.acceptance[target.link_reqs]
         return (
             acceptance_type is Acceptance.always
@@ -86,13 +88,13 @@ class StandardStrategyParser:
     def parse(
         cls, lines: Sequence[str]
     ) -> Tup[Set[TargetEdgeReqs], Mapping[TargetEdgeReqs, Acceptance]]:
-        pat_type = r"([a-z_]+)"
-        pat_rel = r"([<>~=])"
-        pat_accept = r"(?:accept:([\-*^$]?))?"
+        pat_type = r"(@?[a-z_]+)"
+        pat_rel = r"([<>~=.*])"
+        pat_accept = r"(?:accept:([\-*^$]))?"
         pat_src_words = r"(?:src:'''(.+?)''')?"
         pat_dest_words = r"(?:dest:'''(.+?)''')?"
         comment = r"(?:#(.*))?"
-        pat = f"^ *{pat_type} *{pat_rel} *{pat_type} *{pat_accept} * {pat_src_words} *{pat_dest_words} *{comment} *$"
+        pat = f"^ *{pat_type} *{pat_rel} *{pat_type} *{pat_accept} *{pat_src_words} *{pat_dest_words} *{comment} *$"
         pat = re.compile(pat)
         to_rel = {
             ">": TargetRelType.superset_of,
@@ -115,11 +117,9 @@ class StandardStrategyParser:
             if match is None:
                 raise AssertionError(f"Could not parse line '{line}'")
             try:
-                src_str = match.group(1).lower()
-                sources = TargetType.all_types() if src_str == "any" else [TargetType[src_str]]
+                sources = TargetType.resolve(match.group(1))
                 rel = to_rel[match.group(2)]
-                dest_str = match.group(3).lower()
-                targets = TargetType.all_types() if dest_str == "any" else [TargetType[dest_str]]
+                dests = TargetType.resolve(match.group(3))
                 accept = to_accept[match.group(4).lower()]
                 src_pat = (
                     None
@@ -134,7 +134,7 @@ class StandardStrategyParser:
             except (KeyError, TypeError, sre_compile.error):
                 raise AssertionError(f"Could not parse line '{line}'")
             for source in sources:
-                for dest in targets:
+                for dest in dests:
                     edge = TargetEdgeReqs(
                         src_type=source,
                         src_pattern=src_pat,
@@ -153,6 +153,12 @@ class TargetTraversalStrategies:
     """
 
     @classmethod
+    def standard_strategies(cls) -> Set[str]:
+        return {
+            p.stem for p in MandosResources.path("strategies").iterdir() if p.suffix == ".strat"
+        }
+
+    @classmethod
     def by_name(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
         if MandosResources.contains("strategies", name, suffix=".strat"):
             return cls.from_resource(name, api)
@@ -162,20 +168,12 @@ class TargetTraversalStrategies:
 
     @classmethod
     def by_classname(cls, fully_qualified: str, api: ChemblApi) -> TargetTraversalStrategy:
-        s = fully_qualified
-        mod = s[: s.rfind(".")]
-        clz = s[s.rfind(".") :]
-        try:
-            x = getattr(sys.modules[mod], clz)
-        except AttributeError:
-            raise LookupError(
-                f"Did not find strategy by fully-qualified class name {fully_qualified}"
-            )
-        return cls.create(x, api)
+        clazz = ReflectionUtils.injection(fully_qualified, TargetTraversalStrategy)
+        return cls.create(clazz, api)
 
     @classmethod
     def from_resource(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
-        path = MandosResources.path("strategies", name)
+        path = MandosResources.path("strategies", name, suffix=".strat")
         lines = StandardStrategyParser.read_lines(path)
         return cls._from_lines(lines, api, path.stem)
 
@@ -198,14 +196,17 @@ class TargetTraversalStrategies:
 
         class Strategy(StandardTargetTraversalStrategy):
             @classmethod
+            @property
             def edges(cls) -> Set[TargetEdgeReqs]:
                 return edges
 
             @classmethod
+            @property
             def acceptance(cls) -> Mapping[TargetEdgeReqs, Acceptance]:
                 return accept
 
             @classmethod
+            @property
             def api(cls) -> ChemblApi:
                 return api
 
@@ -232,6 +233,7 @@ class TargetTraversalStrategies:
 
         class X(clz):
             @classmethod
+            @property
             def api(cls) -> ChemblApi:
                 return api
 

@@ -11,5 +11,5 @@ selectivity_group         * protein_complex_group   accept:-
 selectivity_group         * protein_family          accept:-
 single_protein            < protein_family          accept:-
 protein_family            > protein_family          accept:-
-any                       = any                     accept:-
-any                       . any                     accept:$
+@any                      = @any                    accept:-
+@any                      . @any                    accept:$

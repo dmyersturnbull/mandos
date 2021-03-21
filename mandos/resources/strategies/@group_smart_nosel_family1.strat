@@ -9,5 +9,5 @@ protein_complex           ~ protein_complex_group   accept:-
 protein_complex_group     < protein_complex_group   accept:-
 single_protein            < protein_family          accept:-
 protein_family            > protein_family          accept:-
-any                       = any                     accept:-
-any                       . any                     accept:$
+@any                      = @any                    accept:-
+@any                      . @any                    accept:$

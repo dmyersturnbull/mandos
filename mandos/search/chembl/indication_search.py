@@ -30,8 +30,8 @@ class IndicationHit(ChemblHit):
 class IndicationSearch(ChemblSearch[IndicationHit]):
     """"""
 
-    def __init__(self, chembl_api: ChemblApi, min_phase: int):
-        super().__init__(chembl_api)
+    def __init__(self, key: str, api: ChemblApi, min_phase: int):
+        super().__init__(key, api)
         self.min_phase = min_phase
 
     def find(self, lookup: str) -> Sequence[IndicationHit]:
@@ -67,15 +67,20 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
         Returns:
 
         """
+        phase = indication.req_as("max_phase_for_ind", int)
         return IndicationHit(
-            indication.req_as("drugind_id", str),
-            compound.chid,
-            compound.inchikey,
-            lookup,
-            compound.name,
+            record_id=indication.req_as("drugind_id", str),
+            origin_inchikey=lookup,
+            matched_inchikey=compound.inchikey,
+            compound_id=compound.chid,
+            compound_name=compound.name,
+            predicate=f"phase {phase} trial intervention",
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
-            max_phase=indication.req_as("max_phase_for_ind", int),
+            search_key=self.key,
+            search_class=self.search_class,
+            data_source=self.data_source,
+            max_phase=phase,
         )
 
 

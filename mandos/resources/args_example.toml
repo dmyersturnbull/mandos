@@ -1,13 +1,13 @@
-[[key]]
-name = "binding_common_species"
-type = "chembl:binding"
+[[search]]
+key = "binding.common_species"
+source = "chembl:binding"
 min_pchembl = 0
 relations = "<,<=,=,>=,>"
 taxa = "human,rat,mouse,bos taurus"
 
-[[key]]
-name = "binding_vertebrata"
-type = "chembl:binding"
+[[search]]
+key = "binding.vertebrata"
+source = "chembl:binding"
 min_pchembl = 0
 relations = "<,<=,=,>=,>"
 taxa = "vertebrata"

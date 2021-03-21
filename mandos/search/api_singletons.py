@@ -1,0 +1,24 @@
+from mandos.model.chembl_api import ChemblApi
+from mandos.model.pubchem_api import PubchemApi, CachingPubchemApi, QueryingPubchemApi
+from mandos.model.settings import MANDOS_SETTINGS
+
+
+class Apis:
+
+    Pubchem = None
+    Chembl = None
+
+    @classmethod
+    def set(cls, chembl: ChemblApi, pubchem: PubchemApi) -> None:
+        cls.Chembl = chembl
+        cls.Pubchem = pubchem
+
+    @classmethod
+    def set_default(cls) -> None:
+        from chembl_webresource_client.new_client import new_client as _Chembl
+
+        cls.Pubchem = CachingPubchemApi(MANDOS_SETTINGS.cache_path, QueryingPubchemApi())
+        cls.Chembl = ChemblApi.wrap(_Chembl)
+
+
+__all__ = ["Apis"]

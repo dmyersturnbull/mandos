@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import abc
+import inspect
 import logging
 import enum
+import sys
+import typing
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Type, TypeVar, Generic, Mapping, Any
 
 from pocketutils.core.dot_dict import NestedDotDict
 
@@ -15,8 +18,73 @@ class CompoundNotFoundError(LookupError):
     """"""
 
 
-@enum.unique
-class CleverEnum(enum.Enum, metaclass=abc.ABCMeta):
+class InjectionError(LookupError):
+    """"""
+
+
+class ReflectionUtils:
+
+    T = TypeVar("T", covariant=True)
+
+    @classmethod
+    def get_generic_arg(cls, clazz: Type[T], bound: Optional[Type[T]] = None) -> Type:
+        bases = clazz.__orig_bases__
+        param = typing.get_args(bases[0])[0]
+        if not issubclass(param, bound):
+            raise AssertionError(f"{param} is not a {bound}")
+        return param
+
+    @classmethod
+    def default_arg_values(cls, func) -> Mapping[str, Optional[Any]]:
+        return {k: v.default for k, v in cls.optional_args(func).items()}
+
+    @classmethod
+    def required_args(cls, func):
+        return cls._args(func, True)
+
+    @classmethod
+    def optional_args(cls, func):
+        return cls._args(func, False)
+
+    @classmethod
+    def _args(cls, func, req):
+        signature = inspect.signature(func)
+        return {
+            k: v
+            for k, v in signature.parameters.items()
+            if req
+            and v.default is inspect.Parameter.empty
+            or not req
+            and v.default is not inspect.Parameter.empty
+        }
+
+    @classmethod
+    def injection(cls, fully_qualified: str, clazz: Type[T]) -> Type[T]:
+        """
+        Gets a **class** by its fully-resolved class name.
+
+        Args:
+            fully_qualified:
+            clazz:
+
+        Returns:
+            The Type
+
+        Raises:
+            InjectionError: If the class was not found
+        """
+        s = fully_qualified
+        mod = s[: s.rfind(".")]
+        clz = s[s.rfind(".") :]
+        try:
+            return getattr(sys.modules[mod], clz)
+        except AttributeError:
+            raise InjectionError(
+                f"Did not find {clazz} by fully-qualified class name {fully_qualified}"
+            )
+
+
+class CleverEnum(enum.Enum):
     """
     An enum with a ``.of`` method that finds values
     with limited string/value fixing.
@@ -68,4 +136,10 @@ class MandosResources:
         return NestedDotDict.read_json(cls.path(*nodes, suffix=suffix))
 
 
-__all__ = ["CompoundNotFoundError", "MandosResources", "CleverEnum"]
+__all__ = [
+    "CompoundNotFoundError",
+    "MandosResources",
+    "CleverEnum",
+    "ReflectionUtils",
+    "InjectionError",
+]

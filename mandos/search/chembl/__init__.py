@@ -17,14 +17,19 @@ class ChemblHit(AbstractHit, metaclass=abc.ABCMeta):
 
 
 class ChemblSearch(Search[H], metaclass=abc.ABCMeta):
-    def __init__(self, chembl_api: ChemblApi):
+    def __init__(self, key: str, api: ChemblApi):
         """
         Constructor.
 
         Args:
             chembl_api:
         """
-        self.api = chembl_api
+        super().__init__(key)
+        self.api = api
+
+    @property
+    def data_source(self) -> str:
+        return "ChEMBL"
 
 
 __all__ = ["ChemblHit", "ChemblSearch"]

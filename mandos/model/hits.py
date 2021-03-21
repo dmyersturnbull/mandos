@@ -2,6 +2,8 @@ import dataclasses
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
+from typeddfs import TypedDfs
+
 
 @dataclass(frozen=True, repr=True, order=True)
 class Triple:
@@ -9,55 +11,19 @@ class Triple:
     Compound, predicate, object.
     """
 
+    inchikey: str
     compound_id: str
-    compound_lookup: str
     compound_name: str
     predicate: str
     object_name: str
     object_id: str
 
-    @classmethod
-    def tab_header(cls) -> str:
-        """
-
-        Returns:
-
-        """
-        return "\t".join(
-            [
-                "compound_id",
-                "compound_lookup",
-                "compound_name",
-                "predicate",
-                "object_name",
-                "object_id",
-            ]
-        )
-
-    @property
-    def tabs(self) -> str:
-        items = [
-            self.compound_lookup,
-            self.compound_id,
-            self.compound_name,
-            self.predicate,
-            self.object_name,
-            self.object_id,
-        ]
-        return "\t".join(["-" if k is None else str(k) for k in items])
-
     @property
     def statement(self) -> str:
         """
-        Returns a simple text statement with brackets.
-
-        Returns:
-
+        Returns a simple text statement.
         """
-        sub = f"{self.compound_lookup} [{self.compound_id}] [{self.compound_name}]>"
-        pred = f"<{self.predicate}>"
-        obj = f"<{self.object_name} [{self.object_id}]>"
-        return "\t".join([sub, pred, obj])
+        return f'"{self.inchikey}"\t"{self.predicate}"\t"{self.object_name}"'
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -65,31 +31,26 @@ class AbstractHit:
     """"""
 
     record_id: Optional[str]
+    origin_inchikey: str
+    matched_inchikey: str
     compound_id: str
-    inchikey: str
-    compound_lookup: str
     compound_name: str
+    predicate: str
     object_id: str
     object_name: str
+    search_key: str
+    search_class: str
+    data_source: str
 
     def to_triple(self) -> Triple:
         return Triple(
-            compound_lookup=self.compound_lookup,
+            inchikey=self.origin_inchikey,
             compound_id=self.compound_id,
             compound_name=self.compound_name,
             predicate=self.predicate,
             object_id=self.object_id,
             object_name=self.object_name,
         )
-
-    @property
-    def predicate(self) -> str:
-        """
-
-        Returns:
-
-        """
-        raise NotImplementedError()
 
     def __hash__(self):
         return hash(self.record_id)
@@ -104,4 +65,14 @@ class AbstractHit:
         return [f.name for f in dataclasses.fields(cls)]
 
 
-__all__ = ["AbstractHit", "Triple"]
+HitFrame = (
+    TypedDfs.typed("HitFrame")
+    .require("record_id")
+    .require("inchikey", "compound_id", "compound_name")
+    .require("predicate")
+    .require("object_id", "object_name")
+    .require("search_key", "search_class", "data_source")
+).build()
+
+
+__all__ = ["AbstractHit", "Triple", "HitFrame"]

@@ -1,7 +1,8 @@
 import abc
 import logging
+import re
 from dataclasses import dataclass
-from typing import Sequence, TypeVar, Mapping, Any
+from typing import Sequence, TypeVar, Set, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
@@ -26,6 +27,8 @@ class ProteinHit(ChemblHit, metaclass=abc.ABCMeta):
     A protein target entry for a compound.
     """
 
+    exact_target_id: str
+
 
 H = TypeVar("H", bound=ProteinHit, covariant=True)
 
@@ -35,46 +38,30 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
     Abstract search.
     """
 
-    def __init__(self, chembl_api: ChemblApi, taxa: Sequence[Taxonomy], traversal_strategy: str):
-        super().__init__(chembl_api)
+    def __init__(
+        self,
+        key: str,
+        api: ChemblApi,
+        taxa: Sequence[Taxonomy],
+        traversal_strategy: str,
+        allowed_target_types: Set[str],
+    ):
+        super().__init__(key, api)
         self.taxa = taxa
-        self._traversal_strategy = TargetTraversalStrategies.by_name(traversal_strategy, self.api)
+        self.traversal_strategy = TargetTraversalStrategies.by_name(traversal_strategy, self.api)
+        self.allowed_target_types = allowed_target_types
 
-    def get_params(self) -> Mapping[str, Any]:
-        # TODO not robust
-        return {
-            key: value
-            for key, value in vars(self).items()
-            if not key.startswith("_") and key != "path"
-        }
-
-    def get_params_str(self) -> str:
-        return ", ".join([k + "=" + str(v) for k, v in self.get_params()])
-
-    def is_in_taxa(self, species: str) -> bool:
+    def is_in_taxa(self, species: Union[int, str]) -> bool:
         """
         Returns true if the ChEMBL species is contained in any of our taxonomies.
         """
         return any((taxon.contains(species) for taxon in self.taxa))
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__ + "(" + self.get_params_str() + ")"
-
-    def __str__(self) -> str:
-        return self.__class__.__name__ + "(" + self.get_params_str() + ")"
-
-    def find_all(self, compounds: Sequence[str]) -> Sequence[H]:
-        logger.info(
-            f"Using traversal strategy {self.traversal_strategy.__class__.__name__} for {self.search_name}"
-        )
-        return super().find_all(compounds)
+    def _set_to_regex(self, values) -> str:
+        return "(" + "|".join([f"(?:{re.escape(v)})" for v in values]) + ")"
 
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         raise NotImplementedError()
-
-    @property
-    def traversal_strategy(self) -> TargetTraversalStrategy:
-        return self._traversal_strategy
 
     def should_include(
         self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
@@ -121,8 +108,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         Returns:
             A sequence of hits.
         """
-        h = self.get_h()
-        return [h(**data, object_id=best_target.chembl, object_name=best_target.name)]
+        raise NotImplementedError()
 
     def find(self, lookup: str) -> Sequence[H]:
         """
@@ -130,7 +116,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         Args:
             lookup:
 
-        Returns:e
+        Returns:
 
         """
         form = ChemblUtils(self.api).get_compound(lookup)

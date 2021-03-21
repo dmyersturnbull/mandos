@@ -21,7 +21,7 @@ Mandos extracts ~30 annotation types from ~15 databases.
 Types include mechanisms of action (MoAs), binding activity, disease indications, classifications, clinical trials,
 pathways involved, legal statuses, physical properties, and co-occurring literature terms.
 Output is formatted in consistent CSV files, mainly for consumption by algorithms.
-All knowledge is a semantic triple, such as `alprazolam    inactive at    BK receptor`, plus additional data
+All knowledge is a semantic triple, such as `alprazolam inactive at BK receptor`, plus additional data
 specific to each type (e.g. EC50 or clinical phase).
 It’s also happy to fetch annotations for compounds that are structurally similar to yours.
 
@@ -39,19 +39,19 @@ The following info is perhaps enough to get started.
 A lot of processing is done behind-the-scenes;
 **[see the docs 📚](https://mandos-chem.readthedocs.io/en/latest/)** for more.
 
-**Input:** compounds.txt is a line-by-line list of 
+**Input:** compounds.txt is a line-by-line list of
 [InChI Keys](https://en.wikipedia.org/wiki/International_Chemical_Identifier#InChIKey)
 Pass type-specific command-line options like `--taxa vertebrata`,
 or run multiple searches with `mandos meta:all compounds.txt --config searches.toml`.
 (See: [example config file](https://github.com/dmyersturnbull/mandos/blob/main/mandos/resources/ags_example.toml))
 `mandos <type> --help` will show and briefly explain the options.
 
-**Output:** One CSV file per annotation type – 9 columns shared between all files, plus type-specific columns.
-The consistent columns are: 
-*InChI Key*, *compound ID*, *compound name*, *predicate ID*, *predicate name*, *object ID*, *object name*,
-*annotation ID*, and *source*. Additional columns include EC50, original name, species, clinical phase, etc.
+**Output:** One CSV file per annotation type – 10 columns shared between all files, plus type-specific columns.
+The consistent columns are: _record_id_, _inchikey_, _compound_id_, _compound_name_,
+_predicate_, _object_id_, _object_name_, _search_key_, _search_class_, and _data_source_.
+Additional columns include EC50, original name, species, clinical phase, etc.
 You could concatenate the files for something like the following.
-(*Columns were dropped and renamed for display.*)
+(_Columns were dropped and renamed for display._)
 
 ```
 comp. ID  comp. name  predicate name                 object ID       object name

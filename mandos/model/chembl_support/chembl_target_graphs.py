@@ -3,6 +3,7 @@ import abc
 import enum
 import re
 from dataclasses import dataclass
+from functools import total_ordering
 from typing import Optional, Set, Sequence, Tuple as Tup, Type
 
 from mandos.model.chembl_api import ChemblApi
@@ -151,6 +152,7 @@ class TargetRelType(enum.Enum):
         return TargetRelType[s.replace(" ", "_").replace("-", "_").lower()]
 
 
+@total_ordering
 class ChemblTargetGraph(metaclass=abc.ABCMeta):
     # noinspection PyUnresolvedReferences
     """
@@ -162,15 +164,40 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
     """
 
     def __init__(self, node: TargetNode):
+        if not isinstance(node, TargetNode):
+            raise TypeError(f"Bad type {type(node)} for {node}")
         self.node = node
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.node})"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.node})"
+
+    def __hash__(self):
+        return hash(self.node)
+
+    def __eq__(self, target):
+        if not isinstance(target, ChemblTargetGraph):
+            raise TypeError(f"Bad type {type(target)} for {target}")
+        return self.node == target.node
+
+    def __lt__(self, target):
+        if not isinstance(target, ChemblTargetGraph):
+            raise TypeError(f"Bad type {type(target)} for {target}")
+        return self.node.__lt__(target.node)
 
     @classmethod
     def at_node(cls, target: TargetNode) -> ChemblTargetGraph:
+        if not isinstance(target, TargetNode):
+            raise TypeError(f"Bad type {type(target)} for {target}")
         return cls(target)
 
     @classmethod
     def at_target(cls, target: ChemblTarget) -> ChemblTargetGraph:
         # lie and fill in None -- we don't know because we haven't traversed
+        if not isinstance(target, ChemblTarget):
+            raise TypeError(f"Bad type {type(target)} for {target}")
         # noinspection PyTypeChecker
         return cls(TargetNode(0, None, target, None, None))
 
@@ -228,11 +255,13 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
             linked_id = superset["related_target_chembl_id"]
             rel_type = TargetRelType.of(superset["relationship"])
             if rel_type in rel_types or TargetRelType.any_link in rel_types:
-                linked_target = self.__class__(self.factory.find(self.api))
+                linked_target = self.__class__.at_target(self.factory().find(linked_id))
                 links.append((linked_target, rel_type))
         # we need to add self-links separately
         if TargetRelType.self_link in rel_types:
-            links.append((self.target.chembl, TargetRelType.self_link))
+            links.append(
+                (self.at_target(self.factory().find(self.target.chembl)), TargetRelType.self_link)
+            )
         return sorted(links)
 
     def traverse(self, permitting: Set[TargetEdgeReqs]) -> Set[TargetNode]:
@@ -246,7 +275,7 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
             The targets in the set, in a breadth-first order (then sorted by CHEMBL ID)
             The int is the depth, starting at 0 (this protein), going to +inf for the highest ancestors
         """
-        results = set()
+        results: Set[TargetNode] = set()
         # purposely use the invalid value None for is_root
         # noinspection PyTypeChecker
         self._traverse(TargetNode(0, None, self, None, None), permitting, results)

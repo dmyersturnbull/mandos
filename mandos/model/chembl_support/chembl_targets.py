@@ -6,7 +6,7 @@ from __future__ import annotations
 import enum
 import logging
 from dataclasses import dataclass
-from typing import Optional, Set
+from typing import Optional, Set, Mapping
 
 from urllib3.util.retry import MaxRetryError
 from pocketutils.core.dot_dict import NestedDotDict
@@ -52,12 +52,56 @@ class TargetType(CleverEnum):
     protein_nucleic_acid_complex = enum.auto()
     metal = enum.auto()
     small_molecule = enum.auto()
+    cell_line = enum.auto()
+    macromolecule = enum.auto()
     subcellular = enum.auto()
+    tissue = enum.auto()
     unknown = enum.auto()
 
     @classmethod
+    def resolve(cls, types: str) -> Set[TargetType]:
+        """
+        Resolve a bunch of target types in a comma-separated list,
+        allowing for special types prefixed by an ``@``: ``@all``, ``@known``, ``@protein``, ``@molecular``, and
+        ``@nonmolecular``
+
+        Args:
+            types: A string like ``'@protein,nucleic_acid``
+        """
+        found = set()
+        for st in types.split(","):
+            st = st.strip()
+            if st == "@all":
+                match = TargetType.all_types()
+            elif st == "@known":
+                match = {s for s in TargetType.all_types() if not s.is_unknown}
+            elif st == "@protein":
+                match = TargetType.protein_types()
+            elif st == "@molecular":
+                match = TargetType.molecular_types()
+            elif st == "@nonmolecular":
+                match = TargetType.nonmolecular_types()
+            else:
+                match = {TargetType.of(st)}
+            for m in match:
+                found.add(m)
+        return found
+
+    @classmethod
+    def special_type_names(cls) -> Mapping[str, str]:
+        return {
+            "@all": "all types",
+            "@known": "all types except unknown",
+            "@protein": ", ".join([s.name.replace("_", " ") for s in cls.protein_types()]),
+            "@molecular": ", ".join([s.name.replace("_", " ") for s in cls.molecular_types()]),
+            "@nonmolecular": ", ".join(
+                [s.name.replace("_", " ") for s in cls.nonmolecular_types()]
+            ),
+        }
+
+    @classmethod
     def _unmatched_type(cls) -> TargetType:
-        # we'll allow an "unknown" value in case ChEMBL adds more types
+        # we'll overload the "unknown" value in case ChEMBL adds more types
         return cls.unknown
 
     @classmethod
@@ -68,27 +112,42 @@ class TargetType(CleverEnum):
         This does **not** include protein-protein interactions, chimeric proteins,
         protein-nucleic acid complexes, or selectivity groups.
         """
-        return {s for s in cls if s.is_protein}
-
-    @classmethod
-    def all_types(cls) -> Set[TargetType]:
-        return set(TargetType)  # here for symmetry
-
-    @property
-    def is_traversable(self) -> bool:
-        """
-        Returns the target types that can have relationships defined on them.
-        Note that this may not match ChEMBL's own definition --
-        there may be types (e.g. protein_protein_interaction) that have relationships.
-        Those rare types are not included here.
-        """
-        return self in {
+        return {
             TargetType.single_protein,
             TargetType.protein_family,
             TargetType.protein_complex,
             TargetType.protein_complex_group,
-            TargetType.selectivity_group,
         }
+
+    @classmethod
+    def molecular_types(cls) -> Set[TargetType]:
+        """
+        Returns the types that are either "molecular entities", including proteins, metals, nucleic acids, and
+        protein/nucleic acid complexes, or groups of them, including protein families and protein complex groups.
+        This excludes types like tissues, cell lines, and selectivity groups.
+        """
+        return {
+            TargetType.single_protein,
+            TargetType.protein_family,
+            TargetType.protein_complex,
+            TargetType.protein_complex_group,
+            TargetType.nucleic_acid,
+            TargetType.protein_nucleic_acid_complex,
+            TargetType.metal,
+            TargetType.small_molecule,
+            TargetType.macromolecule,
+        }
+
+    @classmethod
+    def nonmolecular_types(cls) -> Set[TargetType]:
+        """
+        Complement of ``molecular_types``.
+        """
+        return {t for t in TargetType.all_types() if not t.is_molecular}
+
+    @classmethod
+    def all_types(cls) -> Set[TargetType]:
+        return set(TargetType)  # here for symmetry
 
     @property
     def is_protein(self) -> bool:
@@ -98,12 +157,16 @@ class TargetType(CleverEnum):
         This does **not** include protein-protein interactions, chimeric proteins,
         protein-nucleic acid complexes, or selectivity groups.
         """
-        return self in {
-            TargetType.single_protein,
-            TargetType.protein_family,
-            TargetType.protein_complex,
-            TargetType.protein_complex_group,
-        }
+        return self in self.__class__.protein_types()
+
+    @property
+    def is_molecular(self) -> bool:
+        """
+        Whether this type is a "molecular entity" or superset (e.g. protein family or complex group).
+
+        Does not include 'unknown'.
+        """
+        return self in self.__class__.molecular_types()
 
     @property
     def is_unknown(self) -> bool:
@@ -166,4 +229,5 @@ __all__ = [
     "TargetFactory",
     "TargetNotFoundError",
     "ChemblTarget",
+    "ConfidenceLevel",
 ]

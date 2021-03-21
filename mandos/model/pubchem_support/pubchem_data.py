@@ -923,6 +923,7 @@ class BiologicalTestResults(PubchemMiniDataView):
             "acname": Mapx.str_to(str, nullable=True),
             "acvalue": (lambda x: None if x is None else float(x)),
             "targetname": Mapx.req_is(str, nullable=True),
+            "cmpdname": Mapx.req_is(str, nullable=False),
         }
         return (
             self._tables

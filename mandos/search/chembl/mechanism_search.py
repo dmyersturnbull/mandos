@@ -23,11 +23,7 @@ class MechanismHit(ProteinHit):
     action_type: str
     direct_interaction: bool
     description: str
-    exact_target_id: str
-
-    @property
-    def predicate(self) -> str:
-        return self.action_type.lower()
+    src_id: str
 
 
 class MechanismSearch(ProteinSearch[MechanismHit]):
@@ -37,14 +33,14 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
 
     def __init__(
         self,
-        chembl_api: ChemblApi,
-        tax: Taxonomy,
+        key: str,
+        api: ChemblApi,
+        taxa: Sequence[Taxonomy],
         traversal_strategy: str,
         allowed_target_types: Set[str],
         min_confidence_score: Optional[int],
     ):
-        super().__init__(chembl_api, tax, traversal_strategy)
-        self.allowed_target_types = allowed_target_types
+        super().__init__(key, api, taxa, traversal_strategy, allowed_target_types)
         self.min_confidence_score = min_confidence_score
 
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
@@ -59,24 +55,33 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         return True
 
     def to_hit(
-        self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
+        self,
+        lookup: str,
+        compound: ChemblCompound,
+        data: NestedDotDict,
+        best_target: ChemblTargetGraph,
     ) -> Sequence[MechanismHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
-        x = NestedDotDict(
-            dict(
-                record_id=data["mec_id"],
-                compound_id=compound.chid,
-                inchikey=compound.inchikey,
-                compound_name=compound.name,
-                compound_lookup=lookup,
-                action_type=data["action_type"],
-                direct_interaction=data["direct_interaction"],
-                description=data["mechanism_of_action"],
-                exact_target_id=data["target_chembl_id"],
-            )
+        x = MechanismHit(
+            record_id=data["mec_id"],
+            origin_inchikey=lookup,
+            matched_inchikey=compound.inchikey,
+            compound_id=compound.chid,
+            compound_name=compound.name,
+            predicate=data.req_as("action_type", str),
+            object_id=best_target.chembl,
+            object_name=best_target.name,
+            search_key=self.key,
+            search_class=self.search_class,
+            data_source=self.data_source,
+            exact_target_id=data.req_as("target_chembl_id", str),
+            src_id=data.req_as("src_id", str),
+            action_type=data.req_as("action_type", str),
+            direct_interaction=data.req_as("direct_interaction", bool),
+            description=data.req_as("mechanism_of_action", str),
         )
-        return [MechanismHit(**x, object_id=target.chembl, object_name=target.name)]
+        return [x]
 
 
 __all__ = ["MechanismHit", "MechanismSearch"]

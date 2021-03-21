@@ -15,13 +15,14 @@ class PubchemHit(AbstractHit, metaclass=abc.ABCMeta):
 
 
 class PubchemSearch(Search[H], metaclass=abc.ABCMeta):
-    def __init__(self, pubchem_api: PubchemApi):
+    def __init__(self, key: str, pubchem_api: PubchemApi):
         """
         Constructor.
 
         Args:
             pubchem_api:
         """
+        super().__init__(key)
         self.api = pubchem_api
 
 

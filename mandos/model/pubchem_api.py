@@ -19,12 +19,13 @@ import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 
+from mandos.model import CompoundNotFoundError
 from mandos.model.pubchem_support.pubchem_data import PubchemData
 
 logger = logging.getLogger("mandos")
 
 
-class PubchemCompoundLookupError(LookupError):
+class PubchemCompoundLookupError(CompoundNotFoundError):
     """"""
 
 

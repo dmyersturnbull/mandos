@@ -8,5 +8,5 @@ protein_complex           < protein_complex_group   accept:-
 protein_complex           ~ protein_complex_group   accept:-
 protein_complex_group     < protein_complex_group   accept:-
 selectivity_group         * protein_complex_group   accept:-
-any                       = any                     accept:-
-any                       . any                     accept:$
+@any                      = @any                    accept:-
+@any                      . @any                    accept:$

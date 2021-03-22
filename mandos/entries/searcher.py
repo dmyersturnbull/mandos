@@ -20,7 +20,7 @@ from mandos.model.searches import Search
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.search.chembl import ChemblSearch
 from mandos.search.pubchem import PubchemSearch
-from mandos.search.api_singletons import Apis
+from mandos.entries.api_singletons import Apis
 
 Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
 logger = logging.getLogger(__package__)

@@ -12,9 +12,9 @@ import typer
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model import InjectionError
-from mandos.search.entries import Entries, Entry
+from mandos.entries.entries import Entries, Entry
 
-from mandos.search.api_singletons import Apis
+from mandos.entries.api_singletons import Apis
 
 logger = logging.getLogger(__package__)
 cli = typer.Typer()

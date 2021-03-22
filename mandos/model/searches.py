@@ -8,7 +8,7 @@ from typing import Generic, Sequence, TypeVar
 import pandas as pd
 
 from mandos.model.hits import AbstractHit, HitFrame
-from mandos.model import CompoundNotFoundError
+from mandos.model import CompoundNotFoundError, ReflectionUtils
 
 logger = logging.getLogger("mandos")
 
@@ -33,25 +33,40 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
     @property
     def data_source(self) -> str:
+        """
+        Where the data originally came from; e.g. ``the Human Metabolome Database (HMDB)``"
+        """
         raise NotImplementedError()
 
     def get_params(self) -> typing.Mapping[str, typing.Any]:
+        """
+        Returns the *parameters* of this ``Search`` their values.
+        Parameters are attributes that do not begin with an underscore.
+        """
         return {key: value for key, value in vars(self).items() if not key.startswith("_")}
 
     def find_to_df(self, inchikeys: Sequence[str]) -> HitFrame:
+        """
+        Calls :py:meth:`find_all` and returns a :py:class:`HitFrame` DataFrame subclass.
+        Writes a logging ERROR for each compound that was not found.
+
+        Args:
+            inchikeys: A list of InChI key strings
+        """
         hits = self.find_all(inchikeys)
         return HitFrame([pd.Series({f: getattr(h, f) for f in self.hit_fields()}) for h in hits])
 
     def find_all(self, inchikeys: Sequence[str]) -> Sequence[H]:
         """
         Loops over every compound and calls ``find``.
-        Just comes with better logging.
+        Comes with better logging.
+        Writes a logging ERROR for each compound that was not found.
 
         Args:
-            inchikeys:
+            inchikeys: A list of InChI key strings
 
         Returns:
-
+            The list of :py:class:`mandos.model.hits.AbstractHit`
         """
         lst = []
         for i, compound in enumerate(inchikeys):
@@ -71,12 +86,13 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     def find(self, inchikey: str) -> Sequence[H]:
         """
         To override.
+        Finds the annotations for a single compound.
 
         Args:
-            inchikey:
+            inchikey: An InChI Key
 
         Returns:
-            Something
+            A list of annotations
 
         Raises:
             CompoundNotFoundError
@@ -87,9 +103,6 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     def hit_fields(cls) -> Sequence[str]:
         """
         Gets the fields in the Hit type parameter.
-
-        Returns:
-
         """
         # Okay, there's a lot of magic going on here
         # We need to access the _parameter_ H on cls -- raw `H` doesn't work
@@ -105,13 +118,9 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     @classmethod
     def get_h(cls):
         """
-        What is my hit type?
-
-        Returns:
-
+        Returns the underlying hit TypeVar, ``H``.
         """
-        # noinspection PyUnresolvedReferences
-        return cls.__orig_bases__[0]
+        return ReflectionUtils.get_generic_arg(cls, AbstractHit)
 
     def __repr__(self) -> str:
         return ", ".join([k + "=" + str(v) for k, v in self.get_params()])
@@ -120,7 +129,14 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         return repr(self)
 
     def __eq__(self, other: Search) -> bool:
-        if not isinstance(other, self.__class__):
+        """
+        Returns True iff all of the parameters match, thereby excluding attributes with underscores.
+        Multiversal equality.
+
+        Raises:
+            TypeError: If ``other`` is not a :py:class:`Search`
+        """
+        if not isinstance(other, Search):
             raise TypeError(f"{type(other)} not comparable")
         return repr(self) == repr(other)
 

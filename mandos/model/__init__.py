@@ -28,8 +28,25 @@ class ReflectionUtils:
 
     @classmethod
     def get_generic_arg(cls, clazz: Type[T], bound: Optional[Type[T]] = None) -> Type:
+        """
+        Finds the generic argument (specific TypeVar) of a :py:class:`~typing.Generic` class.
+        **Assumes that ``clazz`` only has one type parameter. Always returns the first.**
+
+        Args:
+            clazz: The Generic class
+            bound: If non-None, requires the returned type to be a subclass of ``bound`` (or equal to it)
+
+        Returns:
+            The class
+
+        Raises:
+            AssertionError: For most errors
+        """
         bases = clazz.__orig_bases__
-        param = typing.get_args(bases[0])[0]
+        try:
+            param = typing.get_args(bases[0])[0]
+        except KeyError:
+            raise AssertionError(f"Failed to get generic type on {cls}")
         if not issubclass(param, bound):
             raise AssertionError(f"{param} is not a {bound}")
         return param
@@ -40,10 +57,30 @@ class ReflectionUtils:
 
     @classmethod
     def required_args(cls, func):
+        """
+        Finds parameters that lack default values.
+
+        Args:
+            func: A function or method
+
+        Returns:
+            A dict mapping parameter names to instances of ``MappingProxyType``,
+            just as ``inspect.signature(func).parameters`` does.
+        """
         return cls._args(func, True)
 
     @classmethod
     def optional_args(cls, func):
+        """
+        Finds parameters that have default values.
+
+        Args:
+            func: A function or method
+
+        Returns:
+            A dict mapping parameter names to instances of ``MappingProxyType``,
+            just as ``inspect.signature(func).parameters`` does.
+        """
         return cls._args(func, False)
 
     @classmethod
@@ -101,6 +138,10 @@ class CleverEnum(enum.Enum):
 
     @classmethod
     def of(cls, s: Union[int, str]) -> __qualname__:
+        """
+        Turns a string or int into this type.
+        Case-insensitive. Replaces `` `` and ``-`` with ``_``.
+        """
         key = s.replace(" ", "_").replace("-", "_").lower()
         try:
             if isinstance(s, str):
@@ -127,12 +168,13 @@ class MandosResources:
 
     @classmethod
     def path(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> Path:
-        """Gets a path of a test resource file under resources/."""
+        """Gets a path of a test resource file under ``resources/``."""
         path = Path(Path(__file__).parent.parent, "resources", *nodes)
         return path.with_suffix(path.suffix if suffix is None else suffix)
 
     @classmethod
     def json(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> NestedDotDict:
+        """Reads a JSON file under ``resources/``."""
         return NestedDotDict.read_json(cls.path(*nodes, suffix=suffix))
 
 

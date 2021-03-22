@@ -28,7 +28,9 @@ class Triple:
 
 @dataclass(frozen=True, order=True, repr=True)
 class AbstractHit:
-    """"""
+    """
+    An abstract annotation (statement type), which may support additional fields.
+    """
 
     record_id: Optional[str]
     origin_inchikey: str
@@ -58,9 +60,7 @@ class AbstractHit:
     @classmethod
     def fields(cls) -> Sequence[str]:
         """
-
-        Returns:
-
+        Finds the list of fields in this class by reflection.
         """
         return [f.name for f in dataclasses.fields(cls)]
 

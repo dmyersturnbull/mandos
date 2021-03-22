@@ -3,11 +3,10 @@ import logging
 from dataclasses import dataclass
 from typing import Sequence, Optional, Set
 
-from mandos.search.chembl._activity_search import _ActivitySearch, AssayType, _ActivityHit
-from mandos.search.chembl._protein_search import ProteinHit
+from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.chembl_support import ChemblCompound
+from mandos.model.chembl_support import ChemblCompound, AssayType
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 
 logger = logging.getLogger("mandos")
@@ -66,4 +65,4 @@ class FunctionalSearch(_ActivitySearch[FunctionalHit]):
         return [hit]
 
 
-__all__ = ["FunctionalHit", "FunctionalSearch", "AssayType"]
+__all__ = ["FunctionalHit", "FunctionalSearch"]

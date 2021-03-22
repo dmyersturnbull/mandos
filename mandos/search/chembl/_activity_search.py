@@ -1,4 +1,3 @@
-import enum
 import logging
 import abc
 from dataclasses import dataclass
@@ -7,28 +6,12 @@ from typing import Sequence, Set, Optional
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.chembl_api import ChemblApi
-from mandos.model.chembl_support import ChemblCompound
+from mandos.model.chembl_support import ChemblCompound, AssayType
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch, H
 
 logger = logging.getLogger("mandos")
-
-
-class AssayType(enum.Enum):
-    binding = enum.auto()
-    functional = enum.auto()
-    adme = enum.auto()
-    physicochemical = enum.auto()
-
-    @property
-    def character(self) -> str:
-        return {
-            AssayType.binding: "B",
-            AssayType.functional: "F",
-            AssayType.adme: "A",
-            AssayType.physicochemical: "P",
-        }[self]
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -154,4 +137,4 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
     subcellular_region: Optional[str]
 
 
-__all__ = ["_ActivitySearch", "AssayType", "_ActivityHit"]
+__all__ = ["_ActivitySearch", "_ActivityHit"]

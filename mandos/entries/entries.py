@@ -8,11 +8,11 @@ import abc
 import logging
 from inspect import cleandoc as doc
 from pathlib import Path
-from typing import Optional, TypeVar, Generic, Union, Mapping, Set, Sequence, Type
+from typing import TypeVar, Generic, Union, Mapping, Set, Sequence, Type
 
 import typer
 
-from mandos.model import ReflectionUtils, InjectionError, MandosResources
+from mandos.model import ReflectionUtils, InjectionError
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import DataValidityComment
 from mandos.model.chembl_support.chembl_targets import TargetType, ConfidenceLevel
@@ -21,10 +21,10 @@ from mandos.model.searches import Search
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.search.api_singletons import Apis
+from mandos.entries.api_singletons import Apis
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 from mandos.search.pubchem.dgidb_search import DgiSearch, CgiSearch
-from mandos.search.searcher import Searcher
+from mandos.entries.searcher import Searcher
 
 Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
 from mandos.search.chembl.binding_search import BindingSearch

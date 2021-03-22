@@ -10,11 +10,11 @@ from typing import Optional
 import typer
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.search.entries import Entries
+from mandos.entries.entries import Entries
 
-from mandos.search.api_singletons import Apis
-from mandos.search.multi_searches import MultiSearch
-from mandos.search.searcher import Searcher, SearcherUtils
+from mandos.entries.api_singletons import Apis
+from mandos.entries.multi_searches import MultiSearch
+from mandos.entries.searcher import SearcherUtils
 
 logger = logging.getLogger(__package__)
 # IMPORTANT!

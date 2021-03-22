@@ -1,5 +1,7 @@
 from mandos.model.chembl_api import ChemblApi
-from mandos.model.pubchem_api import PubchemApi, CachingPubchemApi, QueryingPubchemApi
+from mandos.model.pubchem_api import PubchemApi
+from mandos.model.querying_pubchem_api import QueryingPubchemApi
+from mandos.model.caching_pubchem_api import CachingPubchemApi
 from mandos.model.settings import MANDOS_SETTINGS
 
 

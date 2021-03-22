@@ -89,4 +89,26 @@ class ChemblCompound:
     name: str
 
 
-__all__ = ["ChemblCompound", "ChemblCompoundLookupError", "DataValidityComment", "ActivityRelation"]
+class AssayType(enum.Enum):
+    binding = enum.auto()
+    functional = enum.auto()
+    adme = enum.auto()
+    physicochemical = enum.auto()
+
+    @property
+    def character(self) -> str:
+        return {
+            AssayType.binding: "B",
+            AssayType.functional: "F",
+            AssayType.adme: "A",
+            AssayType.physicochemical: "P",
+        }[self]
+
+
+__all__ = [
+    "ChemblCompound",
+    "ChemblCompoundLookupError",
+    "DataValidityComment",
+    "ActivityRelation",
+    "AssayType",
+]

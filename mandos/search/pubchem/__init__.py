@@ -15,15 +15,17 @@ class PubchemHit(AbstractHit, metaclass=abc.ABCMeta):
 
 
 class PubchemSearch(Search[H], metaclass=abc.ABCMeta):
-    def __init__(self, key: str, pubchem_api: PubchemApi):
+    def __init__(self, key: str, api: PubchemApi):
         """
         Constructor.
 
         Args:
-            pubchem_api:
+            api:
         """
+        if api is None:
+            raise ValueError(self.__class__.__name__)
         super().__init__(key)
-        self.api = pubchem_api
+        self.api = api
 
 
 __all__ = ["PubchemHit", "PubchemSearch"]

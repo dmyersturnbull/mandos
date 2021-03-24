@@ -1,10 +1,7 @@
-import logging
-
 import defusedxml.ElementTree as Xml
 from pocketutils.core.dot_dict import NestedDotDict
 
-
-logger = logging.getLogger("mandos")
+from mandos import logger
 
 
 class HmdbApi:

@@ -1,16 +1,14 @@
 from __future__ import annotations
 import abc
 import dataclasses
-import logging
 import typing
 from typing import Generic, Sequence, TypeVar
 
 import pandas as pd
 
+from mandos import logger
 from mandos.model.hits import AbstractHit, HitFrame
 from mandos.model import CompoundNotFoundError, ReflectionUtils
-
-logger = logging.getLogger("mandos")
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -73,14 +71,13 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             try:
                 x = self.find(compound)
             except CompoundNotFoundError:
-                logger.error(f"Failed to find compound {compound}. Skipping.")
+                logger.error(f"NOT FOUND: {compound}. Skipping.")
                 continue
             lst.extend(x)
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
-            if i > 0 and i % 20 == 0 or i == len(inchikeys) - 1:
-                logger.info(
-                    f"Found {len(lst)} {self.search_name} annotations for {i} of {len(inchikeys)} compounds"
-                )
+        logger.info(
+            f"Found {len(lst)} {self.search_name} annotations for {i} of {len(inchikeys)} compounds"
+        )
         return lst
 
     def find(self, inchikey: str) -> Sequence[H]:
@@ -123,7 +120,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         return ReflectionUtils.get_generic_arg(cls, AbstractHit)
 
     def __repr__(self) -> str:
-        return ", ".join([k + "=" + str(v) for k, v in self.get_params()])
+        return ", ".join([k + "=" + str(v) for k, v in self.get_params().items()])
 
     def __str__(self) -> str:
         return repr(self)

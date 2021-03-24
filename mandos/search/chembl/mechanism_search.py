@@ -1,17 +1,14 @@
-import logging
 from dataclasses import dataclass
 from typing import Sequence, Set, Optional
 
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
-from mandos.search.chembl.target_traversal import TargetTraversalStrategy, TargetTraversalStrategies
-
-logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True)

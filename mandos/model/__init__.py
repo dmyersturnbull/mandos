@@ -11,7 +11,8 @@ from typing import Optional, Union, Type, TypeVar, Generic, Mapping, Any
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-logger = logging.getLogger("logger")
+
+from mandos import logger
 
 
 class CompoundNotFoundError(LookupError):

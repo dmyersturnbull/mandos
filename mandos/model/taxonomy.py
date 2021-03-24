@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from functools import total_ordering
 from pathlib import Path
@@ -9,7 +8,7 @@ from typing import List, Mapping, Optional, Sequence, Set, Union
 import pandas as pd
 from typeddfs import TypedDfs
 
-logger = logging.getLogger(__package__)
+from mandos import logger
 
 TaxonomyDf = (
     TypedDfs.typed("TaxonomyDf").require("taxon").require("parent").require("scientific_name")

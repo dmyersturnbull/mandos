@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from mandos.model.pubchem_api import CachingPubchemApi
+from mandos.model.caching_pubchem_api import CachingPubchemApi
 from mandos.model.pubchem_support.pubchem_models import (
     Codes,
     CoOccurrenceType,
@@ -202,6 +202,7 @@ class TestPubchemApi:
                     interactions=frozenset(
                         {"CHRNB2 protein results in increased susceptibility to Cocaine"}
                     ),
+                    tax_id=10090,
                     tax_name="Mus musculus",
                     pmids=frozenset(),
                 ),
@@ -210,6 +211,7 @@ class TestPubchemApi:
                     interactions=frozenset(
                         {"Cocaine results in decreased expression of CHURC1 mRNA"}
                     ),
+                    tax_id=9606,
                     tax_name="Homo sapiens",
                     pmids=frozenset({Codes.PubmedId("16710320"), Codes.PubmedId("15009677")}),
                 ),
@@ -242,6 +244,7 @@ class TestPubchemApi:
                     activity_name="Ki",
                     activity_value=0.0035,
                     target_name=None,
+                    compound_name="Cocaine",
                 ),
                 Bioactivity(
                     assay_id=127359,
@@ -256,6 +259,7 @@ class TestPubchemApi:
                     activity_name="Kd",
                     activity_value=0.0044,
                     target_name=None,
+                    compound_name="Cocaine",
                 ),
             }
         )

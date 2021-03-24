@@ -65,7 +65,12 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
             object_name=target,
             search_key=self.key,
             search_class=self.search_class,
-            data_source=self.data_source + ":" + dd.assay_ref,
+            data_source=self.data_source
+            + ":"
+            + dd.assay_ref
+            + "("
+            + dd.assay_type.name.lower()
+            + ")",
             activity=dd.activity.name.lower(),
             confirmatory=dd.assay_type is AssayType.confirmatory,
             micromolar=dd.activity_value,

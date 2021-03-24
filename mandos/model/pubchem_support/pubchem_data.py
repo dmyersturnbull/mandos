@@ -4,7 +4,6 @@ PubChem data views and processors.
 from __future__ import annotations
 
 import abc
-import logging
 import re
 from datetime import date, datetime
 from typing import Mapping, Optional, Sequence, Union, FrozenSet, Any, Dict
@@ -16,6 +15,8 @@ from pocketutils.core.exceptions import MultipleMatchesError
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
+
+from mandos import logger
 
 # noinspection PyProtectedMember
 from mandos.model.pubchem_support._nav_fns import Filter, Mapx, Flatmap
@@ -44,8 +45,6 @@ from mandos.model.pubchem_support.pubchem_models import (
     CompoundGeneInteraction,
     Bioactivity,
 )
-
-logger = logging.getLogger("mandos")
 
 
 class Misc:
@@ -843,7 +842,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
         keys = {
             "genesymbol": Codes.GenecardSymbol,
             "interaction": Mapx.split("|", nullable=True),
-            "taxid": Mapx.req_is(int, nullable=True),
+            "taxid": Mapx.get_int(nullable=True),
             "taxname": Mapx.req_is(str, True),
             "pmids": Mapx.split("|", nullable=True),
         }
@@ -911,7 +910,7 @@ class BiologicalTestResults(PubchemMiniDataView):
     @property
     def bioactivity(self) -> FrozenSet[Bioactivity]:
         keys = {
-            "aid": Mapx.req_is(int),
+            "aid": Mapx.get_int(),
             "aidtype": (lambda s: AssayType[s.lower().strip()]),
             "aidsrcname": Mapx.req_is(str),
             "aidname": Mapx.req_is(str),

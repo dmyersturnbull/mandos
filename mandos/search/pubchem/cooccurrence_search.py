@@ -58,6 +58,7 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
 
     def find(self, inchikey: str) -> Sequence[H]:
         data = self.api.fetch_data(inchikey)
+        allofthem = data.literature.gene_cooccurrences
         return [
             self.__class__.get_h()(
                 record_id=None,
@@ -75,7 +76,7 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
                 search_class=self.search_class,
                 data_source=self.data_source,
             )
-            for dd in data.literature.gene_cooccurrences
+            for dd in allofthem
             if (
                 dd.score >= self.min_score
                 and dd.neighbor_article_count >= self.min_articles

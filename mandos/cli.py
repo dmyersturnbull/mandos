@@ -6,16 +6,17 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+
 import typer
+
+from mandos import logger
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.entries.entries import Entries, _Typer
-
 from mandos.entries.api_singletons import Apis
 from mandos.entries.multi_searches import MultiSearch
 from mandos.entries.searcher import SearcherUtils
 
-logger = logging.getLogger(__package__)
 # IMPORTANT!
 Apis.set_default()
 cli = typer.Typer()
@@ -88,6 +89,7 @@ for entry in Entries:
 
     info = CommandInfo(entry.cmd(), callback=entry.run)
     cli.registered_commands.append(info)
+    # print(f"Registered {entry.cmd()} to {entry}")
     setattr(Commands, entry.cmd(), entry.run)
 
 cli.registered_commands.extend(
@@ -99,6 +101,19 @@ cli.registered_commands.extend(
 
 
 if __name__ == "__main__":
+    # logging.basicConfig(level=0)
+    import sys
+
+    root = logging.getLogger()
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(0)
+    formatter = logging.Formatter("%(levelname)-7s %(asctime)s %(message)s", "%Y%m%d:%H:%M:%S")
+    handler.setFormatter(formatter)
+    root.addHandler(handler)
+    # log_factory = PrettyRecordFactory(10, 12, 5, width=100, symbols=True).modifying(logger)
+    # good start; can be changed
+    root.setLevel(logging.WARNING)
+    logger.setLevel(logging.INFO)
     cli()
 
 

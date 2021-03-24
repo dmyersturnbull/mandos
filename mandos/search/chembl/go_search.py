@@ -8,11 +8,10 @@ from typing import Sequence, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 from mandos.model.chembl_api import ChemblApi
 from mandos.search.chembl import ChemblHit, ChemblSearch
 from mandos.search.chembl.binding_search import BindingSearch, BindingHit
-
-logger = logging.getLogger("mandos")
 
 
 class GoType(enum.Enum):

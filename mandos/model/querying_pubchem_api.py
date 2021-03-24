@@ -16,10 +16,9 @@ import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 
+from mandos import logger
 from mandos.model.pubchem_api import PubchemCompoundLookupError, PubchemApi
 from mandos.model.pubchem_support.pubchem_data import PubchemData
-
-logger = logging.getLogger("mandos")
 
 
 class QueryingPubchemApi(PubchemApi):

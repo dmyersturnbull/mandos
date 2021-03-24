@@ -2,13 +2,16 @@
 Metadata for this project.
 """
 
-import logging
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import metadata as __load
 from pathlib import Path
 
-pkg = Path(__file__).absolute().parent.name
-logger = logging.getLogger(pkg)
+from pocketutils.logging.fancy_logger import LogLevel, AdvancedLogger
+
+pkg = "mandos"
+LogLevel.initalize()
+logger = AdvancedLogger.create(pkg)
+
 _metadata = None
 try:
     _metadata = __load(Path(__file__).absolute().parent.name)
@@ -38,4 +41,4 @@ if __name__ == "__main__":  # pragma: no cover
         print("Unknown project info")
 
 
-__all__ = ["MandosMetadata"]
+__all__ = ["MandosMetadata", "logger"]

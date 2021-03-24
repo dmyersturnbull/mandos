@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import os
-import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 
-logger = logging.getLogger("mandos")
+ONE_YEAR = 60 * 60 * 24 * 365
 
 
 class Globals:
@@ -35,13 +35,17 @@ class Settings:
     is_testing: bool
     cache_path: Path
     cache_gzip: bool
+    chembl_expire_sec: int
     chembl_n_retries: int
     chembl_timeout_sec: int
+    chembl_backoff_factor: float
     chembl_query_delay_min: float
     chembl_query_delay_max: float
     chembl_fast_save: bool
+    pubchem_expire_sec: int
     pubchem_n_retries: int
     pubchem_timeout_sec: float
+    pubchem_backoff_factor: float
     pubchem_query_delay_min: float
     pubchem_query_delay_max: float
     pubchem_use_parent: bool
@@ -81,12 +85,20 @@ class Settings:
             is_testing=data.get_as("mandos.is_testing", bool, False),
             cache_path=data.get_as("mandos.cache.path", Path, Globals.mandos_path).expanduser(),
             cache_gzip=data.get_as("mandos.cache.gzip", bool),
+            chembl_expire_sec=data.get_as("mandos.query.chembl.expire_sec", int, ONE_YEAR),
             chembl_n_retries=data.get_as("mandos.query.chembl.n_retries", int, 1),
             chembl_fast_save=data.get_as("mandos.query.chembl.fast_save", bool, True),
             chembl_timeout_sec=data.get_as("mandos.query.chembl.timeout_sec", int, 1),
+            chembl_backoff_factor=data.get_as(
+                "mandos.query.chembl.pubchem_backoff_factor", float, 2
+            ),
             chembl_query_delay_min=data.get_as("mandos.query.chembl.delay_sec", float, 0.25),
             chembl_query_delay_max=data.get_as("mandos.query.chembl.delay_sec", float, 0.25),
+            pubchem_expire_sec=data.get_as("mandos.query.pubchem.expire_sec", int, ONE_YEAR),
             pubchem_timeout_sec=data.get_as("mandos.query.pubchem.timeout_sec", int, 1),
+            pubchem_backoff_factor=data.get_as(
+                "mandos.query.pubchem.pubchem_backoff_factor", float, 2
+            ),
             pubchem_query_delay_min=data.get_as("mandos.query.pubchem.delay_sec", float, 0.25),
             pubchem_query_delay_max=data.get_as("mandos.query.pubchem.delay_sec", float, 0.25),
             pubchem_n_retries=data.get_as("mandos.query.pubchem.n_retries", int, 1),
@@ -102,11 +114,13 @@ class Settings:
         instance = Globals.chembl_settings
         instance.CACHING = True
         if not Globals.is_in_ci:  # not sure if this is needed
-            instance.CACHE_NAME = str(self.chembl_cache_path)
+            instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
             logger.info(f"Setting ChEMBL cache to {self.chembl_cache_path}")
         instance.TOTAL_RETRIES = self.chembl_n_retries
         instance.FAST_SAVE = self.chembl_fast_save
         instance.TIMEOUT = self.chembl_timeout_sec
+        instance.BACKOFF_FACTOR = self.chembl_backoff_factor
+        instance.CACHE_EXPIRE = self.chembl_expire_sec
         self.chembl_cache_path.mkdir(exist_ok=True, parents=True)
         self.pubchem_cache_path.mkdir(exist_ok=True, parents=True)
         self.hmdb_cache_path.mkdir(exist_ok=True, parents=True)

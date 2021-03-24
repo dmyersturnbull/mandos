@@ -14,11 +14,6 @@ class DiseaseHit(PubchemHit):
 class DiseaseSearch(PubchemSearch[DiseaseHit]):
     """"""
 
-    def __init__(self, key: str, api: PubchemApi, therapeutic: bool, marker: bool = True):
-        super().__init__(key, api)
-        self.therapeutic = therapeutic
-        self.marker = marker
-
     @property
     def data_source(self) -> str:
         return "Comparative Toxicogenomics Database (CTD)"
@@ -41,12 +36,6 @@ class DiseaseSearch(PubchemSearch[DiseaseHit]):
                 data_source=self.data_source,
             )
             for dd in data.associated_disorders_and_diseases.associated_disorders_and_diseases
-            if (
-                dd.evidence_type == "marker/mechanism"
-                and self.marker
-                or dd.evidence_type == "therapeutic"
-                and self.therapeutic
-            )
         ]
 
 

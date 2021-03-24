@@ -3,22 +3,18 @@ PubChem querying API.
 """
 from __future__ import annotations
 
-import abc
-import logging
 from pathlib import Path
-from typing import Optional, Sequence, Union, FrozenSet, Mapping
+from typing import Optional, Union, FrozenSet
 
-import io
 import gzip
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 from mandos.model.pubchem_api import PubchemCompoundLookupError, PubchemApi
 from mandos.model.pubchem_support.pubchem_data import PubchemData
 from mandos.model.querying_pubchem_api import QueryingPubchemApi
-
-logger = logging.getLogger("mandos")
 
 
 class CachingPubchemApi(PubchemApi):
@@ -32,16 +28,16 @@ class CachingPubchemApi(PubchemApi):
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
         path = self.data_path(inchikey)
         if path.exists():
-            logger.info(f"Found cached PubChem data at {path.absolute()}")
+            logger.debug(f"Found cached PubChem data at {path.absolute()}")
         elif self._querier is None:
             raise PubchemCompoundLookupError(f"Key {inchikey} not found cached at {path}")
         else:
-            logger.info(f"Downloading PubChem data for {inchikey} ...")
+            # logger.info(f"Downloading PubChem data for {inchikey} ...")
             data = self._querier.fetch_data(inchikey)
             path.parent.mkdir(parents=True, exist_ok=True)
             encoded = data.to_json()
             self._write_json(encoded, path)
-            logger.info(f"Wrote PubChem data to {path.absolute()}")
+            logger.debug(f"Wrote PubChem data to {path.absolute()}")
             return data
         read = self._read_json(path)
         return PubchemData(read)

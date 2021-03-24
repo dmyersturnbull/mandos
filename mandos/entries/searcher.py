@@ -14,6 +14,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.path_tools import PathTools
 from typeddfs import TypedDfs
 
+from mandos import logger
 from mandos.model import CompoundNotFoundError
 from mandos.model.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.searches import Search
@@ -21,9 +22,6 @@ from mandos.model.settings import MANDOS_SETTINGS
 from mandos.search.chembl import ChemblSearch
 from mandos.search.pubchem import PubchemSearch
 from mandos.entries.api_singletons import Apis
-
-Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
-logger = logging.getLogger(__package__)
 
 IdMatchFrame = (
     TypedDfs.typed("IdMatchFrame")
@@ -55,6 +53,9 @@ class SearcherUtils:
         # to fix that, we need to delete the cached /match dataframes
         # now that I'm writing this down, I realize this is pretty bad
         # TODO
+        # noinspection PyPep8Naming
+        Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
+        logger.notice(f"Using {Chembl}, {Pubchem}")
         key = hash(",".join(inchikeys))
         cached_path = (MANDOS_SETTINGS.match_cache_path / str(key)).with_suffix(".feather")
         if cached_path.exists():
@@ -65,22 +66,27 @@ class SearcherUtils:
         if pubchem:
             for inchikey in inchikeys:
                 try:
-                    found_pubchem[inchikey] = str(Pubchem.fetch_data(inchikey).cid)
+                    cid = Pubchem.fetch_data(inchikey).cid
+                    found_pubchem[inchikey] = str(cid)
+                    logger.info(f"Found:      PubChem {inchikey} ({cid})")
                 except CompoundNotFoundError:
-                    logger.error(f"Did not find compound {inchikey}")
-                    logger.debug(f"Did not find compound {inchikey}", exc_info=True)
+                    logger.error(f"NOT FOUND: PubChem {inchikey}")
+                    logger.debug(f"Did not find PubChem {inchikey}", exc_info=True)
         if chembl:
             for inchikey in inchikeys:
                 try:
-                    found_chembl[inchikey] = ChemblUtils(Chembl).get_compound(inchikey).chid
+                    chid = ChemblUtils(Chembl).get_compound(inchikey).chid
+                    found_chembl[inchikey] = chid
+                    logger.info(f"Found:      ChEMBL {inchikey} ({chid})")
                 except CompoundNotFoundError:
-                    logger.error(f"Did not find compound {inchikey}")
-                    logger.debug(f"Did not find compound {inchikey}", exc_info=True)
+                    logger.error(f"NOT FOUND: ChEMBL {inchikey}")
+                    logger.debug(f"Did not find ChEMBL {inchikey}", exc_info=True)
         df = pd.DataFrame([pd.Series(dict(inchikey=c)) for c in inchikeys])
         df["chembl_id"] = df["inchikey"].map(found_chembl.get)
         df["pubchem_id"] = df["inchikey"].map(found_pubchem.get)
         df = IdMatchFrame(df)
         df.to_feather(cached_path)
+        logger.info(f"Wrote {cached_path}")
 
     @classmethod
     def read(cls, input_path: Path) -> Sequence[str]:
@@ -144,7 +150,7 @@ class Searcher:
         """
         self.what = searches
         self.input_path: Optional[Path] = input_path
-        self.inchikeys: Optional[Sequence[str]] = []
+        self.inchikeys: Optional[Sequence[str]] = None
 
     def search(self) -> Searcher:
         """
@@ -161,18 +167,19 @@ class Searcher:
             output_path = self.output_path_of(what)
             df = what.find_to_df(self.inchikeys)
             df.to_csv(output_path)
-            metadata = NestedDotDict(
-                dict(key=what.key, search=what.search_class, params=what.get_params())
-            )
+            params = {k: str(v) for k, v in what.get_params().items() if k not in {"key", "api"}}
+            metadata = NestedDotDict(dict(key=what.key, search=what.search_class, params=params))
             metadata.write_json(output_path.with_suffix(".json"))
+            logger.notice(f"Wrote {what.key} to {output_path}")
         return self
 
     def paths(self) -> Sequence[Path]:
         return [self.output_path_of(what) for what in self.what]
 
     def output_path_of(self, what: Search) -> Path:
-        parent = self.input_path.parent
-        child = self.input_path.stem + what.key + ".tab"
+        parent = self.input_path.parent / (self.input_path.stem + "-output")
+        parent.mkdir(exist_ok=True)
+        child = what.key + ".csv"
         node = PathTools.sanitize_path_node(child)
         if (parent / node).resolve() != (parent / child).resolve():
             logger.debug(f"Path {child} sanitized to {node}")

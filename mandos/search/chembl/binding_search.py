@@ -4,14 +4,10 @@ from typing import Sequence, Set, Optional
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.chembl_api import ChemblApi
+from mandos import logger
 from mandos.model.chembl_support import ChemblCompound
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
-from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
-
-logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True)

@@ -3,9 +3,10 @@ import logging
 from dataclasses import dataclass
 from typing import Sequence, Optional, Set
 
-from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
+from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
 from mandos.model.chembl_support import ChemblCompound, AssayType
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 

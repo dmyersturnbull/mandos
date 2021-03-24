@@ -4,19 +4,17 @@ Runner.
 
 from __future__ import annotations
 
-import logging
 import typing
 from pathlib import Path
 from typing import Optional, Union, Type
 import typer
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 from mandos.model import InjectionError
 from mandos.entries.entries import Entries, Entry
-
 from mandos.entries.api_singletons import Apis
 
-logger = logging.getLogger(__package__)
 cli = typer.Typer()
 Apis.set_default()
 Chembl, Pubchem = Apis.Chembl, Apis.Pubchem

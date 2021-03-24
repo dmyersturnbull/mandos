@@ -4,17 +4,15 @@ Model of ChEMBL targets and a hierarchy between them as a directed acyclic graph
 from __future__ import annotations
 
 import enum
-import logging
 from dataclasses import dataclass
 from typing import Optional, Set, Mapping
 
 from urllib3.util.retry import MaxRetryError
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 from mandos.model import CleverEnum
 from mandos.model.chembl_api import ChemblApi
-
-logger = logging.getLogger(__package__)
 
 
 class TargetNotFoundError(ValueError):
@@ -214,7 +212,7 @@ class TargetFactory:
         try:
             targets = self.api.target.filter(target_chembl_id=chembl)
         except MaxRetryError:
-            raise TargetNotFoundError(f"Failed to find target {chembl}")
+            raise TargetNotFoundError(f"NOT FOUND: Target {chembl}")
         assert len(targets) == 1, f"Found {len(targets)} targets for {chembl}"
         target = NestedDotDict(targets[0])
         return ChemblTarget(

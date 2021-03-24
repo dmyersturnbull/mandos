@@ -19,8 +19,9 @@ class Apis:
     def set_default(cls) -> None:
         from chembl_webresource_client.new_client import new_client as _Chembl
 
-        cls.Pubchem = CachingPubchemApi(MANDOS_SETTINGS.cache_path, QueryingPubchemApi())
+        cls.Pubchem = CachingPubchemApi(MANDOS_SETTINGS.pubchem_cache_path, QueryingPubchemApi())
         cls.Chembl = ChemblApi.wrap(_Chembl)
+        MANDOS_SETTINGS.set()
 
 
 __all__ = ["Apis"]

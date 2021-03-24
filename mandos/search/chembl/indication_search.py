@@ -6,12 +6,11 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
 from mandos.model.chembl_support.chembl_utils import ChemblUtils
 from mandos.search.chembl import ChemblHit, ChemblSearch
-
-logger = logging.getLogger("mandos")
 
 
 @dataclass(frozen=True, order=True, repr=True)

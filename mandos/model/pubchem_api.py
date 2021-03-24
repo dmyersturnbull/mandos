@@ -4,13 +4,11 @@ PubChem querying API.
 from __future__ import annotations
 
 import abc
-import logging
 from typing import Optional, Union, FrozenSet
 
+from mandos import logger
 from mandos.model import CompoundNotFoundError
 from mandos.model.pubchem_support.pubchem_data import PubchemData
-
-logger = logging.getLogger("mandos")
 
 
 class PubchemCompoundLookupError(CompoundNotFoundError):

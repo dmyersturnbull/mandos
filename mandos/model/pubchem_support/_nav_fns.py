@@ -3,7 +3,6 @@ Support classes to help with querying and processing web data.
 """
 from __future__ import annotations
 
-import logging
 import re
 from datetime import date, datetime
 from typing import (
@@ -21,9 +20,8 @@ from typing import (
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools
 
+from mandos import logger
 from mandos.model.pubchem_support._nav_model import FilterFn
-
-logger = logging.getLogger("mandos")
 
 T = TypeVar("T")
 
@@ -165,6 +163,17 @@ class Mapx:
         return int_date
 
     @classmethod
+    def get_int(cls, nullable: bool = False) -> Callable[[str], str]:
+        def get_int(value):
+            if nullable and value is None:
+                pass
+            elif not isinstance(value, (int, float, str)):
+                raise TypeError(f"{value} is a {type(value)}, not int-like")
+            return int(value)
+
+        return get_int
+
+    @classmethod
     def req_is(cls, type_, nullable: bool = False, then_convert=None) -> Callable[[str], str]:
         def req_is(value):
             if nullable and value is None:
@@ -208,7 +217,7 @@ class Mapx:
                 raise ValueError(f"Value is None")
             if value is None:
                 return empty_frozenset
-            return frozenset([s.strip() for s in value.split(sep)])
+            return frozenset([s.strip() for s in str(value).split(sep)])
 
         return split
 

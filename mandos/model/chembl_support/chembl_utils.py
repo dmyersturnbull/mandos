@@ -6,11 +6,10 @@ from pocketutils.core.dot_dict import NestedDotDict
 from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 
+from mandos import logger
 from mandos.model.chembl_api import ChemblApi
 from mandos.model import CompoundNotFoundError, CleverEnum
 from mandos.model.chembl_support import ChemblCompound
-
-logger = logging.getLogger("mandos")
 
 
 class MolStructureType(CleverEnum):
@@ -97,7 +96,7 @@ class ChemblUtils:
                 ).only(["molecule_chembl_id", "pref_name", "molecule_structures"])
             )
         except (HTTPError, RequestException):
-            raise CompoundNotFoundError(f"Failed to find compound {smiles}")
+            raise CompoundNotFoundError(f"NOT FOUND: ChEMBL compound {smiles}")
         if len(results) != 1:
             raise CompoundNotFoundError(f"Got {len(results)} for compound {smiles}")
         result = results[0]

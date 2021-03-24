@@ -282,10 +282,12 @@ class AtcCode:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class DrugbankInteraction:
+    record_id: str
     gene_symbol: Codes.GeneId
     action: str
+    protein_id: str
     target_name: str
-    general_function: Sequence[str]
+    general_function: str
     specific_function: str
     pmids: FrozenSet[Codes.PubmedId]
     dois: FrozenSet[Codes.Doi]
@@ -302,6 +304,7 @@ class DrugbankDdi:
 class AssayType(enum.Enum):
     confirmatory = enum.auto()
     literature = enum.auto()
+    other = enum.auto()
 
 
 class Activity(enum.Enum):
@@ -407,6 +410,7 @@ class DrugGeneInteraction:
 class CompoundGeneInteraction:
     gene_name: Optional[Codes.GeneId]
     interactions: FrozenSet[str]
+    tax_id: Optional[int]
     tax_name: Optional[str]
     pmids: FrozenSet[Codes.PubmedId]
 

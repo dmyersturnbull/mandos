@@ -843,6 +843,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
         keys = {
             "genesymbol": Codes.GenecardSymbol,
             "interaction": Mapx.split("|", nullable=True),
+            "taxid": Mapx.req_is(int, nullable=True),
             "taxname": Mapx.req_is(str, True),
             "pmids": Mapx.split("|", nullable=True),
         }
@@ -857,9 +858,10 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
     @property
     def drugbank_interactions(self) -> FrozenSet[DrugbankInteraction]:
         keys = {
+            "gid": int,
             "genesymbol": Codes.GenecardSymbol,
             "drugaction": Mapx.req_is(str),
-            "targetid": Mapx.req_is(str),
+            "targetcomponent": Mapx.req_is(str),
             "targetname": Mapx.req_is(str),
             "generalfunc": Mapx.req_is(str),
             "specificfunc": Mapx.req_is(str),

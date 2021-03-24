@@ -70,7 +70,8 @@ The output is a CSV file. Excluding additional columns, the findings can be summ
 Annotation types
 ################
 
-Currently, all annotations are accessed from two primary sources: ChEMBL and DrugBank.
+Currently, all annotations are accessed from one of there primary sources: ChEMBL, DrugBank, or the
+Human Metabolome Database (HMDB).
 Those from PubChem are mostly derived from other sources, such as DrugBank.
 The types are organized either as *chembl:〈type〉*, or as *〈section〉.〈source〉:〈type〉*,
 where *section* approximately corresponds to the name of a section on the PubChem webpage for a PubChem *compound*.
@@ -95,42 +96,47 @@ Below is the full list of annotation types that are available at the command-lin
 More can be found in the Python API; these are generally too specialized to be commonly used.
 Some types also warrant dedicated documentation, which can be found in other pages on this site.
 
-============            =====================================================================================
- search                  description
-============            =====================================================================================
-chembl:mechanism        ChEMBL molecular mechanism annotations
-chembl:binding          ChEMBL binding activity annotations
-chembl:activity         All ChEMBL activity annotations
-chembl:atc              ATC codes as listed by ChEMBL
-chembl:trials           ChEMBL indication annotations as MESH IDs
-chembl:go               GO P/C/F terms associated with ChEMBL MoA targets
-summary.ncit:links      Names of compounds linked from the NCIt drug summary
-chem.pubchem:comp       Computed chemical and structural properties on PubChem
-chem.pubchem:cactvs     CACTVS molecular fingerprints from PubChem
-drug.livertox:class     LiverTox drug classes
-drug.dea:class          DEA drug classes
-drug.dea:schedule       DEA schedules
-drug.hsdb:uses          Uses from the HSDB
-drug.trials:mesh        MeSH codes from clinicaltrials.gov
-pharma.mesh:mesh        MeSH codes listed on PubChem
-pharma.atc:atc          ATC codes listed on PubChem
-pharma.drugbank:summary Names of linked compounds in the DrugBank pharmacology summary
-pharma.hsdb:summary     Names of linked compounds in the HSDB pharmacology summary
-pharma.drugbank:moa     Names of linked compounds in the DrugBank MoA summary
-pharma.hsdb:moa         Names of linked compounds in the HSDB MoA summary
-use.cpdat:category      Categories from the CPCat
-safety.echa:ghs         GHS hazard codes from the European Chemicals Agency
-tox.chemidplus:acute    Names of acute effects from ChemIDplus
-disease.ctd:mesh        Associated diseases and disorders from the CTD
-lit.pubmed:mesh         MeSH headings or subheadings from associated PubMed articles
-lit.pubchem:chemicals   Names of compounds co-occurring in the literature (with scores)
-lit.pubchem:genes       Names of genes co-occurring in the literature (with scores)
-lit.pubchem:diseases    Names of diseases co-occurring in the literature (with scores)
-interact.dgidb:dgis     Drug–gene interactions from DrugBank
-interact.dgidb:cgis     Chemical–gene interactions from DrugBank
-interact.drugbank:dtis  Drug–target interactions from DrugBank
-interact.drugbank:ddis  Drug–drug interactions from DrugBank
-interact.pubchem:react  Names of pathways from reactions on PubChem
-assay.pubchem:tests     Targets from bioAssay activity on PubChem
-meta:random             Random values in the range 1...n compounds (with replacement)
-============            =====================================================================================
+============                 ================================================================================
+ search                       description
+============                 ================================================================================
+chembl:mechanism             ChEMBL molecular mechanism annotations
+chembl:binding               ChEMBL binding activity annotations
+chembl:activity              All ChEMBL activity annotations
+chembl:atc                   ATC codes as listed by ChEMBL
+chembl:trials                ChEMBL indication annotations as MESH IDs
+chembl:go:function           GO Function terms associated with ChEMBL MoA targets
+chembl:go:process            GO Process terms associated with ChEMBL MoA targets
+chembl:go:component          GO Component terms associated with ChEMBL MoA targets
+chembl:metabolite            Metabolites listed on ChEMBL
+summary.ncit:link            Names of compounds linked from the NCIt drug summary
+chem.pubchem:comp            Computed chemical and structural properties on PubChem
+chem.pubchem:cactvs          CACTVS molecular fingerprints from PubChem
+drug.livertox:class          LiverTox drug classes
+drug.dea:class               DEA drug classes
+drug.dea:schedule            DEA schedules
+drug.hsdb:uses               Uses from the HSDB
+drug.trials:mesh             MeSH codes from clinicaltrials.gov
+pharma.mesh:mesh             MeSH codes listed on PubChem
+pharma.atc:atc               ATC codes listed on PubChem
+pharma.drugbank:summary      Names of linked compounds in the DrugBank pharmacology summary
+pharma.hsdb:summary          Names of linked compounds in the HSDB pharmacology summary
+pharma.drugbank:moa          Names of linked compounds in the DrugBank MoA summary
+pharma.hsdb:moa              Names of linked compounds in the HSDB MoA summary
+use.cpdat:category           Categories from the CPCat
+safety.echa:ghs              GHS hazard codes from the European Chemicals Agency
+tox.chemidplus:acute         Names of acute effects from ChemIDplus
+disease.ctd:mesh             Associated diseases and disorders from the CTD
+lit.pubchem:mesh             MeSH headings or subheadings from associated PubMed articles
+lit.pubchem:chemical         Names of compounds co-occurring in the literature (with scores)
+lit.pubchem:gene             Names of genes co-occurring in the literature (with scores)
+lit.pubchem:disease          Names of diseases co-occurring in the literature (with scores)
+interact.dgidb:gene          Drug–gene interactions from the Drug Gene Interaction Database (DGIdb)
+interact.ctd:gene            Chemical–gene interactions from the Comparative Toxicogenomics Database (CTD)
+interact.drugbank:target     Target names of drug–target interactions from DrugBank
+interact.drugbank:function   General functions of drug–target interactions from DrugBank
+interact.drugbank:ddi        Drug–drug interactions from DrugBank
+interact.pubchem:react       Names of pathways from reactions on PubChem
+assay.pubchem:activity       Targets from bioAssay activity on PubChem
+hmdb:tissue                  Tissues listed on HMDB
+meta:random                  Random values in the range 1...n compounds (with replacement)
+============                 ================================================================================

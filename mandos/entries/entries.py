@@ -8,7 +8,7 @@ import abc
 import logging
 from inspect import cleandoc as doc
 from pathlib import Path
-from typing import TypeVar, Generic, Union, Mapping, Set, Sequence, Type
+from typing import TypeVar, Generic, Union, Mapping, Set, Sequence, Type, Optional
 
 import typer
 
@@ -16,15 +16,26 @@ from mandos.model import ReflectionUtils, InjectionError
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import DataValidityComment
 from mandos.model.chembl_support.chembl_targets import TargetType, ConfidenceLevel
-from mandos.model.pubchem_support.pubchem_models import ClinicalTrialsGovUtils, CoOccurrenceType
+from mandos.model.pubchem_support.pubchem_models import (
+    ClinicalTrialsGovUtils,
+    CoOccurrenceType,
+    AssayType,
+)
 from mandos.model.searches import Search
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.entries.api_singletons import Apis
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
-from mandos.search.pubchem.dgidb_search import DgiSearch, CgiSearch
+from mandos.search.pubchem.bioactivity_search import BioactivitySearch
+from mandos.search.pubchem.dgidb_search import DgiSearch
+from mandos.search.pubchem.ctd_gene_search import CtdGeneSearch
 from mandos.entries.searcher import Searcher
+from mandos.search.pubchem.drugbank_ddi_search import DrugbankDdiSearch
+from mandos.search.pubchem.drugbank_interaction_search import (
+    DrugbankTargetSearch,
+    DrugbankGeneralFunctionSearch,
+)
 
 Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
 from mandos.search.chembl.binding_search import BindingSearch
@@ -42,6 +53,7 @@ from mandos.search.pubchem.disease_search import DiseaseSearch
 logger = logging.getLogger(__package__)
 
 S = TypeVar("S", bound=Search, covariant=True)
+U = TypeVar("U", covariant=True, bound=CoOccurrenceSearch)
 
 
 class Utils:
@@ -76,8 +88,8 @@ class _Typer:
     path = typer.Argument(
         None,
         exists=True,
-        file_okay=True,
         dir_okay=False,
+        readable=True,
         help=doc(
             """
             The path to the input file.
@@ -320,23 +332,27 @@ class EntryChemblBinding(Entry[BindingSearch]):
     @classmethod
     def run(
         cls,
-        path=_Typer.path,
-        key=_Typer.key("chembl:binding"),
-        taxa=_Typer.taxa,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("chembl:binding"),
+        taxa: Optional[str] = _Typer.taxa,
         traversal=_Typer.traversal_strategy,
         target_types=_Typer.target_types,
         confidence=_Typer.min_confidence,
         relations=_Typer.relations,
         min_pchembl=_Typer.min_pchembl,
         banned_flags=_Typer.banned_flags,
-        test=_Typer.test,
+        test: bool = _Typer.test,
     ) -> Searcher:
         """
-        Fetch binding data from ChEMBL.
+        Binding data from ChEMBL.
         These are 'activity' annotations of the type 'B' that have a pCHEMBL value.
         There is extended documentation on this search; see:
 
         https://mandos-chem.readthedocs.io/en/latest/binding.html
+
+        OBJECT: ChEMBL preferred target name
+
+        PREDICATE: "binds"
         """
         built = BindingSearch(
             key=key,
@@ -356,16 +372,20 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
     @classmethod
     def run(
         cls,
-        path=_Typer.path,
-        key=_Typer.key("chembl:mechanism"),
-        taxa=_Typer.taxa,
-        traversal=_Typer.traversal_strategy,
-        target_types=_Typer.target_types,
-        min_confidence=_Typer.min_confidence,
-        test=_Typer.test,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("chembl:mechanism"),
+        taxa: Optional[str] = _Typer.taxa,
+        traversal: str = _Typer.traversal_strategy,
+        target_types: str = _Typer.target_types,
+        min_confidence: Optional[int] = _Typer.min_confidence,
+        test: bool = _Typer.test,
     ) -> Searcher:
         """
-        Fetch mechanism of action (MoA) data from ChEMBL.
+        Mechanism of action (MoA) data from ChEMBL.
+
+        OBJECT: ChEMBL preferred target name
+
+        PREDICATE: Target action; e.g. "agonist" or "positive allosteric modulator"
         """
         built = MechanismSearch(
             key=key,
@@ -382,13 +402,17 @@ class EntryChemblTrials(Entry[IndicationSearch]):
     @classmethod
     def run(
         cls,
-        path=_Typer.path,
-        key=_Typer.key("chembl.trials"),
-        min_phase=_Typer.chembl_trial,
-        test=_Typer.test,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("chembl.trial"),
+        min_phase: Optional[int] = _Typer.chembl_trial,
+        test: bool = _Typer.test,
     ) -> Searcher:
         """
-        Fetch clinical trials recorded in ChEMBL.
+        Diseases from clinical trials listed in ChEMBL.
+
+        OBJECT: MeSH code
+
+        PREDICATE: "phase <level> trial"
         """
         built = IndicationSearch(key=key, api=Chembl, min_phase=min_phase)
         return cls._run(built, path, test)
@@ -398,15 +422,19 @@ class EntryChemblAtc(Entry[AtcSearch]):
     @classmethod
     def run(
         cls,
-        path=_Typer.path,
-        key=_Typer.key("chembl.atc"),
-        levels=typer.Option(
+        path: Path = _Typer.path,
+        key: str = _Typer.key("chembl.atc"),
+        levels: str = typer.Option(
             "1,2,3,4,5", min=1, max=5, help="""List of ATC levels, comma-separated."""
         ),
-        test=_Typer.test,
+        test: bool = _Typer.test,
     ) -> Searcher:
         """
-        Fetch ATC codes from ChEMBL.
+        ATC codes from ChEMBL.
+
+        OBJECT: ATC Code
+
+        PREDICATE: "ATC L<leveL> code"
         """
         built = AtcSearch(key=key, api=Chembl, levels={int(x.strip()) for x in levels.split(",")})
         return cls._run(built, path, test)
@@ -424,16 +452,16 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
     @classmethod
     def run(
         cls,
-        path=_Typer.path,
-        key=_Typer.key("<see above>"),
-        taxa=_Typer.taxa,
-        traversal_strategy=_Typer.traversal_strategy,
-        target_types=_Typer.target_types,
-        confidence=_Typer.min_confidence,
-        relations=_Typer.relations,
-        min_pchembl=_Typer.min_pchembl,
-        banned_flags=_Typer.banned_flags,
-        binding_search=typer.Option(
+        path: Path = _Typer.path,
+        key: str = _Typer.key("<see above>"),
+        taxa: Optional[str] = _Typer.taxa,
+        traversal_strategy: str = _Typer.traversal_strategy,
+        target_types: str = _Typer.target_types,
+        confidence: Optional[int] = _Typer.min_confidence,
+        relations: str = _Typer.relations,
+        min_pchembl: float = _Typer.min_pchembl,
+        banned_flags: Optional[str] = _Typer.banned_flags,
+        binding_search: Optional[str] = typer.Option(
             None,
             help="""
             The fully qualified name of a class inheriting ``BindingSearch``.
@@ -443,7 +471,11 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         test=_Typer.test,
     ) -> Searcher:
         """
-        Process data.
+        GO terms associated with ChEMBL binding targets.
+
+        OBJECT: GO Term name
+
+        PREDICATE: "GO <Function/Process/Component> term"
 
         Note:
 
@@ -497,52 +529,21 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
     @classmethod
     def run(
         cls,
-        path=_Typer.path,
-        key=_Typer.key("disease.ctd:mesh"),
-        therapeutic=typer.Option(True, help="Include annotations of type 'therapeutic'"),
-        marker=typer.Option(True, help="Include annotations of type 'marker/mechanism'"),
-        test=_Typer.test,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("disease.ctd:mesh"),
+        therapeutic: bool = typer.Option(True, help="Include annotations of type 'therapeutic'"),
+        marker: bool = typer.Option(True, help="Include annotations of type 'marker/mechanism'"),
+        test: bool = _Typer.test,
     ) -> Searcher:
         """
-        Fetch MeSH codes of diseases and disorders in the Comparative Toxicogenomics Database (CTD).
+        Diseases in the Comparative Toxicogenomics Database (CTD).
+
+        OBJECT: MeSH code of disease
+
+        PREDICATE: "marker/mechanism" or "disease"
         """
         built = DiseaseSearch(key, Pubchem, therapeutic=therapeutic, marker=marker)
         return cls._run(built, path, test)
-
-
-class EntryPubchemDgi(Entry[DgiSearch]):
-    @classmethod
-    def run(
-        cls,
-        path=_Typer.path,
-        key=_Typer.key("disease.dgidb:dgis"),
-        test=_Typer.test,
-    ) -> Searcher:
-        """
-        Fetch DRUG/gene interactions in the Drug Gene Interaction Database (DGIDB).
-        Also see ``disease.dgidb:cgis``.
-        """
-        built = DgiSearch(key, Pubchem)
-        return cls._run(built, path, test)
-
-
-class EntryPubchemCgi(Entry[CgiSearch]):
-    @classmethod
-    def run(
-        cls,
-        path=_Typer.path,
-        key=_Typer.key("disease.dgidb:cgis"),
-        test=_Typer.test,
-    ) -> Searcher:
-        """
-        Fetch COMPOUND/gene interactions in the Drug Gene Interaction Database (DGIDB).
-        Also see ``disease.dgidb:dgis``.
-        """
-        built = CgiSearch(key, Pubchem)
-        return cls._run(built, path, test)
-
-
-U = TypeVar("U", covariant=True, bound=CoOccurrenceSearch)
 
 
 class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
@@ -558,24 +559,28 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
     @classmethod
     def run(
         cls,
-        path=_Typer.path,
-        key=_Typer.key("<see above>"),
-        min_score=typer.Option(
+        path: Path = _Typer.path,
+        key: str = _Typer.key("<see above>"),
+        min_score: float = typer.Option(
             0.0,
             help="Minimum enrichment score, inclusive. See docs for more info.",
             min=0.0,
         ),
-        min_articles=typer.Option(
+        min_articles: int = typer.Option(
             0,
             help="Minimum number of articles for both the compound and object, inclusive.",
             min=0,
         ),
-        test=_Typer.test,
+        test: bool = _Typer.test,
     ) -> Searcher:
         """
-        Fetch co-occurrences from PubMed articles.
+        Co-occurrences from PubMed articles.
         There is extended documentation on this search.
         Also refer to https://pubchemdocs.ncbi.nlm.nih.gov/knowledge-panels
+
+        OBJECT: Name of gene/chemical/disease
+
+        PREDICATE: "<gene/chemical/disease> co-occurrence"
         """
         if key is None:
             key = cls.cmd()
@@ -596,6 +601,150 @@ class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccur
     """"""
 
 
+class EntryPubchemDgi(Entry[DgiSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.dgidb:gene"),
+        test: bool = _Typer.test,
+    ) -> Searcher:
+        """
+        Drug/gene interactions in the Drug Gene Interaction Database (DGIDB).
+        Also see ``disease.dgidb:int``.
+
+        OBJECT: Name of the gene
+
+        PREDICATE: "drug/gene interaction"
+        """
+        built = DgiSearch(key, Pubchem)
+        return cls._run(built, path, test)
+
+
+class EntryPubchemCgi(Entry[CtdGeneSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.ctd:gene"),
+        test: bool = _Typer.test,
+    ) -> Searcher:
+        """
+        Compound/gene interactions in the Drug Gene Interaction Database (DGIDB).
+        Also see ``interact.dgidb:int``.
+
+        OBJECT: Name of the gene
+
+        PREDICATE: "compound/gene interaction"
+
+        """
+        built = CtdGeneSearch(key, Pubchem)
+        return cls._run(built, path, test)
+
+
+class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.drugbank:target"),
+        test: bool = _Typer.test,
+    ) -> Searcher:
+        """
+        Protein targets from DrugBank.
+
+        OBJECT: Target name (e.g. "Solute carrier family 22 member 11") from DrugBank
+
+        PREDICATE: Action (e.g. "binder", "downregulator", or "agonist")
+        """
+        built = DrugbankTargetSearch(key, Pubchem)
+        return cls._run(built, path, test)
+
+
+class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.drugbank:function"),
+        test: bool = _Typer.test,
+    ) -> Searcher:
+        """
+        General functions from DrugBank targets.
+
+        OBJECT: Name of the general function (e.g. "Toxic substance binding")
+
+        PREDICATE: against on target (e.g. "binder", "downregulator", or "agonist").
+        """
+        built = DrugbankGeneralFunctionSearch(key, Pubchem)
+        return cls._run(built, path, test)
+
+
+class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.drugbank:ddi"),
+        test: bool = _Typer.test,
+    ) -> Searcher:
+        """
+        Drug/drug interactions listed by DrugBank.
+
+        The 'description' column includes useful information about the interaction,
+        such as diseases and whether a risk is increased or decreased.
+
+        OBJECT: name of the drug (e.g. "ibuprofen")
+
+        PREDICATE: "ddi"
+        """
+        built = DrugbankDdiSearch(key, Pubchem)
+        return cls._run(built, path, test)
+
+
+class EntryPubchemAssay(Entry[BioactivitySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("assay.pubchem:activity"),
+        confirmatory: bool = typer.Option(True, help="Include 'confirmatory' assays"),
+        literature: bool = typer.Option(True, help="Include 'literature' assays"),
+        other: bool = typer.Option(True, help="Include 'other' assays"),
+        name_must_match: bool = typer.Option(
+            False,
+            help=doc(
+                """
+            Require that the name of the compound(s) exactly matches the compound name on PubChem (case-insensitive)
+        """
+            ),
+        ),
+        ban_sources: Optional[str] = None,
+        test: bool = _Typer.test,
+    ) -> Searcher:
+        """
+        PubChem bioactivity results.
+
+        Note: The species name, if present, is taken from the target name.
+        The taxon ID is what was curated in PubChem.
+
+        OBJECT: Name of the target without species suffix (e.g. "Slc6a3 - solute carrier family 6 member 3")
+
+        PREDICATE: "active"/"inactive"/"inconclusive"/"undetermined"
+        """
+        assay_types = set()
+        if literature:
+            assay_types.add(AssayType.literature)
+        if confirmatory:
+            assay_types.add(AssayType.confirmatory)
+        if other:
+            assay_types.add(AssayType.other)
+        built = BioactivitySearch(
+            key, Pubchem, assay_types=assay_types, compound_name_must_match=name_must_match
+        )
+        return cls._run(built, path, test)
+
+
 Entries = [
     EntryChemblBinding,
     EntryChemblMechanism,
@@ -608,4 +757,10 @@ Entries = [
     EntryPubchemGeneCoOccurrence,
     EntryPubchemDiseaseCoOccurrence,
     EntryPubchemChemicalCoOccurrence,
+    EntryPubchemDgi,
+    EntryPubchemCgi,
+    EntryDrugbankTarget,
+    EntryGeneralFunction,
+    EntryDrugbankDdi,
+    EntryPubchemAssay,
 ]

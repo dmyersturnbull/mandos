@@ -1,43 +1,44 @@
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, Optional
 
-from mandos.model.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
 @dataclass(frozen=True, order=True, repr=True)
-class DgiHit(PubchemHit):
+class CtdGeneHit(PubchemHit):
     """"""
 
+    taxon_id: Optional[int]
+    taxon_name: Optional[str]
 
-class DgiSearch(PubchemSearch[DgiHit]):
+
+class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
     """"""
-
-    def __init__(self, key: str, api: PubchemApi):
-        super().__init__(key, api)
 
     @property
     def data_source(self) -> str:
-        return "Drug Gene Interaction Database (DGIdb)"
+        return "Comparative Toxicogenomics Database (CTD)"
 
-    def find(self, inchikey: str) -> Sequence[DgiHit]:
+    def find(self, inchikey: str) -> Sequence[CtdGeneHit]:
         data = self.api.fetch_data(inchikey)
         return [
-            DgiHit(
+            CtdGeneHit(
                 record_id=None,
                 origin_inchikey=inchikey,
                 matched_inchikey=data.names_and_identifiers.inchikey,
                 compound_id=str(data.cid),
                 compound_name=data.name,
-                predicate=f"drug/gene interaction",
-                object_id=dd.gene_claim_id,
+                predicate="gene interaction",
+                object_id=dd.gene_name,
                 object_name=dd.gene_name,
                 search_key=self.key,
                 search_class=self.search_class,
                 data_source=self.data_source,
+                taxon_id=dd.tax_id,
+                taxon_name=dd.tax_name,
             )
-            for dd in data.biomolecular_interactions_and_pathways.drug_gene_interactions
+            for dd in data.biomolecular_interactions_and_pathways.compound_gene_interactions
         ]
 
 
-__all__ = ["DgiHit", "DgiSearch"]
+__all__ = ["CtdGeneHit", "CtdGeneSearch"]

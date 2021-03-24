@@ -37,7 +37,11 @@ IdMatchFrame = (
 class SearcherUtils:
     @classmethod
     def dl(
-        cls, inchikeys: Sequence[str], pubchem: bool = True, chembl: bool = True
+        cls,
+        inchikeys: Sequence[str],
+        pubchem: bool = True,
+        chembl: bool = True,
+        hmdb: bool = True,
     ) -> IdMatchFrame:
         # we actually cache the results, even though the underlying APIs cache
         # the reasons for this are a little obscure --

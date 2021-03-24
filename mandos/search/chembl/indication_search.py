@@ -74,7 +74,7 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
             matched_inchikey=compound.inchikey,
             compound_id=compound.chid,
             compound_name=compound.name,
-            predicate=f"phase {phase} trial intervention",
+            predicate=f"phase {phase} trial",
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
             search_key=self.key,

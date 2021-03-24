@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Sequence, Optional, Set
 
@@ -15,6 +16,7 @@ class BioactivityHit(PubchemHit):
     confirmatory: bool
     micromolar: float
     relation: str
+    species: Optional[str]
     compound_name_in_assay: str
     referrer: str
 
@@ -26,18 +28,11 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         self,
         key: str,
         api: PubchemApi,
-        answers: Set[Activity],
         assay_types: Set[AssayType],
-        min_micromolar: Optional[float],
-        max_micromolar: Optional[float],
-        relations: Set[str],
         compound_name_must_match: bool,
     ):
         super().__init__(key, api)
-        self.answers = answers
         self.assay_types = assay_types
-        self.min_micromolar, self.max_micromolar = min_micromolar, max_micromolar
-        self.relations = relations
         self.compound_name_must_match = compound_name_must_match
 
     @property
@@ -48,26 +43,34 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         data = self.api.fetch_data(inchikey)
         results = []
         for dd in data.biological_test_results.bioactivity:
-            results.append(self.process(inchikey, data, dd))
+            if (
+                not self.compound_name_must_match or dd.compound_name.lower() == data.name.lower()
+            ) and dd.assay_type in self.assay_types:
+                results.append(self.process(inchikey, data, dd))
         return results
 
     def process(self, inchikey: str, data: PubchemData, dd: Bioactivity) -> BioactivityHit:
+        # strip off the species name
+        match = re.compile(r"^(.+?)\([^)]+\)?$").fullmatch(dd.target_name)
+        target = match.group(1).strip()
+        species = None if match.group(2).strip() == "" else match.group(2).strip()
         return BioactivityHit(
             record_id=None,
             origin_inchikey=inchikey,
             matched_inchikey=data.names_and_identifiers.inchikey,
             compound_id=str(data.cid),
             compound_name=data.name,
-            predicate=f"bioactivity",
+            predicate=dd.activity.name.lower(),
             object_id=dd.gene_id,
-            object_name=dd.target_name,
+            object_name=target,
             search_key=self.key,
             search_class=self.search_class,
-            data_source=self.data_source + " : " + dd.assay_ref,
+            data_source=self.data_source + ":" + dd.assay_ref,
             activity=dd.activity.name.lower(),
             confirmatory=dd.assay_type is AssayType.confirmatory,
             micromolar=dd.activity_value,
             relation=dd.activity_name,
+            species=species,
             compound_name_in_assay=dd.compound_name,
             referrer=dd.assay_ref,
         )

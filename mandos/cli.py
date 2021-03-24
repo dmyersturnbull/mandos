@@ -6,11 +6,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
 import typer
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.entries.entries import Entries
+from mandos.entries.entries import Entries, _Typer
 
 from mandos.entries.api_singletons import Apis
 from mandos.entries.multi_searches import MultiSearch
@@ -29,23 +28,26 @@ class Commands:
 
     @staticmethod
     def search(
-        path: Path,
-        config: Optional[Path] = None,
+        path: Path = _Typer.path,
+        config: Path = typer.Argument(
+            None,
+            help=".toml config file. See docs.",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+        ),
     ) -> None:
         """
-        Runs multiple searches.
-
-        Args:
-            path:
-            config:
+        Run multiple searches.
         """
         MultiSearch(path, config).search()
 
     @staticmethod
     def find(
-        path: Path,
-        pubchem: bool = True,
-        chembl: bool = True,
+        path: Path = _Typer.path,
+        pubchem: bool = typer.Option(True, help="Download data from PubChem"),
+        chembl: bool = typer.Option(True, help="Download data from ChEMBL"),
+        hmdb: bool = typer.Option(True, help="Download data from HMDB"),
     ) -> None:
         """
         Fetches and caches compound data.
@@ -55,7 +57,7 @@ class Commands:
         if out_path.exists():
             raise FileExistsError(out_path)
         inchikeys = SearcherUtils.read(path)
-        df = SearcherUtils.dl(inchikeys, pubchem=pubchem, chembl=chembl)
+        df = SearcherUtils.dl(inchikeys, pubchem=pubchem, chembl=chembl, hmdb=hmdb)
         df.to_csv(out_path)
         typer.echo(f"Wrote to {out_path}")
 
@@ -90,8 +92,8 @@ for entry in Entries:
 
 cli.registered_commands.extend(
     [
-        CommandInfo("search", callback=Commands.search),
-        CommandInfo("dl_tax", callback=Commands.dl_tax, hidden=True),
+        CommandInfo("@search", callback=Commands.search),
+        CommandInfo("@dl-tax", callback=Commands.dl_tax, hidden=True),
     ]
 )
 
@@ -100,4 +102,4 @@ if __name__ == "__main__":
     cli()
 
 
-__all__ = ["Commands", "Searcher"]
+__all__ = ["Commands"]

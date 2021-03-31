@@ -47,6 +47,18 @@ class Code(str):
         value = str(value).strip()
         return cls(value)
 
+    @classmethod
+    def of_nullable(cls, value: Union[None, str, int, float]):
+        if value is None:
+            return None
+        if isinstance(value, float):
+            try:
+                value = int(value)
+            except ArithmeticError:
+                value = str(value)
+        value = str(value).strip()
+        return cls(value)
+
 
 class Codes:
     """
@@ -54,6 +66,28 @@ class Codes:
     For example, ``DrugbankInteraction`` might have a ``gene`` field,
     which can be described as a ``GenecardSymbol`` if known.
     """
+
+    class ChemIdPlusOrganism(Code):
+        """
+        E.g. 'women', 'frog', 'infant', or 'domestic animals - goat/sheep'
+        """
+
+        @property
+        def is_human(self) -> bool:
+            return str(self) in {"women", "woman", "men", "man", "infant", "infants", "human"}
+
+    class ChemIdPlusEffect(Code):
+        """
+        E.g. 'BEHAVIORAL: MUSCLE WEAKNESS'
+        """
+
+        @property
+        def category(self) -> str:
+            return self[: self.index(":")]
+
+        @property
+        def subcategory(self) -> str:
+            return self[self.index(":") :]
 
     class EcNumber(Code):
         """
@@ -256,6 +290,21 @@ class GhsCode:
 
 
 @dataclass(frozen=True, repr=True, eq=True)
+class AcuteEffectEntry:
+    gid: int
+    effects: FrozenSet[Codes.ChemIdPlusEffect]
+    organism: Codes.ChemIdPlusOrganism
+    test_type: str
+    route: str
+    dose: str
+
+    @property
+    def mg_per_kg(self) -> float:
+        match = re.compile(r".+?\(\d+mg/kg\)").fullmatch(self.dose)
+        return float(match.group(1))
+
+
+@dataclass(frozen=True, repr=True, eq=True)
 class AssociatedDisorder:
     gid: str
     disease_id: Codes.MeshCode
@@ -280,12 +329,20 @@ class AtcCode:
         return [g for g in match.groups() if g is not None]
 
 
+class DrugbankTargetType(enum.Enum):
+    target = enum.auto()
+    carrier = enum.auto()
+    transporter = enum.auto()
+    enzyme = enum.auto()
+
+
 @dataclass(frozen=True, repr=True, eq=True)
 class DrugbankInteraction:
     record_id: str
     gene_symbol: Codes.GeneId
     action: str
     protein_id: str
+    target_type: DrugbankTargetType
     target_name: str
     general_function: str
     specific_function: str
@@ -407,7 +464,7 @@ class DrugGeneInteraction:
 
 
 @dataclass(frozen=True, repr=True, eq=True)
-class CompoundGeneInteraction:
+class ChemicalGeneInteraction:
     gene_name: Optional[Codes.GeneId]
     interactions: FrozenSet[str]
     tax_id: Optional[int]
@@ -425,7 +482,7 @@ __all__ = [
     "Bioactivity",
     "Activity",
     "DrugGeneInteraction",
-    "CompoundGeneInteraction",
+    "ChemicalGeneInteraction",
     "GhsCode",
     "PubmedEntry",
     "Code",
@@ -435,4 +492,6 @@ __all__ = [
     "Publication",
     "ComputedProperty",
     "ClinicalTrialsGovUtils",
+    "AcuteEffectEntry",
+    "DrugbankTargetType",
 ]

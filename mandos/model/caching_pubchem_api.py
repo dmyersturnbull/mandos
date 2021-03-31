@@ -27,19 +27,25 @@ class CachingPubchemApi(PubchemApi):
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
         path = self.data_path(inchikey)
+        path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():
             logger.debug(f"Found cached PubChem data at {path.absolute()}")
         elif self._querier is None:
-            raise PubchemCompoundLookupError(f"Key {inchikey} not found cached at {path}")
+            raise PubchemCompoundLookupError(f"{inchikey} not found cached at {path}")
         else:
-            # logger.info(f"Downloading PubChem data for {inchikey} ...")
-            data = self._querier.fetch_data(inchikey)
-            path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                data = self._querier.fetch_data(inchikey)
+            except PubchemCompoundLookupError:
+                # write an empty dict so we don't query again
+                self._write_json(NestedDotDict({}).to_json(), path)
+                raise
             encoded = data.to_json()
             self._write_json(encoded, path)
             logger.debug(f"Wrote PubChem data to {path.absolute()}")
             return data
         read = self._read_json(path)
+        if len(read) == 0:
+            raise PubchemCompoundLookupError(f"{inchikey} is empty at {path}")
         return PubchemData(read)
 
     def data_path(self, inchikey: str):

@@ -71,7 +71,7 @@ class GoSearch(ChemblSearch[GoHit]):
                     matched_inchikey=match.matched_inchikey,
                     compound_id=match.compound_id,
                     compound_name=match.compound_name,
-                    predicate=f"GO {self.go_type.name} term (binding)",
+                    predicate=f"is associated with {self.go_type.name} term",
                     object_id=xref_id,
                     object_name=xref_name,
                     search_key=self.key,

@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import Sequence, TypeVar
+from typing import Sequence, TypeVar, Set
 
 from mandos.model.pubchem_api import PubchemApi
+from mandos.model.pubchem_support.pubchem_models import DrugbankTargetType
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -11,6 +12,7 @@ class _DrugbankInteractionHit(PubchemHit):
 
     gene_symbol: str
     protein_id: str
+    target_type: str
     target_name: str
     general_function: str
     specific_function: str
@@ -30,6 +32,10 @@ T = TypeVar("T", bound=_DrugbankInteractionHit, covariant=True)
 
 
 class _DrugbankInteractionSearch(PubchemSearch[T]):
+    def __init__(self, key: str, api: PubchemApi, target_types: Set[DrugbankTargetType]):
+        super().__init__(key, api)
+        self.target_types = target_types
+
     """"""
 
     @property
@@ -42,14 +48,16 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
 
     def find(self, inchikey: str) -> Sequence[T]:
         data = self.api.fetch_data(inchikey)
+        # noinspection PyPep8Naming
+        H = self.__class__.get_h()
         return [
-            self.__class__.get_h()(
+            H(
                 record_id=dd.record_id,
                 origin_inchikey=inchikey,
                 matched_inchikey=data.names_and_identifiers.inchikey,
                 compound_id=str(data.cid),
                 compound_name=data.name,
-                predicate=dd.action,
+                predicate=dd.target_type.name + " :: " + dd.action + " on",
                 object_id=dd.protein_id,
                 object_name=getattr(dd, self.__class__._attr()),
                 search_key=self.key,
@@ -62,6 +70,7 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
                 specific_function=dd.specific_function,
             )
             for dd in data.biomolecular_interactions_and_pathways.drugbank_interactions
+            if dd.target_type in self.target_types
         ]
 
 

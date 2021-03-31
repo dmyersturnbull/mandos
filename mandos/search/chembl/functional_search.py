@@ -49,7 +49,7 @@ class FunctionalSearch(_ActivitySearch[FunctionalHit]):
             matched_inchikey=compound.inchikey,
             compound_id=compound.chid,
             compound_name=compound.name,
-            predicate="functional activity",
+            predicate="has functional activity for",
             object_id=best_target.chembl,
             object_name=best_target.name,
             search_key=self.key,

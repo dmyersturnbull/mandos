@@ -163,10 +163,10 @@ class Mapx:
         return int_date
 
     @classmethod
-    def get_int(cls, nullable: bool = False) -> Callable[[str], str]:
+    def get_int(cls, nullable: bool = False) -> Callable[[str], Optional[int]]:
         def get_int(value):
             if nullable and value is None:
-                pass
+                return None
             elif not isinstance(value, (int, float, str)):
                 raise TypeError(f"{value} is a {type(value)}, not int-like")
             return int(value)

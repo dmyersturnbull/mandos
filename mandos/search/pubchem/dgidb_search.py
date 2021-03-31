@@ -22,22 +22,30 @@ class DgiSearch(PubchemSearch[DgiHit]):
 
     def find(self, inchikey: str) -> Sequence[DgiHit]:
         data = self.api.fetch_data(inchikey)
-        return [
-            DgiHit(
-                record_id=None,
-                origin_inchikey=inchikey,
-                matched_inchikey=data.names_and_identifiers.inchikey,
-                compound_id=str(data.cid),
-                compound_name=data.name,
-                predicate=f"drug/gene interaction",
-                object_id=dd.gene_claim_id,
-                object_name=dd.gene_name,
-                search_key=self.key,
-                search_class=self.search_class,
-                data_source=self.data_source,
+        results = []
+        for dd in data.biomolecular_interactions_and_pathways.drug_gene_interactions:
+            interactions = (
+                ["interacts with"]
+                if len(dd.interactions) == 0
+                else [s + " for" for s in dd.interactions]
             )
-            for dd in data.biomolecular_interactions_and_pathways.drug_gene_interactions
-        ]
+            for interaction in interactions:
+                results.append(
+                    DgiHit(
+                        record_id=None,
+                        origin_inchikey=inchikey,
+                        matched_inchikey=data.names_and_identifiers.inchikey,
+                        compound_id=str(data.cid),
+                        compound_name=data.name,
+                        predicate=interaction,
+                        object_id=dd.gene_claim_id,
+                        object_name=dd.gene_name,
+                        search_key=self.key,
+                        search_class=self.search_class,
+                        data_source=self.data_source,
+                    )
+                )
+        return results
 
 
 __all__ = ["DgiHit", "DgiSearch"]

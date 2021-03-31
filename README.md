@@ -15,19 +15,38 @@
 [![Code Quality (Scrutinizer)](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/dmyersturnbull/mandos/?branch=main)  
 [![Created with Tyrannosaurus](https://img.shields.io/badge/Created_with-Tyrannosaurus-0000ff.svg)](https://github.com/dmyersturnbull/mandos)
 
-**Fetch knowledge on chemical compounds from public databases, squeezing it all into a consistent form.**
+The “kitchen sink” preprocessing tool for chemical screens:  
+**Fetch knowledge on compounds from public databases, squeezing it all into a consistent form.**
 
-Mandos extracts ~30 annotation types from ~15 databases.
-Types include mechanisms of action (MoAs), binding activity, disease indications, classifications, clinical trials,
-pathways involved, legal statuses, physical properties, and co-occurring literature terms.
-Output is formatted in consistent CSV files, mainly for consumption by algorithms.
-All knowledge is a semantic triple, such as `alprazolam inactive at BK receptor`, plus additional data
-specific to each type (e.g. EC50 or clinical phase).
-It’s also happy to fetch annotations for compounds that are structurally similar to yours.
+Mandos extracts ~30 annotation types, including:
+
+- mechanisms of action (MoAs), binding activity, classifications, pathways involved, gene expression effects,
+- disease indications, clinical trials, drug–drug interactions, co-occurring literature terms,
+- legal statuses, LD50, health hazards, acute exposure effects, physical properties, ...
+
+Output in CSV files is summarized as _semantic triples_,
+such as `alprazolam inactive at BK receptor`, with additional data (e.g. EC50 or clinical phase).
+It can also fetch annotations for structurally similar compounds.
+
+### 💡 Common uses
+
+It’s a preprocessing tool for algorithms and data analysis on chemical screens.
+_Example uses:_
+
+- What distinguishes your screening hits pharmacologically?
+- What distinguishes groups from a multidimensional screen?
+- Build a training set for machine learning.
+- Make sure your results aren’t explained by something like solubility.
+
+These tasks are often performed with just [ATC codes](https://www.ema.europa.eu/en/glossary/atc-code)
+or binding to [ChEMBL](https://www.ebi.ac.uk/chembl/) targets.
+But if your compounds lack ATC codes, or binding annotations – or don’t correlate with binding –
+you can compare against far more pharmacological variables, such as GO terms and literature co-occurrences.
+You can also get targets like `GABA-A receptor; anion channel` rather than specific GABA-A subunits and complexes.
 
 ### 🎨 Example
 
-You can use Mandos as a Python API or command-line tool.
+Use Mandos as a Python API or command-line tool.
 To search just the mechanism of action for alprazolam:
 
 ```bash
@@ -35,9 +54,8 @@ echo "VREFGVBLTWBCJP-UHFFFAOYSA-N" > compounds.txt
 mandos chembl:mechanism compounds.txt
 ```
 
-The following info is perhaps enough to get started.
-A lot of processing is done behind-the-scenes;
-**[see the docs 📚](https://mandos-chem.readthedocs.io/en/latest/)** for more.
+The following info is perhaps enough to get started, but a lot is done behind-the-scenes.
+**[See the docs 📚](https://mandos-chem.readthedocs.io/en/latest/)** for more.
 
 **Input:** compounds.txt is a line-by-line list of
 [InChI Keys](https://en.wikipedia.org/wiki/International_Chemical_Identifier#InChIKey)

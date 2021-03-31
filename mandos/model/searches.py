@@ -73,6 +73,9 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             except CompoundNotFoundError:
                 logger.error(f"NOT FOUND: {compound}. Skipping.")
                 continue
+            except Exception:
+                logger.error(f"Failed on {compound}", exc_info=True)
+                continue
             lst.extend(x)
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
         logger.info(
@@ -109,7 +112,8 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # (not that we're using those)
         # If this magic is too magical, we can make this an abstract method
         # But that would be a lot of excess code and it might be less modular
-        actual_h = typing.get_args(cls.get_h())[0]
+        x = cls.get_h()
+        actual_h = x.__bases__[0]
         return [f.name for f in dataclasses.fields(actual_h)]
 
     @classmethod

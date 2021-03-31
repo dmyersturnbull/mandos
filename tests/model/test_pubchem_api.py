@@ -8,7 +8,7 @@ from mandos.model.pubchem_support.pubchem_models import (
     Codes,
     CoOccurrenceType,
     AtcCode,
-    CompoundGeneInteraction,
+    ChemicalGeneInteraction,
     DrugbankDdi,
     DrugGeneInteraction,
     CoOccurrence,
@@ -195,9 +195,9 @@ class TestPubchemApi:
                 ),
             }
         )
-        assert bio.compound_gene_interactions == frozenset(
+        assert bio.chemical_gene_interactions == frozenset(
             {
-                CompoundGeneInteraction(
+                ChemicalGeneInteraction(
                     gene_name=Codes.GeneId("CHRNB2"),
                     interactions=frozenset(
                         {"CHRNB2 protein results in increased susceptibility to Cocaine"}
@@ -206,7 +206,7 @@ class TestPubchemApi:
                     tax_name="Mus musculus",
                     pmids=frozenset(),
                 ),
-                CompoundGeneInteraction(
+                ChemicalGeneInteraction(
                     gene_name=Codes.GeneId("CHURC1"),
                     interactions=frozenset(
                         {"Cocaine results in decreased expression of CHURC1 mRNA"}

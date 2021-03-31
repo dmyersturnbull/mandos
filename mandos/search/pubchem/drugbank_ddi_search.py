@@ -27,7 +27,7 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
                 matched_inchikey=data.names_and_identifiers.inchikey,
                 compound_id=str(data.cid),
                 compound_name=data.name,
-                predicate="ddi",
+                predicate="has DDI with",
                 object_id=dd.drug_drugbank_id,
                 object_name=dd.drug_drugbank_id,
                 search_key=self.key,

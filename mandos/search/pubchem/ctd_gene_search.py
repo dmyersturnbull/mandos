@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Sequence, Optional
 
@@ -21,24 +22,85 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
 
     def find(self, inchikey: str) -> Sequence[CtdGeneHit]:
         data = self.api.fetch_data(inchikey)
-        return [
-            CtdGeneHit(
-                record_id=None,
-                origin_inchikey=inchikey,
-                matched_inchikey=data.names_and_identifiers.inchikey,
-                compound_id=str(data.cid),
-                compound_name=data.name,
-                predicate="gene interaction",
-                object_id=dd.gene_name,
-                object_name=dd.gene_name,
-                search_key=self.key,
-                search_class=self.search_class,
-                data_source=self.data_source,
-                taxon_id=dd.tax_id,
-                taxon_name=dd.tax_name,
+        results = []
+        for dd in data.biomolecular_interactions_and_pathways.chemical_gene_interactions:
+            for interaction in dd.interactions:
+                for predicate in self._predicate(data.name, dd.gene_name, interaction):
+                    results.append(
+                        CtdGeneHit(
+                            record_id=None,
+                            origin_inchikey=inchikey,
+                            matched_inchikey=data.names_and_identifiers.inchikey,
+                            compound_id=str(data.cid),
+                            compound_name=data.name,
+                            predicate=predicate,
+                            object_id=dd.gene_name,
+                            object_name=dd.gene_name,
+                            search_key=self.key,
+                            search_class=self.search_class,
+                            data_source=self.data_source,
+                            taxon_id=dd.tax_id,
+                            taxon_name=dd.tax_name,
+                        )
+                    )
+        return results
+
+    def _predicate(self, compound: str, gene: str, interaction: str) -> Sequence[str]:
+        # TODO: Sometimes synonyms of the compound are used (e.g. "Crack Cocaine")
+        if (
+            "co-treated" in interaction
+            or "co-treatment" in interaction
+            or "mutant" in interaction
+            or "modified form" in interaction
+            or "alternative form" in interaction
+        ):
+            return []
+        expression = {
+            "results in increased ((?:expression)|(?:activity)|(?:phosphorylation))": "increases $1 of",
+            "results in decreased ((?:expression)|(?:activity)|(?:phosphorylation))": "decreases $1 of",
+            "affects the ((?:expression)|(?:activity)|(?:phosphorylation))": "affects $1 of",
+            "affects the localization": "affects localization",
+        }
+        results = []
+        for txt, effect in expression.items():
+            result = self._if_match(
+                interaction,
+                re.escape(compound)
+                + " "
+                + txt
+                + " "
+                + gene
+                + "(?: (?:mRNA)|(?:protein)|(?:exon))?",
+                effect,
             )
-            for dd in data.biomolecular_interactions_and_pathways.compound_gene_interactions
-        ]
+            if result is not None:
+                results.append(result)
+            else:
+                # catches "affects the activity of and affects the expression of"
+                # TODO: could this catch something weird:
+                if result is None:
+                    result = self._if_match(
+                        interaction, re.escape(compound) + " " + txt + " of and .+", effect
+                    )
+                if result is not None:
+                    results.append(result)
+        if len(results) > 0:
+            return results
+        result = self._if_match(
+            interaction,
+            compound + " ((?:affects)|(?:promotes)|(?:inhibits)) the reaction",
+            "affects a reaction involving",
+        )
+        return [] if result is None else [result]
+
+    def _if_match(self, interaction: str, pattern: str, result: str) -> Optional[str]:
+        pat = re.compile("^" + pattern + "$", flags=re.IGNORECASE)
+        match = pat.fullmatch(interaction)
+        if match is None:
+            return None
+        for i, group in enumerate(match.groupdict()):
+            result = result.replace("$" + str(i + 1), group)
+        return result
 
 
 __all__ = ["CtdGeneHit", "CtdGeneSearch"]

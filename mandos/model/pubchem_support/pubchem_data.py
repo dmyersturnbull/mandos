@@ -42,8 +42,10 @@ from mandos.model.pubchem_support.pubchem_models import (
     Activity,
     CoOccurrence,
     DrugGeneInteraction,
-    CompoundGeneInteraction,
+    ChemicalGeneInteraction,
     Bioactivity,
+    AcuteEffectEntry,
+    DrugbankTargetType,
 )
 
 
@@ -185,13 +187,12 @@ class NamesAndIdentifiers(PubchemMiniDataView):
     @property
     def molecular_formula(self) -> str:
         return (
-            self._toc
+            self._mini
             / "Molecular Formula"
             / "Information"
             / self._has_ref("PubChem")
             / "Value"
             / "StringWithMarkup"
-            / "Markup"
             // ["String"]
             // Flatmap.require_only()
             // Flatmap.require_only()
@@ -199,7 +200,7 @@ class NamesAndIdentifiers(PubchemMiniDataView):
 
     def descriptor(self, key: str) -> str:
         return (
-            self._toc
+            self._mini
             / "Computed Descriptors"
             / "Section"
             % "TOCHeading"
@@ -208,7 +209,6 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             / self._has_ref("PubChem")
             / "Value"
             / "StringWithMarkup"
-            / "Markup"
             // ["String"]
             // Flatmap.require_only()
             // Flatmap.require_only()
@@ -613,19 +613,22 @@ class Toxicity(PubchemMiniDataView):
         return "Toxicity"
 
     @property
-    def acute_effects(self) -> FrozenSet[str]:
-        values = (
+    def acute_effects(self) -> FrozenSet[AcuteEffectEntry]:
+        return (
             self._tables
             / "chemidplus"
-            // ["effect"]
-            // Flatmap.request_only()
-            // Mapx.split_and_flatten_nonnulls(";", skip_nulls=True)
-        ).contents
-        vals = {
-            v.strip().lower().replace("\n", " ").replace("\r", " ").replace("\t", " ")
-            for v in values
-        }
-        return frozenset({v for v in vals if v != "nan"})
+            // ["gid", "effect", "organism", "testtype", "route", "dose"]
+            / FilterFn(lambda dot: dot.get_as("effect", str) is not None)
+            / [
+                int,
+                Mapx.split_to(Codes.ChemIdPlusEffect.of, ";"),
+                Codes.ChemIdPlusOrganism.of,
+                str,
+                str,
+                str,
+            ]
+            // Flatmap.construct(AcuteEffectEntry)
+        ).to_set
 
 
 class AssociatedDisordersAndDiseases(PubchemMiniDataView):
@@ -836,11 +839,11 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
         ).to_set
 
     @property
-    def compound_gene_interactions(self) -> FrozenSet[CompoundGeneInteraction]:
+    def chemical_gene_interactions(self) -> FrozenSet[ChemicalGeneInteraction]:
         # the order of this dict is crucial
         # YES, the | used in pmids really is different from the , used in DrugGeneInteraction
         keys = {
-            "genesymbol": Codes.GenecardSymbol,
+            "genesymbol": Codes.GenecardSymbol.of_nullable,
             "interaction": Mapx.split("|", nullable=True),
             "taxid": Mapx.get_int(nullable=True),
             "taxname": Mapx.req_is(str, True),
@@ -851,7 +854,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
             / "ctdchemicalgene"
             // list(keys.keys())
             / list(keys.values())
-            // Flatmap.construct(CompoundGeneInteraction)
+            // Flatmap.construct(ChemicalGeneInteraction)
         ).to_set
 
     @property
@@ -860,7 +863,8 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
             "gid": int,
             "genesymbol": Codes.GenecardSymbol,
             "drugaction": Mapx.req_is(str),
-            "targetcomponent": Mapx.req_is(str),
+            "targetcomponentname": Mapx.req_is(str),
+            "targettype": Mapx.req_is(str, then_convert=DrugbankTargetType),
             "targetname": Mapx.req_is(str),
             "generalfunc": Mapx.req_is(str),
             "specificfunc": Mapx.req_is(str),
@@ -978,7 +982,7 @@ class Classification(PubchemMiniDataView):
 class PubchemData(PubchemDataView):
     @property
     def name(self) -> Optional[str]:
-        return self._data.get("Record.RecordTitle")
+        return self._data.get("record.RecordTitle")
 
     @property
     def title_and_summary(self) -> TitleAndSummary:

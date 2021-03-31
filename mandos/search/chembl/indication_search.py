@@ -20,10 +20,7 @@ class IndicationHit(ChemblHit):
     """
 
     max_phase: int
-
-    @property
-    def predicate(self) -> str:
-        return f"phase-{self.max_phase} trial"
+    first_approval_year: str
 
 
 class IndicationSearch(ChemblSearch[IndicationHit]):
@@ -56,16 +53,6 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
     def process(
         self, lookup: str, compound: ChemblCompound, indication: NestedDotDict
     ) -> IndicationHit:
-        """
-
-        Args:
-            lookup:
-            compound:
-            indication:
-
-        Returns:
-
-        """
         phase = indication.req_as("max_phase_for_ind", int)
         return IndicationHit(
             record_id=indication.req_as("drugind_id", str),
@@ -73,13 +60,14 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
             matched_inchikey=compound.inchikey,
             compound_id=compound.chid,
             compound_name=compound.name,
-            predicate=f"phase {phase} trial",
+            predicate=f"used in a phase {phase} trial for",
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
             search_key=self.key,
             search_class=self.search_class,
-            data_source=self.data_source,
+            data_source=self.data_source + " :: " + indication.req_as("references", str),
             max_phase=phase,
+            first_approval_year=indication.req_as("first_approval", str),
         )
 
 

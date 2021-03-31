@@ -54,23 +54,23 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         match = re.compile(r"^(.+?)\([^)]+\)?$").fullmatch(dd.target_name)
         target = match.group(1).strip()
         species = None if match.group(2).strip() == "" else match.group(2).strip()
+        data_source = f"{self.data_source}: {dd.assay_ref} ({dd.assay_type.name})"
+        if dd.activity in {Activity.inconclusive, Activity.unspecified}:
+            predicate = "has " + dd.activity.name + " activity for"
+        else:
+            predicate = "is " + dd.activity.name + " against"
         return BioactivityHit(
             record_id=None,
             origin_inchikey=inchikey,
             matched_inchikey=data.names_and_identifiers.inchikey,
             compound_id=str(data.cid),
             compound_name=data.name,
-            predicate=dd.activity.name.lower(),
+            predicate=predicate,
             object_id=dd.gene_id,
             object_name=target,
             search_key=self.key,
             search_class=self.search_class,
-            data_source=self.data_source
-            + ":"
-            + dd.assay_ref
-            + "("
-            + dd.assay_type.name.lower()
-            + ")",
+            data_source=data_source,
             activity=dd.activity.name.lower(),
             confirmatory=dd.assay_type is AssayType.confirmatory,
             micromolar=dd.activity_value,

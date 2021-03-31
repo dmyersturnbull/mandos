@@ -27,7 +27,7 @@ class DiseaseSearch(PubchemSearch[DiseaseHit]):
                 matched_inchikey=data.names_and_identifiers.inchikey,
                 compound_id=str(data.cid),
                 compound_name=data.name,
-                predicate=f"{dd.evidence_type}",
+                predicate=f"has {dd.evidence_type} evidence for",
                 object_id=dd.disease_id,
                 object_name=dd.disease_name,
                 evidence_type=dd.evidence_type,

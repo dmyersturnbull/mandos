@@ -50,7 +50,7 @@ class BindingSearch(_ActivitySearch[BindingHit]):
             matched_inchikey=compound.inchikey,
             compound_id=compound.chid,
             compound_name=compound.name,
-            predicate="binds",
+            predicate="binds to",
             object_id=best_target.chembl,
             object_name=best_target.name,
             search_key=self.key,

@@ -73,7 +73,7 @@ class AtcSearch(ChemblSearch[AtcHit]):
             matched_inchikey=compound.inchikey,
             compound_id=compound.chid,
             compound_name=compound.name,
-            predicate=f"ATC L{level} code",
+            predicate=f"has ATC level {level} code",
             object_id=dots.get(f"level{level}"),
             object_name=dots.get(f"level{level}_description"),
             search_key=self.key,

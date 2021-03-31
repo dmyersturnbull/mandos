@@ -5,12 +5,12 @@ Run searches and write files.
 from __future__ import annotations
 
 import gzip
-import logging
 from pathlib import Path
 from typing import Sequence, Optional, Dict
 
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.path_tools import PathTools
 from typeddfs import TypedDfs
 
@@ -22,6 +22,8 @@ from mandos.model.settings import MANDOS_SETTINGS
 from mandos.search.chembl import ChemblSearch
 from mandos.search.pubchem import PubchemSearch
 from mandos.entries.api_singletons import Apis
+
+InputFrame = (TypedDfs.typed("InputFrame").require("inchikey")).build()
 
 IdMatchFrame = (
     TypedDfs.typed("IdMatchFrame")
@@ -89,47 +91,14 @@ class SearcherUtils:
         logger.info(f"Wrote {cached_path}")
 
     @classmethod
-    def read(cls, input_path: Path) -> Sequence[str]:
-        sep = cls._get_sep(input_path)
-        if sep in {"\t", ","}:
-            df = pd.read_csv(input_path, sep=sep)
-            return cls._from_df(df)
-        elif sep == "feather":
-            df = pd.read_feather(input_path)
-            return cls._from_df(df)
-        elif sep == "gz":
-            with gzip.open(input_path, "rt") as f:
-                return cls._from_txt(f.read())
-        elif sep == "txt":
-            return cls._from_txt(input_path.read_text(encoding="utf8"))
-        else:
-            raise AssertionError(sep)
-
-    @classmethod
-    def _from_df(cls, df: pd.DataFrame) -> Sequence[str]:
-        df.columns = [c.lower() if isinstance(c, str) else c for c in df.columns]
-        if "inchikey" not in df.columns:
-            raise KeyError("For a CSV or TSV file, include a column called 'inchikey'")
-        return df["inchikey"].values.tolist()
-
-    @classmethod
-    def _from_txt(cls, text: str) -> Sequence[str]:
-        return [line.strip() for line in text.splitlines() if len(line.strip()) > 0]
-
-    @classmethod
-    def _get_sep(cls, input_path: Path) -> str:
-        if any((str(input_path).endswith(z) for z in {".tab", ".tsv", ".tab.gz", ".tsv.gz"})):
-            return "\t"
-        elif any((str(input_path).endswith(z) for z in {".csv", ".csv.gz"})):
-            return ","
-        elif any((str(input_path).endswith(z) for z in {".feather"})):
-            return "feather"
-        elif any((str(input_path).endswith(z) for z in {".txt.gz", ".lines.gz"})):
-            return "gz"
-        elif any((str(input_path).endswith(z) for z in {".txt", ".lines"})):
-            return "txt"
-        else:
-            raise ValueError(f"{input_path} should end in .tab, .tsv, .csv, .txt, .lines, or .gz")
+    def read(cls, input_path: Path) -> InputFrame:
+        df = TypedDfs.untyped("Input").read_file(input_path, header=None, comment="#")
+        if "inchikey" in df.columns_names:
+            return InputFrame.convert(df)
+        elif ".lines" in input_path.name or ".txt" in input_path.name:
+            df.columns = ["inchikey"]
+            return InputFrame.convert(df)
+        raise ValueError(f"Could not parse {input_path}; no column 'inchikey'")
 
 
 class Searcher:
@@ -138,7 +107,7 @@ class Searcher:
     Create and use once.
     """
 
-    def __init__(self, searches: Sequence[Search], input_path: Path):
+    def __init__(self, searches: Sequence[Search], to: Sequence[Path], input_path: Path):
         """
         Constructor.
 
@@ -150,22 +119,30 @@ class Searcher:
         """
         self.what = searches
         self.input_path: Optional[Path] = input_path
-        self.inchikeys: Optional[Sequence[str]] = None
+        self.input_df: InputFrame = None
+        self.output_paths = {
+            what.key: self._output_path_of(path, path)
+            for what, path in CommonTools.zip_list(searches, to)
+        }
+        if str(to).startswith("."):
+            pass
 
     def search(self) -> Searcher:
         """
         Performs the search, and writes data.
         """
-        if self.inchikeys is not None:
+        if self.input_df is not None:
             raise ValueError(f"Already ran a search")
-        self.inchikeys = SearcherUtils.read(self.input_path)
+        self.input_df = SearcherUtils.read(self.input_path)
+        inchikeys = self.input_df["inchikey"].unique()
         has_pubchem = any((isinstance(what, PubchemSearch) for what in self.what))
         has_chembl = any((isinstance(what, ChemblSearch) for what in self.what))
         # find the compounds first so the user knows what's missing before proceeding
-        SearcherUtils.dl(self.inchikeys, pubchem=has_pubchem, chembl=has_chembl)
+        SearcherUtils.dl(inchikeys, pubchem=has_pubchem, chembl=has_chembl)
         for what in self.what:
-            output_path = self.output_path_of(what)
-            df = what.find_to_df(self.inchikeys)
+            output_path = self.output_paths[what.key]
+            df = what.find_to_df(inchikeys)
+            # TODO keep any other columns in input_df
             df.to_csv(output_path)
             params = {k: str(v) for k, v in what.get_params().items() if k not in {"key", "api"}}
             metadata = NestedDotDict(dict(key=what.key, search=what.search_class, params=params))
@@ -173,10 +150,15 @@ class Searcher:
             logger.notice(f"Wrote {what.key} to {output_path}")
         return self
 
-    def paths(self) -> Sequence[Path]:
-        return [self.output_path_of(what) for what in self.what]
+    def _output_path_of(self, what: Search, to: Optional[Path]) -> Path:
+        if to is None:
+            return self._default_path_of(what)
+        elif str(to).startswith("."):
+            return self._default_path_of(what).with_suffix(str(to))
+        else:
+            return to
 
-    def output_path_of(self, what: Search) -> Path:
+    def _default_path_of(self, what: Search) -> Path:
         parent = self.input_path.parent / (self.input_path.stem + "-output")
         parent.mkdir(exist_ok=True)
         child = what.key + ".csv"

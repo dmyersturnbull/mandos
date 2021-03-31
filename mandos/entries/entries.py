@@ -5,6 +5,7 @@ Run searches and write files.
 from __future__ import annotations
 
 import abc
+import typing
 from inspect import cleandoc as doc
 from pathlib import Path
 from typing import TypeVar, Generic, Union, Mapping, Set, Sequence, Type, Optional
@@ -19,6 +20,7 @@ from mandos.model.pubchem_support.pubchem_models import (
     ClinicalTrialsGovUtils,
     CoOccurrenceType,
     AssayType,
+    DrugbankTargetType,
 )
 from mandos.model.searches import Search
 from mandos.model.settings import MANDOS_SETTINGS
@@ -26,7 +28,12 @@ from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.entries.api_singletons import Apis
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
+from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
+from mandos.search.pubchem.computed_property_search import (
+    ComputedPropertySearch,
+    ComputedPropertyHit,
+)
 from mandos.search.pubchem.dgidb_search import DgiSearch
 from mandos.search.pubchem.ctd_gene_search import CtdGeneSearch
 from mandos.entries.searcher import Searcher
@@ -306,14 +313,14 @@ class _Typer:
     )
 
     chembl_trial = typer.Option(
-        3,
+        0,
         "--phase",
         show_default=False,
         help=doc(
             """
         Minimum phase of a clinical trial, inclusive.
         Values are: 0, 1, 2, 3.
-        [default: 3]
+        [default: 0]
         """
         ),
         min=0,
@@ -348,7 +355,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
 
     @classmethod
     def _run(cls, built: S, path: Path, to: Optional[Path], check: bool):
-        searcher = Searcher([built], path)
+        searcher = Searcher([built], [to], path)
         if not check:
             searcher.search()
         return searcher
@@ -400,7 +407,19 @@ class EntryChemblBinding(Entry[BindingSearch]):
 
         OBJECT: ChEMBL preferred target name
 
-        PREDICATE: "binds"
+        PREDICATE: "binds to"
+
+        OTHER COLUMNS:
+
+        - taxon_id: From UniProt
+
+        - taxon_name: From Uniprot (scientific name)
+
+        - pchembl: Negative base-10 log of activity value (see docs on ChEMBL)
+
+        - standard_relation: One of '<', '<=', '=', '>=', '>', '~'. Consider using <, <=, and = to indicate hits.
+
+        - std_type: e.g. EC50, Kd
         """
         built = BindingSearch(
             key=key,
@@ -435,7 +454,15 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
 
         OBJECT: ChEMBL preferred target name
 
-        PREDICATE: Target action; e.g. "agonist" or "positive allosteric modulator"
+        PREDICATE: Target action; e.g. "agonist of" or "positive allosteric modulator of"
+
+        OTHER COLUMNS:
+
+        - direct_interaction: true or false
+
+        - description: From ChEMBL
+
+        - exact_target_id: the specifically annotated target, before traversal
         """
         built = MechanismSearch(
             key=key,
@@ -534,11 +561,15 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
 
         OBJECT: GO Term name
 
-        PREDICATE: "GO ""Function"|"Process"|"Component"" term"
+        PREDICATE: "associated with ""Function"|"Process"|"Component"" term"
+
+        OTHER COLUMNS:
+            See the docs for ``mandos chembl:binding``
 
         Note:
 
             By default, the key is the "chembl:go.function", "chembl:go.process", or "chembl:go.component".
+
         """
         if key is None or key == "<see above>":
             key = cls.cmd()
@@ -599,7 +630,7 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
 
         OBJECT: MeSH code of disease
 
-        PREDICATE: "marker/mechanism" or "disease"
+        PREDICATE: "marker/mechanism evidence for" or "disease evidence for"
         """
         built = DiseaseSearch(key, Apis.Pubchem)
         return cls._run(built, path, to, check)
@@ -642,7 +673,17 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
 
         OBJECT: Name of gene/chemical/disease
 
-        PREDICATE: "<gene/chemical/disease> co-occurrence"
+        PREDICATE: "co-occurs with <gene/chemical/disease>"
+
+        OTHER COLUMNS:
+
+        - score: enrichment score; see PubChem docs
+
+        - intersect_count: Number of articles co-occurring
+
+        - query_count: Total number of articles for query compound
+
+        - neighbor_count: Total number of articles for target (co-occurring) compound
         """
         if key is None or key == "<see above>":
             key = cls.cmd()
@@ -679,7 +720,7 @@ class EntryPubchemDgi(Entry[DgiSearch]):
 
         OBJECT: Name of the gene
 
-        PREDICATE: "drug/gene interaction"
+        PREDICATE: "interacts with gene"
         """
         built = DgiSearch(key, Apis.Pubchem)
         return cls._run(built, path, to, check)
@@ -725,7 +766,7 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
 
         PREDICATE: Action (e.g. "binder", "downregulator", or "agonist")
         """
-        built = DrugbankTargetSearch(key, Apis.Pubchem)
+        built = DrugbankTargetSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
         return cls._run(built, path, to, check)
 
 
@@ -734,7 +775,7 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.drugbank:function"),
+        key: str = _Typer.key("interact.drugbank:target-function"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
@@ -746,7 +787,54 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
 
         PREDICATE: against on target (e.g. "binder", "downregulator", or "agonist").
         """
-        built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem)
+        built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
+        return cls._run(built, path, to, check)
+
+
+class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.drugbank:pk"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Protein transporters, carriers, and enzymes from DrugBank.
+
+        OBJECT: Transporter name (e.g. "Solute carrier family 22 member 11") from DrugBank
+
+        PREDICATE: "transported by", "carried by", or "metabolized by"
+        """
+        target_types = {
+            DrugbankTargetType.transporter,
+            DrugbankTargetType.carrier,
+            DrugbankTargetType.enzyme,
+        }
+        built = DrugbankTargetSearch(key, Apis.Pubchem, target_types)
+        return cls._run(built, path, to, check)
+
+
+class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.drugbank:pk-function"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        General functions from DrugBank transporters, carriers, and enzymes.
+
+        OBJECT: Name of the general function (e.g. "Toxic substance binding")
+
+        PREDICATE: "transported by", "carried by", or "metabolized by"
+        """
+        built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
         return cls._run(built, path, to, check)
 
 
@@ -811,6 +899,333 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
         return cls._run(built, path, to, check)
 
 
+class EntryDeaSchedule(Entry[BioactivitySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("drug.dea:schedule"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        DEA schedules (UNDER CONSTRUCTION).
+
+        OBJECT: (1 to 4, or "unscheduled")
+
+        PREDICATE: "has DEA schedule"
+        """
+        pass
+
+
+class EntryDeaClass(Entry[BioactivitySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("drug.dea:class"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        DEA classes (UNDER CONSTRUCTION).
+
+        OBJECT: e.g. "hallucinogen"
+
+        PREDICATE: "is in DEA class"
+        """
+        pass
+
+
+class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("tox.chemidplus:acute"),
+        to: Optional[Path] = _Typer.to,
+        level: int = typer.Option(
+            2,
+            min=1,
+            max=2,
+            help="""
+          The level in the ChemIDPlus hierarchy of effect names.
+          Level 1: e.g. 'behavioral'
+          Level 2: 'behavioral: excitement'
+          """,
+        ),
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Acute effect codes from ChemIDPlus.
+
+        OBJECT: E.g. "behavioral: excitement"
+
+        PREDICATE: "causes acute effect"
+
+        OTHER COLUMNS:
+
+            - organism: e.g. 'women', 'infant', 'men', 'human', 'dog', 'domestic animals - sheep and goats'
+            - human: true or false
+            - test_type: e.g. 'TDLo'
+            - route: e.g. 'skin'
+            - mg_per_kg: e.g. 17.5
+        """
+        built = AcuteEffectSearch(
+            key,
+            Apis.Pubchem,
+            top_level=level == 1,
+        )
+        return cls._run(built, path, to, check)
+
+
+class EntryChemidPlusLd50(Entry[Ld50Search]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("tox.chemidplus:ld50"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        LD50 acute effects from ChemIDPlus.
+
+        OBJECT: A dose in mg/kg (e.g. 3100)
+
+        PREDICATE: "LD50 :: <route>" (e.g. "LD50 :: intravenous)
+
+        OTHER COLUMNS:
+
+            - organism: e.g. 'women', 'infant', 'men', 'human', 'dog', 'domestic animals - sheep and goats'
+            - human: true or false
+        """
+        built = Ld50Search(key, Apis.Pubchem)
+        return cls._run(built, path, to, check)
+
+
+class EntryHmdbTissue(Entry[BioactivitySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("hmdb:tissue"),
+        to: Optional[Path] = _Typer.to,
+        min_nanomolar: Optional[float] = None,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Tissue concentrations from HMDB (**UNDER CONSTRUCTION**).
+
+        OBJECT:
+
+        PREDICATE: "tissue"
+        """
+        pass
+
+
+class EntryHmdbComputed(Entry[BioactivitySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("hmdb:computed"),
+        to: Optional[Path] = _Typer.to,
+        min_nanomolar: Optional[float] = None,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Computed molecular properties from HMDB (**UNDER CONSTRUCTION**).
+
+        Keys include pKa, logP, logS, etc.
+
+        OBJECT: A number; booleans are converted to 0/1
+
+        PREDICATE: The name of the property
+        """
+        pass
+
+
+class EntryPubchemReact(Entry[BioactivitySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("interact.pubchem:react"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Metabolic reactions (**UNDER CONSTRUCTION**).
+
+        OBJECT: Equation
+
+        PREDICATE: "<pathway>"
+        """
+        pass
+
+
+class EntryPubchemComputed(Entry[ComputedPropertySearch]):
+
+    KNOWN_USEFUL_KEYS: Mapping[str, str] = {
+        "weight": "Molecular Weight",
+        "xlogp3": None,
+        "hydrogen-bond-donors": "Hydrogen Bond Donor Count",
+        "hydrogen-bond-acceptors": "Hydrogen Bond Acceptor Count",
+        "rotatable-bonds": "Rotatable Bond Count",
+        "exact-mass": None,
+        "monoisotopic-mass": None,
+        "tpsa": "Topological Polar Surface Area",
+        "heavy-atoms": "Heavy Atom Count",
+        "charge": "Formal Charge",
+        "complexity": None,
+    }
+    KNOWN_USELESS_KEYS: Mapping[str, str] = {
+        "components": "Covalently-Bonded Unit Count",
+        "isotope-atoms": "Isotope Atom Count",
+        "defined-atom-stereocenter-count": None,
+        "undefined-atom-stereocenter-count": None,
+        "defined-bond-stereocenter-count": None,
+        "undefined-bond-stereocenter-count": None,
+        "compound-is-canonicalized": None,
+    }
+
+    @staticmethod
+    def __stringify(keys: Mapping[str, str]):
+        return ", ".join((k if v is None else f"{k} ({v.lower()})" for k, v in keys.items()))
+
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("chem.pubchem:computed"),
+        keys: str = typer.Option(
+            "weight,xlogp3,tpsa,complexity,exact-mass,heavy-atom-count,charge",
+            help="""
+                The keys of the computed properties, comma-separated.
+                Key names are case-insensitive and ignore punctuation like underscores and hyphens.
+
+                Known keys are: {}
+
+                Known, less-useful (metadata-like) keys are: {}
+            """.format(
+                __stringify(KNOWN_USEFUL_KEYS), __stringify(KNOWN_USELESS_KEYS)
+            ),
+        ),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Computed properties from PubChem.
+
+        OBJECT: Number
+
+        PREDICATE: e.g. "complexity"
+        """
+        # replace acronyms, etc.
+        # ComputedPropertySearch standardizes punctuation and casing
+        known = {
+            k: v
+            for k, v in {
+                **EntryPubchemComputed.KNOWN_USEFUL_KEYS,
+                **EntryPubchemComputed.KNOWN_USELESS_KEYS,
+            }
+            if v is not None
+        }
+        keys = {known.get(s.strip(), s) for s in keys.split(",")}
+        built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys, source="PubChem")
+        return cls._run(built, path, to, check)
+
+
+class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("drugbank.admet:properties"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Enzyme predictions from DrugBank (UNDER CONSTRUCTION).
+
+        OBJECT: Enzyme name
+
+        PREDICATE: Action
+        """
+
+
+class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("drugbank.admet:metabolites"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Metabolites from DrugBank (UNDER CONSTRUCTION).
+
+        OBJECT: Compound name (e.g. "norcocaine").
+
+        PREDICATE: "metabolized to"
+        """
+
+
+class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("drugbank.admet:dosage"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Dosage from DrugBank (UNDER CONSTRUCTION).
+
+        OBJECT: concentration in mg/mL
+
+        PREDICATE: "dosage :: <route>"
+
+        OTHER COLUMNS:
+
+        - form (e.g. liquid)
+        """
+
+
+class EntryMetaRandom(Entry[BioactivitySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = _Typer.path,
+        key: str = _Typer.key("meta:random"),
+        to: Optional[Path] = _Typer.to,
+        check: bool = _Typer.test,
+        verbose: int = _Typer.verbose,
+    ) -> Searcher:
+        """
+        Random class assignment with replacement (**UNDER CONSTRUCTION**).
+
+        OBJECT: 1 thru n-compounds
+
+        PREDICATE: "random"
+        """
+        pass
+
+
 Entries = [
     EntryChemblBinding,
     EntryChemblMechanism,
@@ -827,6 +1242,15 @@ Entries = [
     EntryPubchemCgi,
     EntryDrugbankTarget,
     EntryGeneralFunction,
+    EntryDrugbankTransporter,
+    EntryTransporterGeneralFunction,
     EntryDrugbankDdi,
     EntryPubchemAssay,
+    EntryDeaSchedule,
+    EntryDeaClass,
+    EntryChemidPlusAcute,
+    EntryChemidPlusLd50,
+    EntryHmdbTissue,
+    EntryPubchemReact,
+    EntryMetaRandom,
 ]

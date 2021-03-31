@@ -91,7 +91,7 @@ class GeneCoOccurrenceSearch(CoOccurrenceSearch[GeneCoOccurrenceHit]):
         return CoOccurrenceType.gene
 
     def _predicate(self) -> str:
-        return "gene co-occurrence"
+        return "co-occurs with gene"
 
     def _query(self, data: PubchemData):
         return data.literature.gene_cooccurrences
@@ -103,7 +103,7 @@ class ChemicalCoOccurrenceSearch(CoOccurrenceSearch[ChemicalCoOccurrenceHit]):
         return CoOccurrenceType.chemical
 
     def _predicate(self) -> str:
-        return "chemical co-occurrence"
+        return "co-occurs with chemical"
 
     def _query(self, data: PubchemData):
         return data.literature.chemical_cooccurrences
@@ -115,7 +115,7 @@ class DiseaseCoOccurrenceSearch(CoOccurrenceSearch[DiseaseCoOccurrenceHit]):
         return CoOccurrenceType.disease
 
     def _predicate(self) -> str:
-        return "disease co-occurrence"
+        return "co-occurs with disease"
 
     def _query(self, data: PubchemData):
         return data.literature.disease_cooccurrences

@@ -66,7 +66,7 @@ pocketutils                    = ">=0.4, <0.5"
 pyarrow                        = ">=3.0, <4.0"
 requests                       = ">=2.25, <3.0"
 tomlkit                        = ">=0.7, <1.0"
-typeddfs                       = ">=0.5, <0.7"
+typeddfs                       = ">=0.6, <0.7"
 typer                          = ">=0.3, <1.0"
 
 

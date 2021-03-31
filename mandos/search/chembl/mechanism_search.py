@@ -60,13 +60,14 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     ) -> Sequence[MechanismHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
+        predicate = data.req_as("action_type", str) + " of"
         x = MechanismHit(
             record_id=data["mec_id"],
             origin_inchikey=lookup,
             matched_inchikey=compound.inchikey,
             compound_id=compound.chid,
             compound_name=compound.name,
-            predicate=data.req_as("action_type", str),
+            predicate=predicate,
             object_id=best_target.chembl,
             object_name=best_target.name,
             search_key=self.key,

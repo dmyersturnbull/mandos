@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from functools import total_ordering
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Set, Union
+from typing import List, Mapping, Optional, Sequence, Set, Union, FrozenSet, Iterable
 
 import pandas as pd
 from typeddfs import TypedDfs
@@ -149,7 +150,7 @@ class Taxonomy:
     Elements in the tree can be looked up by name or ID using ``__getitem__`` and ``get``.
     """
 
-    def __init__(self, by_id: Mapping[int, Taxon]):
+    def __init__(self, by_id: Mapping[int, Taxon], by_name: Mapping[str, FrozenSet[Taxon]]):
         """
 
         Args:
@@ -157,13 +158,16 @@ class Taxonomy:
         """
         # constructor provided for consistency with the members
         self._by_id = dict(by_id)
+        self._by_name = dict(by_name)
         # this probably isn't actually possible
         if len(self) == 0:
             logger.warning(f"{self} contains 0 taxa")
 
     @classmethod
     def from_list(cls, taxa: Sequence[Taxon]) -> Taxonomy:
-        tax = Taxonomy({x.id: x for x in taxa})
+        by_id = {x.id: x for x in taxa}
+        by_name = cls._build_by_name(by_id.values())
+        tax = Taxonomy(by_id, by_name)
         # catch duplicate values
         assert len(tax._by_id) == len(taxa), f"{len(tax._by_id)} != {len(taxa)}"
         return tax
@@ -202,7 +206,16 @@ class Taxonomy:
             raise ValueError(f"There are taxa with missing or empty names: {bad}.")
         for v in tax.values():
             v.__class__ = Taxon
-        return Taxonomy(tax)
+        by_name = cls._build_by_name(tax.values())
+        return Taxonomy(tax, by_name)
+
+    def to_df(self) -> TaxonomyDf:
+        return TaxonomyDf(
+            [
+                pd.Series(dict(taxon=taxon.id, scientific_name=taxon.name, parent=taxon.parent.id))
+                for taxon in self.taxa
+            ]
+        )
 
     @property
     def taxa(self) -> Sequence[Taxon]:
@@ -224,27 +237,77 @@ class Taxonomy:
 
     @property
     def leaves(self) -> Sequence[Taxon]:
-        """
-
-        Returns:
-
-        """
         return [k for k in self.taxa if len(k.children) == 0]
 
     def subtree(self, item: int) -> Taxonomy:
-        """
-
-        Args:
-            item:
-
-        Returns:
-
-        """
         item = self[item]
         descendents = {item, *item.descendents}
-        return Taxonomy({d.id: d for d in descendents})
+        by_id = {d.id: d for d in descendents}
+        by_name = self.__class__._build_by_name(by_id.values())
+        return Taxonomy(by_id, by_name)
+
+    def subtrees_by_name(self, item: str) -> Taxonomy:
+        """
+        Returns the taxonomy that rooted at each of the taxa with the specified scientific name.
+        """
+        descendents: Set[Taxon] = set()
+        for taxon in self._by_name.get(item, []):
+            descendents.update({taxon, *taxon.descendents})
+        by_id = {d.id: d for d in descendents}
+        by_name = self.__class__._build_by_name(by_id.values())
+        return Taxonomy(by_id, by_name)
+
+    def req_one_by_name(self, item: str) -> Taxon:
+        """
+        Gets a single taxon by its name.
+        If there are multiple, returns the first (lowest ID).
+        Raises an error if there are no matches.
+        """
+        one = self.get_one_by_name(item)
+        if one is None:
+            raise LookupError(f"No taxa for {item}")
+        return one
+
+    def req_only_by_name(self, item: str) -> Taxon:
+        """
+        Gets a single taxon by its name.
+        Raises an error if there are multiple matches for the name, or if there are no matches.
+        """
+        taxa = self.get_by_name(item)
+        ids = ",".join([str(t.id) for t in taxa])
+        if len(taxa) > 1:
+            raise ValueError(f"Got multiple results for {item}: {ids}")
+        elif len(taxa) == 0:
+            raise LookupError(f"No taxa for {item}")
+        return next(iter(taxa))
+
+    def get_one_by_name(self, item: str) -> Optional[Taxon]:
+        """
+        Gets a single taxon by its name.
+        If there are multiple, returns the first (lowest ID).
+        If there are none, returns ``None``.
+        """
+        taxa = self.get_by_name(item)
+        ids = ",".join([str(t.id) for t in taxa])
+        if len(taxa) > 1:
+            logger.warning(f"Got multiple results for {item}: {ids}")
+        elif len(taxa) == 0:
+            return None
+        return next(iter(taxa))
+
+    def get_by_name(self, item: str) -> FrozenSet[Taxon]:
+        """
+        Gets all taxa that match a scientific name.
+        """
+        if isinstance(item, Taxon):
+            item = item.name
+        return self._by_name.get(item, frozenset(set()))
 
     def req(self, item: int) -> Taxon:
+        """
+        Gets a single taxon by its ID.
+        Raises an error if it is not found.
+        """
         if isinstance(item, Taxon):
             item = item.id
         return self[item]
@@ -303,5 +366,12 @@ class Taxonomy:
         roots = ", ".join(r.name for r in self.roots)
         return f"{self.__class__.__name__}(n={len(self._by_id)} (roots={roots}) @ {hex(id(self))})"
 
+    @classmethod
+    def _build_by_name(cls, tax: Iterable[Taxon]) -> Mapping[str, FrozenSet[Taxon]]:
+        by_name = defaultdict(set)
+        for t in tax:
+            by_name[t.name].add(t)
+        return {k: frozenset(v) for k, v in by_name.items()}
 
-__all__ = ["Taxon", "Taxonomy"]
+
+__all__ = ["Taxon", "Taxonomy", "TaxonomyDf"]

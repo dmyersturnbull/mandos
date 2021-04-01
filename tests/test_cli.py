@@ -13,13 +13,12 @@ class TestCli:
         assert result.exit_code == 0
         assert "Usage" in result.stdout
 
-    def test_search(self):
+    def test_spec_help(self):
         runner = CliRunner()
-        path = get_test_resource("inchis.txt")
-        result = runner.invoke(cli, ["chembl:atc", str(path)])
+        result = runner.invoke(cli, ["chembl:atc", "--help"])
         if result.exception is not None:
             raise result.exception
-        assert result.stdout == ""
+        assert "--verbose" in result.stdout
 
 
 if __name__ == "__main__":

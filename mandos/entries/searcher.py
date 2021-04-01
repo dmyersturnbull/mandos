@@ -12,7 +12,7 @@ import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.path_tools import PathTools
-from typeddfs import TypedDfs
+from typeddfs import TypedDfs, UntypedDf
 
 from mandos import logger
 from mandos.model import CompoundNotFoundError
@@ -72,7 +72,7 @@ class SearcherUtils:
                     found_pubchem[inchikey] = str(cid)
                     logger.info(f"Found:      PubChem {inchikey} ({cid})")
                 except CompoundNotFoundError:
-                    logger.error(f"NOT FOUND: PubChem {inchikey}")
+                    logger.info(f"NOT FOUND: PubChem {inchikey}")
                     logger.debug(f"Did not find PubChem {inchikey}", exc_info=True)
         if chembl:
             for inchikey in inchikeys:
@@ -81,7 +81,7 @@ class SearcherUtils:
                     found_chembl[inchikey] = chid
                     logger.info(f"Found:      ChEMBL {inchikey} ({chid})")
                 except CompoundNotFoundError:
-                    logger.error(f"NOT FOUND: ChEMBL {inchikey}")
+                    logger.info(f"NOT FOUND: ChEMBL {inchikey}")
                     logger.debug(f"Did not find ChEMBL {inchikey}", exc_info=True)
         df = pd.DataFrame([pd.Series(dict(inchikey=c)) for c in inchikeys])
         df["chembl_id"] = df["inchikey"].map(found_chembl.get)
@@ -92,13 +92,37 @@ class SearcherUtils:
 
     @classmethod
     def read(cls, input_path: Path) -> InputFrame:
-        df = TypedDfs.untyped("Input").read_file(input_path, header=None, comment="#")
-        if "inchikey" in df.columns_names:
-            return InputFrame.convert(df)
+        df: UntypedDf = TypedDfs.untyped("Input").read_file(input_path, header=None, comment="#")
+        if "inchikey" in df.column_names():
+            df = InputFrame.convert(df)
         elif ".lines" in input_path.name or ".txt" in input_path.name:
             df.columns = ["inchikey"]
-            return InputFrame.convert(df)
-        raise ValueError(f"Could not parse {input_path}; no column 'inchikey'")
+            df = InputFrame.convert(df)
+        else:
+            raise ValueError(f"Could not parse {input_path}; no column 'inchikey'")
+        # find duplicates
+        # in hindsight, this wasn't worth the amount of code
+        n0 = len(df)
+        # noinspection PyTypeChecker
+        df: UntypedDf = df.drop_duplicates()
+        n1 = len(df)
+        logger.info("Read {n1} input compounds")
+        if n0 == n1:
+            logger.info(f"There were no duplicate rows")
+        else:
+            logger.info(f"Dropped {n1-n0} duplicated rows")
+        duplicated = df[df.duplicated("inchikey", keep=False)]
+        duplicated_inchikeys = set(duplicated["inchikey"])
+        # noinspection PyTypeChecker
+        df = df.drop_duplicates(subset=["inchikey"], keep="first")
+        n2 = len(df)
+        if len(duplicated) > 1:
+            logger.error(
+                f"{len(duplicated)} rows contain the same inchikey but have differences in other columns"
+            )
+            logger.error(f"Dropped {n2-n1} rows with duplicate inchikeys")
+            logger.error(f"The offending inchikeys are {duplicated_inchikeys}")
+        return df
 
 
 class Searcher:
@@ -121,11 +145,9 @@ class Searcher:
         self.input_path: Optional[Path] = input_path
         self.input_df: InputFrame = None
         self.output_paths = {
-            what.key: self._output_path_of(path, path)
+            what.key: self._output_path_of(what, path)
             for what, path in CommonTools.zip_list(searches, to)
         }
-        if str(to).startswith("."):
-            pass
 
     def search(self) -> Searcher:
         """

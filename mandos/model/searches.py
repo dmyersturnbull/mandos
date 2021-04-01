@@ -71,7 +71,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             try:
                 x = self.find(compound)
             except CompoundNotFoundError:
-                logger.error(f"NOT FOUND: {compound}. Skipping.")
+                logger.info(f"NOT FOUND: {compound}. Skipping.")
                 continue
             except Exception:
                 logger.error(f"Failed on {compound}", exc_info=True)

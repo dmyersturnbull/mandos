@@ -83,11 +83,11 @@ class Codes:
 
         @property
         def category(self) -> str:
-            return self[: self.index(":")]
+            return self[: self.index(":")].strip()
 
         @property
         def subcategory(self) -> str:
-            return self[self.index(":") :]
+            return self[self.index(":") + 1 :].strip()
 
     class EcNumber(Code):
         """
@@ -300,7 +300,10 @@ class AcuteEffectEntry:
 
     @property
     def mg_per_kg(self) -> float:
-        match = re.compile(r".+?\(\d+mg/kg\)").fullmatch(self.dose)
+        # TODO: Could it ever start with just a dot; e.g. '.175'?
+        match = re.compile(r".+?\((\d+(?:.\d+)?) *mg/kg\)").fullmatch(self.dose)
+        if match is None:
+            raise ValueError(f"Dose {self.dose} (accute effect {self.gid}) could not be parsed")
         return float(match.group(1))
 
 

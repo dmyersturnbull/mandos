@@ -5,7 +5,6 @@ Run searches and write files.
 from __future__ import annotations
 
 import abc
-import typing
 from inspect import cleandoc as doc
 from pathlib import Path
 from typing import TypeVar, Generic, Union, Mapping, Set, Sequence, Type, Optional
@@ -480,7 +479,7 @@ class EntryChemblTrials(Entry[IndicationSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("chembl.trial"),
+        key: str = _Typer.key("chembl:trial"),
         to: Optional[Path] = _Typer.to,
         min_phase: Optional[int] = _Typer.chembl_trial,
         check: bool = _Typer.test,
@@ -502,7 +501,7 @@ class EntryChemblAtc(Entry[AtcSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("chembl.atc"),
+        key: str = _Typer.key("chembl:atc"),
         to: Optional[Path] = _Typer.to,
         levels: str = typer.Option(
             "1,2,3,4,5", min=1, max=5, help="""List of ATC levels, comma-separated."""
@@ -626,7 +625,9 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Diseases in the Comparative Toxicogenomics Database (CTD).
+        Diseases in the CTD.
+
+        Comparative Toxicogenomics Database.
 
         OBJECT: MeSH code of disease
 
@@ -709,13 +710,15 @@ class EntryPubchemDgi(Entry[DgiSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.dgidb:gene"),
+        key: str = _Typer.key("inter.dgidb:gene"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Drug/gene interactions in the Drug Gene Interaction Database (DGIDB).
+        Drug/gene interactions in the DGIDB.
+
+        Drug Gene Interaction Database.
         Also see ``disease.dgidb:int``.
 
         OBJECT: Name of the gene
@@ -731,13 +734,15 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.ctd:gene"),
+        key: str = _Typer.key("inter.ctd:gene"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Compound/gene interactions in the Drug Gene Interaction Database (DGIDB).
+        Compound/gene interactions in the DGIDB.
+
+        Drug Gene Interaction Database.
         Also see ``interact.dgidb:int``.
 
         OBJECT: Name of the gene
@@ -754,7 +759,7 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.drugbank:target"),
+        key: str = _Typer.key("inter.drugbank:target"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
@@ -775,7 +780,7 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.drugbank:target-function"),
+        key: str = _Typer.key("inter.drugbank:target-fn"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
@@ -796,13 +801,13 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.drugbank:pk"),
+        key: str = _Typer.key("inter.drugbank:pk"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Protein transporters, carriers, and enzymes from DrugBank.
+        PK-related proteins from DrugBank.
 
         OBJECT: Transporter name (e.g. "Solute carrier family 22 member 11") from DrugBank
 
@@ -822,13 +827,13 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.drugbank:pk-function"),
+        key: str = _Typer.key("inter.drugbank:pk-fn"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        General functions from DrugBank transporters, carriers, and enzymes.
+        DrugBank PK-related protein functions.
 
         OBJECT: Name of the general function (e.g. "Toxic substance binding")
 
@@ -843,7 +848,7 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.drugbank:ddi"),
+        key: str = _Typer.key("inter.drugbank:ddi"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
@@ -910,7 +915,7 @@ class EntryDeaSchedule(Entry[BioactivitySearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        DEA schedules (UNDER CONSTRUCTION).
+        DEA schedules (PENDING).
 
         OBJECT: (1 to 4, or "unscheduled")
 
@@ -930,7 +935,7 @@ class EntryDeaClass(Entry[BioactivitySearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        DEA classes (UNDER CONSTRUCTION).
+        DEA classes (PENDING).
 
         OBJECT: e.g. "hallucinogen"
 
@@ -1020,7 +1025,7 @@ class EntryHmdbTissue(Entry[BioactivitySearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Tissue concentrations from HMDB (**UNDER CONSTRUCTION**).
+        Tissue concentrations from HMDB (PENDING).
 
         OBJECT:
 
@@ -1041,7 +1046,7 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Computed molecular properties from HMDB (**UNDER CONSTRUCTION**).
+        Computed properties from HMDB (PENDING).
 
         Keys include pKa, logP, logS, etc.
 
@@ -1057,19 +1062,23 @@ class EntryPubchemReact(Entry[BioactivitySearch]):
     def run(
         cls,
         path: Path = _Typer.path,
-        key: str = _Typer.key("interact.pubchem:react"),
+        key: str = _Typer.key("inter.pubchem:react"),
         to: Optional[Path] = _Typer.to,
         check: bool = _Typer.test,
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Metabolic reactions (**UNDER CONSTRUCTION**).
+        Metabolic reactions (PENDING).
 
         OBJECT: Equation
 
         PREDICATE: "<pathway>"
         """
         pass
+
+
+def _stringify(keys: Mapping[str, str]):
+    return ", ".join((k if v is None else f"{k} ({v.lower()})" for k, v in keys.items()))
 
 
 class EntryPubchemComputed(Entry[ComputedPropertySearch]):
@@ -1097,10 +1106,6 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         "compound-is-canonicalized": None,
     }
 
-    @staticmethod
-    def __stringify(keys: Mapping[str, str]):
-        return ", ".join((k if v is None else f"{k} ({v.lower()})" for k, v in keys.items()))
-
     @classmethod
     def run(
         cls,
@@ -1116,7 +1121,7 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
 
                 Known, less-useful (metadata-like) keys are: {}
             """.format(
-                __stringify(KNOWN_USEFUL_KEYS), __stringify(KNOWN_USELESS_KEYS)
+                _stringify(KNOWN_USEFUL_KEYS), _stringify(KNOWN_USELESS_KEYS)
             ),
         ),
         to: Optional[Path] = _Typer.to,
@@ -1156,7 +1161,7 @@ class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Enzyme predictions from DrugBank (UNDER CONSTRUCTION).
+        Enzyme predictions from DrugBank (PENDING).
 
         OBJECT: Enzyme name
 
@@ -1175,7 +1180,7 @@ class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Metabolites from DrugBank (UNDER CONSTRUCTION).
+        Metabolites from DrugBank (PENDING).
 
         OBJECT: Compound name (e.g. "norcocaine").
 
@@ -1194,7 +1199,7 @@ class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Dosage from DrugBank (UNDER CONSTRUCTION).
+        Dosage from DrugBank (PENDING).
 
         OBJECT: concentration in mg/mL
 
@@ -1217,7 +1222,7 @@ class EntryMetaRandom(Entry[BioactivitySearch]):
         verbose: int = _Typer.verbose,
     ) -> Searcher:
         """
-        Random class assignment with replacement (**UNDER CONSTRUCTION**).
+        Random class assignment (PENDING).
 
         OBJECT: 1 thru n-compounds
 

@@ -35,18 +35,40 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
     Puts both the raw data and fixed data in the cache under ``~/.mandos/taxonomy/``.
     """
 
-    def load(self, taxon: int) -> Taxonomy:
-        path = self._resolve_non_vertebrate_final(taxon)
-        if path.exists():
-            return Taxonomy.from_path(path)
+    def load_by_name(self, taxon: str) -> Taxonomy:
         vertebrata = Taxonomy.from_path(MandosResources.path("7742.tab.gz"))
-        if taxon in vertebrata:
+        only = vertebrata.req_only_by_name(taxon)
+        return vertebrata.subtree(only.id)
+
+    def load(self, taxon: Union[int, str]) -> Taxonomy:
+        """
+        Tries, in order:
+
+            1. A cached file exactly matching the taxon ID
+            2. A taxon ID under vertebrata
+            3. The UNIQUE name of a taxon under vertebrata
+            4. Downloads the taxonomy with the specified ID
+        """
+        if isinstance(taxon, str) and taxon.isdigit():
+            taxon = int(taxon)
+        if isinstance(taxon, int):
+            path = self._resolve_non_vertebrate_final(taxon)
+            if path.exists():
+                return Taxonomy.from_path(path)
+        vertebrata = Taxonomy.from_path(MandosResources.path("7742.tab.gz"))
+        if isinstance(taxon, int) and taxon in vertebrata:
             return vertebrata.subtree(taxon)
-        raw_path = self._resolve_non_vertebrate_raw(taxon)
-        if not raw_path.exists():
-            self._download(raw_path, taxon)
-            self._fix(raw_path, taxon, path)
-        return Taxonomy.from_path(path)
+        elif isinstance(taxon, str):
+            match = vertebrata.req_only_by_name(taxon).id
+            return vertebrata.subtree(match)
+        if isinstance(taxon, int):
+            raw_path = self._resolve_non_vertebrate_raw(taxon)
+            if not raw_path.exists():
+                self._download(raw_path, taxon)
+                self._fix(raw_path, taxon, path)
+            return Taxonomy.from_path(path)
+        else:
+            raise LookupError(f"Could not find taxon {taxon}; try passing an ID instead")
 
     def _resolve_non_vertebrate_final(self, taxon: int) -> Path:
         raise NotImplementedError()
@@ -94,7 +116,9 @@ class FixedTaxonomyFactory(TaxonomyFactory):
     def __init__(self, tax: Taxonomy):
         self._tax = tax
 
-    def load(self, taxon: int) -> Taxonomy:
+    def load(self, taxon: Union[int, str]) -> Taxonomy:
+        if isinstance(taxon, str):
+            taxon = self._tax.req_only_by_name(taxon).id
         return self._tax.subtree(taxon)
 
 
@@ -102,8 +126,11 @@ class FixedFileTaxonomyFactory(TaxonomyFactory):
     def __init__(self, path: Path):
         self._path = path
 
-    def load(self, taxon: int) -> Taxonomy:
-        return Taxonomy.from_path(self._path).subtree(taxon)
+    def load(self, taxon: Union[int, str]) -> Taxonomy:
+        taxonomy = Taxonomy.from_path(self._path)
+        if isinstance(taxon, str):
+            taxon = taxonomy.req_only_by_name(taxon).id
+        return taxonomy.subtree(taxon)
 
 
 class CacheDirTaxonomyCache(UniprotTaxonomyCache):

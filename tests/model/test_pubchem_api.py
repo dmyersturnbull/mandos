@@ -15,6 +15,7 @@ from mandos.model.pubchem_support.pubchem_models import (
     Activity,
     AssayType,
     Bioactivity,
+    AcuteEffectEntry,
 )
 
 from .. import get_test_resource
@@ -89,13 +90,51 @@ class TestPubchemApi:
         safety = x.safety_and_hazards
         assert {g.code for g in safety.ghs_codes} == {"H311", "H301"}
         tox = x.toxicity
-        assert tox.acute_effects == frozenset(
-            {
-                "an effect",
-                "behavioral: convulsions or effect on seizure threshold",
-                "behavioral: excitement",
-            }
-        )
+        acute_effects = sorted(list(tox.acute_effects), key=lambda e: e.gid)
+        assert acute_effects == [
+            AcuteEffectEntry(
+                gid=67674952,
+                effects=frozenset(),
+                organism=Codes.ChemIdPlusOrganism("mouse"),
+                test_type="LD50",
+                route="subcutaneous",
+                dose="250 mg/kg (250 mg/kg)",
+            ),
+            AcuteEffectEntry(
+                gid=67674953,
+                effects=frozenset({Codes.ChemIdPlusEffect("an effect: a sub-effect")}),
+                organism=Codes.ChemIdPlusOrganism("infant"),
+                test_type="LD50",
+                route="intravenous",
+                dose="17500 ug/kg (17.5 mg/kg)",
+            ),
+            AcuteEffectEntry(
+                gid=67674954,
+                effects=frozenset(
+                    {
+                        Codes.ChemIdPlusEffect("BEHAVIORAL: EXCITEMENT"),
+                        Codes.ChemIdPlusEffect(
+                            "BEHAVIORAL: CONVULSIONS OR EFFECT ON SEIZURE THRESHOLD"
+                        ),
+                    }
+                ),
+                organism=Codes.ChemIdPlusOrganism("women"),
+                test_type="LD50",
+                route="oral",
+                dose="99 mg/kg (99 mg/kg)",
+            ),
+        ]
+        assert acute_effects[0].mg_per_kg == 250.0
+        assert acute_effects[1].mg_per_kg == 17.5
+        assert acute_effects[2].mg_per_kg == 99.0
+        effect2_codes = list(sorted(acute_effects[2].effects))
+        assert effect2_codes[0].category == "BEHAVIORAL"
+        assert effect2_codes[0].subcategory == "CONVULSIONS OR EFFECT ON SEIZURE THRESHOLD"
+        assert effect2_codes[1].category == "BEHAVIORAL"
+        assert effect2_codes[1].subcategory == "EXCITEMENT"
+        assert not acute_effects[0].organism.is_human
+        assert acute_effects[1].organism.is_human  # "infant"
+        assert acute_effects[2].organism.is_human  # "women"
         lit = x.literature
         chem_co = lit.chemical_cooccurrences
         assert frozenset([c.strip_pubs() for c in chem_co]) == frozenset(

@@ -618,10 +618,9 @@ class Toxicity(PubchemMiniDataView):
             self._tables
             / "chemidplus"
             // ["gid", "effect", "organism", "testtype", "route", "dose"]
-            / FilterFn(lambda dot: dot.get_as("effect", str) is not None)
             / [
                 int,
-                Mapx.split_to(Codes.ChemIdPlusEffect.of, ";"),
+                Mapx.split_to(Codes.ChemIdPlusEffect.of, ";", nullable=True),
                 Codes.ChemIdPlusOrganism.of,
                 str,
                 str,

@@ -16,12 +16,16 @@ class Apis:
         cls.Pubchem = pubchem
 
     @classmethod
-    def set_default(cls) -> None:
-        from chembl_webresource_client.new_client import new_client as _Chembl
+    def set_default(cls, pubchem: bool = True, chembl: bool = True) -> None:
+        if chembl:
+            from chembl_webresource_client.new_client import new_client as _Chembl
 
-        cls.Pubchem = CachingPubchemApi(MANDOS_SETTINGS.pubchem_cache_path, QueryingPubchemApi())
-        cls.Chembl = ChemblApi.wrap(_Chembl)
-        MANDOS_SETTINGS.set()
+            cls.Chembl = ChemblApi.wrap(_Chembl)
+        if pubchem:
+            cls.Pubchem = CachingPubchemApi(
+                MANDOS_SETTINGS.pubchem_cache_path, QueryingPubchemApi()
+            )
+        MANDOS_SETTINGS.configure()
 
 
 __all__ = ["Apis"]

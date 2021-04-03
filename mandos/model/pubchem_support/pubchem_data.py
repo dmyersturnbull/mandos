@@ -38,7 +38,6 @@ from mandos.model.pubchem_support.pubchem_models import (
     DrugbankDdi,
     PubmedEntry,
     Publication,
-    AssayType,
     Activity,
     CoOccurrence,
     DrugGeneInteraction,
@@ -619,7 +618,7 @@ class Toxicity(PubchemMiniDataView):
             / "chemidplus"
             // ["gid", "effect", "organism", "testtype", "route", "dose"]
             / [
-                int,
+                Mapx.get_int(nullable=True),
                 Mapx.split_to(Codes.ChemIdPlusEffect.of, ";", nullable=True),
                 Codes.ChemIdPlusOrganism.of,
                 str,
@@ -643,7 +642,13 @@ class AssociatedDisordersAndDiseases(PubchemMiniDataView):
             self._tables
             / "ctd_chemical_disease"
             // ["gid", "diseaseextid", "diseasename", "directevidence", "dois"]
-            / [str, Codes.MeshCode.of, Mapx.req_is(str), Mapx.req_is(str), Mapx.n_bar_items()]
+            / [
+                str,
+                Codes.MeshCode.of,
+                Mapx.req_is(str),
+                Mapx.req_is(str),
+                Mapx.n_bar_items(null_is_zero=True),
+            ]
             // Flatmap.construct(AssociatedDisorder)
         ).to_set
 
@@ -859,16 +864,16 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
     @property
     def drugbank_interactions(self) -> FrozenSet[DrugbankInteraction]:
         keys = {
-            "gid": int,
-            "genesymbol": Codes.GenecardSymbol,
-            "drugaction": Mapx.req_is(str),
+            "gid": (lambda f: None if f is None else str(int(f))),
+            "genesymbol": Codes.GenecardSymbol.of,
+            "drugaction": Mapx.req_is(str, nullable=True),
             "targetcomponentname": Mapx.req_is(str),
-            "targettype": Mapx.req_is(str, then_convert=DrugbankTargetType),
+            "targettype": (lambda s: DrugbankTargetType[s.lower()]),
             "targetname": Mapx.req_is(str),
-            "generalfunc": Mapx.req_is(str),
-            "specificfunc": Mapx.req_is(str),
-            "pmids": Mapx.split(","),
-            "dois": Mapx.split("|"),
+            "generalfunc": Mapx.req_is(str, nullable=True),
+            "specificfunc": Mapx.req_is(str, nullable=True),
+            "pmids": Mapx.split(",", nullable=True),
+            "dois": Mapx.split("|", nullable=True),
         }
         return (
             self._tables
@@ -913,16 +918,14 @@ class BiologicalTestResults(PubchemMiniDataView):
     @property
     def bioactivity(self) -> FrozenSet[Bioactivity]:
         keys = {
-            "aid": Mapx.get_int(),
-            "aidtype": (lambda s: AssayType[s.lower().strip()]),
-            "aidsrcname": Mapx.req_is(str),
-            "aidname": Mapx.req_is(str),
-            "aidmdate": Mapx.int_date(),
-            "geneid": Mapx.str_to(Codes.GeneId, nullable=True, flex_type=True),
+            "aid": Mapx.get_int,
+            "aidtype": Mapx.req_is(str, nullable=False),
+            "aidsrcname": Mapx.req_is(str, nullable=True),
+            "aidname": Mapx.req_is(str, nullable=True),
+            "aidmdate": Mapx.int_date(nullable=True),
+            "geneid": Codes.GeneId.of_nullable,
             "taxid": Mapx.str_to(str, flex_type=True, nullable=True),
-            "pmid": lambda s: None
-            if s is None
-            else Codes.PubmedId(StringTools.strip_off_end(str(s), ".0")),
+            "pmid": Codes.PubmedId.of_nullable,
             "activity": (lambda s: None if s is None else Activity[s.lower()]),
             "acname": Mapx.str_to(str, nullable=True),
             "acvalue": (lambda x: None if x is None else float(x)),
@@ -933,6 +936,7 @@ class BiologicalTestResults(PubchemMiniDataView):
             self._tables
             / "bioactivity"
             // list(keys.keys())
+            / FilterFn(lambda lst: lst[11] is not None)
             / list(keys.values())
             // Flatmap.construct(Bioactivity)
         ).to_set

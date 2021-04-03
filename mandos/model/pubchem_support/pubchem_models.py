@@ -1,11 +1,13 @@
 from __future__ import annotations
 import enum
 import re
+import typing
 from dataclasses import dataclass
 from datetime import date
 from typing import Union, Optional, FrozenSet, Sequence, Mapping, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.tools.string_tools import StringTools
 
 from mandos.model import MandosResources, CleverEnum
 from mandos.model.pubchem_support._nav_fns import Mapx
@@ -42,8 +44,10 @@ class Code(str):
         if isinstance(value, float):
             try:
                 value = int(value)
+                value = StringTools.strip_off_end(str(value).strip(), ".0")
             except ArithmeticError:
                 value = str(value)
+                value = StringTools.strip_off_end(str(value).strip(), ".0")
         value = str(value).strip()
         return cls(value)
 
@@ -54,8 +58,10 @@ class Code(str):
         if isinstance(value, float):
             try:
                 value = int(value)
+                value = StringTools.strip_off_end(str(value).strip(), ".0")
             except ArithmeticError:
                 value = str(value)
+                value = StringTools.strip_off_end(str(value).strip(), ".0")
         value = str(value).strip()
         return cls(value)
 
@@ -341,13 +347,13 @@ class DrugbankTargetType(enum.Enum):
 
 @dataclass(frozen=True, repr=True, eq=True)
 class DrugbankInteraction:
-    record_id: str
+    record_id: Optional[str]
     gene_symbol: Codes.GeneId
-    action: str
+    action: Optional[str]
     protein_id: str
     target_type: DrugbankTargetType
     target_name: str
-    general_function: str
+    general_function: Optional[str]
     specific_function: str
     pmids: FrozenSet[Codes.PubmedId]
     dois: FrozenSet[Codes.Doi]
@@ -361,12 +367,6 @@ class DrugbankDdi:
     description: str
 
 
-class AssayType(enum.Enum):
-    confirmatory = enum.auto()
-    literature = enum.auto()
-    other = enum.auto()
-
-
 class Activity(enum.Enum):
     active = enum.auto()
     inactive = enum.auto()
@@ -377,7 +377,7 @@ class Activity(enum.Enum):
 @dataclass(frozen=True, repr=True, eq=True)
 class Bioactivity:
     assay_id: int
-    assay_type: AssayType
+    assay_type: str
     assay_ref: str
     assay_name: str
     assay_made_date: date
@@ -386,9 +386,32 @@ class Bioactivity:
     pmid: Optional[Codes.PubmedId]
     activity: Optional[Activity]
     activity_name: Optional[str]
-    activity_value: float
+    activity_value: Optional[float]
     target_name: Optional[str]
     compound_name: str
+
+    @property
+    def target_name_abbrev_species(self) -> typing.Tuple[Optional[str], str, Optional[str]]:
+        # first, look for a species name in parentheses
+        # We use \)+ at the end instead of \)
+        # this is to catch cases where we have parentheses inside of the species name
+        # this happens with some virus strains, for e.g.
+        match = re.compile(r"^(.+?)\(([^)]+)\)+$").fullmatch(self.target_name)
+        if match is None:
+            species = None
+            target = self.target_name
+        else:
+            species = match.group(2)
+            target = match.group(1)
+        # now try to get an abbreviation
+        match = re.compile(r"^ *([^ ]+) +- +(.+)$").fullmatch(target)
+        if match is None:
+            abbrev = None
+            name = target
+        else:
+            abbrev = match.group(1)
+            name = match.group(2)
+        return name, abbrev, species
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -479,7 +502,6 @@ __all__ = [
     "ClinicalTrial",
     "AssociatedDisorder",
     "AtcCode",
-    "AssayType",
     "DrugbankInteraction",
     "DrugbankDdi",
     "Bioactivity",

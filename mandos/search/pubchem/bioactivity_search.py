@@ -2,9 +2,11 @@ import re
 from dataclasses import dataclass
 from typing import Sequence, Optional, Set
 
+from loguru import logger
+
 from mandos.model.pubchem_api import PubchemApi
 from mandos.model.pubchem_support.pubchem_data import PubchemData
-from mandos.model.pubchem_support.pubchem_models import Activity, AssayType, Bioactivity
+from mandos.model.pubchem_support.pubchem_models import Activity, Bioactivity
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -12,8 +14,9 @@ from mandos.search.pubchem import PubchemHit, PubchemSearch
 class BioactivityHit(PubchemHit):
     """"""
 
+    target_abbrev: Optional[str]
     activity: str
-    confirmatory: bool
+    assay_type: str
     micromolar: float
     relation: str
     species: Optional[str]
@@ -28,11 +31,9 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         self,
         key: str,
         api: PubchemApi,
-        assay_types: Set[AssayType],
         compound_name_must_match: bool,
     ):
         super().__init__(key, api)
-        self.assay_types = assay_types
         self.compound_name_must_match = compound_name_must_match
 
     @property
@@ -43,18 +44,13 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         data = self.api.fetch_data(inchikey)
         results = []
         for dd in data.biological_test_results.bioactivity:
-            if (
-                not self.compound_name_must_match or dd.compound_name.lower() == data.name.lower()
-            ) and dd.assay_type in self.assay_types:
+            if not self.compound_name_must_match or dd.compound_name.lower() == data.name.lower():
                 results.append(self.process(inchikey, data, dd))
         return results
 
     def process(self, inchikey: str, data: PubchemData, dd: Bioactivity) -> BioactivityHit:
-        # strip off the species name
-        match = re.compile(r"^(.+?)\([^)]+\)?$").fullmatch(dd.target_name)
-        target = match.group(1).strip()
-        species = None if match.group(2).strip() == "" else match.group(2).strip()
-        data_source = f"{self.data_source}: {dd.assay_ref} ({dd.assay_type.name})"
+        target_name, target_abbrev, species = dd.target_name_abbrev_species
+        data_source = f"{self.data_source}: {dd.assay_ref} ({dd.assay_type})"
         if dd.activity in {Activity.inconclusive, Activity.unspecified}:
             predicate = "has " + dd.activity.name + " activity for"
         else:
@@ -67,12 +63,13 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
             compound_name=data.name,
             predicate=predicate,
             object_id=dd.gene_id,
-            object_name=target,
+            object_name=target_name,
             search_key=self.key,
             search_class=self.search_class,
             data_source=data_source,
+            target_abbrev=target_abbrev,
             activity=dd.activity.name.lower(),
-            confirmatory=dd.assay_type is AssayType.confirmatory,
+            assay_type=dd.assay_type,
             micromolar=dd.activity_value,
             relation=dd.activity_name,
             species=species,

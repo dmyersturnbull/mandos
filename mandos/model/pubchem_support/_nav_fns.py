@@ -139,8 +139,12 @@ class Mapx:
         return lowercase_unless_acronym
 
     @classmethod
-    def n_bar_items(cls, sep: str = "||") -> Callable[[Optional[str]], int]:
+    def n_bar_items(
+        cls, sep: str = "||", null_is_zero: bool = False
+    ) -> Callable[[Optional[str]], int]:
         def n_bar_items(value: str) -> int:
+            if null_is_zero and value is None:
+                return 0
             return len(value.split(sep))
 
         return n_bar_items
@@ -190,12 +194,12 @@ class Mapx:
         cls, type_: Callable[[str], T], nullable: bool = False, flex_type: bool = False
     ) -> Callable[[str], str]:
         def str_to(value: Optional[str]) -> Optional[T]:
+            if value is None and nullable:
+                return None
+            elif value is None:
+                raise ValueError(f"Value for type {type_} is None")
             if type_ is not None and not flex_type and not isinstance(value, str):
                 raise TypeError(f"{value} is a {type(value)}, not str")
-            if not nullable and value is None:
-                raise ValueError(f"Value for type {type_} is None")
-            elif value is None:
-                return None
             return type_(str(value).strip())
 
         str_to.__name__ = f"req_is_{type_}" + ("_or_null" if nullable else "")
@@ -213,10 +217,10 @@ class Mapx:
     @classmethod
     def split(cls, sep: str, nullable: bool = False) -> Callable[[Optional[str]], FrozenSet[str]]:
         def split(value: str) -> FrozenSet[str]:
-            if value is None and not nullable:
-                raise ValueError(f"Value is None")
-            if value is None:
+            if value is None and nullable:
                 return empty_frozenset
+            elif value is None:
+                raise ValueError(f"Value is None")
             return frozenset([s.strip() for s in str(value).split(sep)])
 
         return split

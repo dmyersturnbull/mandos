@@ -88,10 +88,10 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
             return results
         result = self._if_match(
             interaction,
-            compound + " ((?:affects)|(?:promotes)|(?:inhibits)) the reaction",
+            re.escape(compound) + " ((?:affects)|(?:promotes)|(?:inhibits)) the reaction",
             "affects a reaction involving",
         )
-        return [] if result is None else [result]
+        return [interaction.replace(compound, "").strip()] if result is None else [result]
 
     def _if_match(self, interaction: str, pattern: str, result: str) -> Optional[str]:
         pat = re.compile("^" + pattern + "$", flags=re.IGNORECASE)

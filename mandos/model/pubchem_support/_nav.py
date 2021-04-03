@@ -191,12 +191,22 @@ class JsonNavigatorListOfLists(AbstractJsonNavigator):
         self, keys: Sequence[Union[None, str, Callable[[Any], Any]]]
     ) -> JsonNavigatorListOfLists:
         fns = [_get_conversion_fn(fn) for fn in keys]
-        return JsonNavigatorListOfLists(
-            [
-                [fn(value) for value, fn in BaseTools.zip_list(contents, fns)]
-                for contents in self.contents
-            ]
-        )
+        gotcha = []
+        for contents in self.contents:
+            got2 = []
+            fields_and_funcs = BaseTools.zip_list(contents, fns)
+            for i, (value, fn) in enumerate(fields_and_funcs):
+                try:
+                    got2.append(fn(value))
+                except (MapError, ValueError, KeyError, TypeError, AttributeError):
+                    raise MapError(
+                        f"Failed mapping on field {i}/{len(fields_and_funcs)} (value: {value} ; fn: {fn})"
+                        + "\n"
+                        + "Full data is: "
+                        + str(contents)
+                    )
+                gotcha.append(got2)
+        return JsonNavigatorListOfLists(gotcha)
 
 
 @dataclass(frozen=True, eq=True)

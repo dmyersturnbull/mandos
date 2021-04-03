@@ -5,20 +5,20 @@ Run searches and write files.
 from __future__ import annotations
 
 import abc
-from inspect import cleandoc as doc
 from pathlib import Path
 from typing import TypeVar, Generic, Union, Mapping, Set, Sequence, Type, Optional
 
 import typer
 
+from mandos.entries import EntryMeta
+from mandos.entries.args import EntryArgs
 from mandos.model import ReflectionUtils, InjectionError
 from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import DataValidityComment
-from mandos.model.chembl_support.chembl_targets import TargetType, ConfidenceLevel
+from mandos.model.chembl_support.chembl_targets import TargetType
 from mandos.model.pubchem_support.pubchem_models import (
     ClinicalTrialsGovUtils,
     CoOccurrenceType,
-    AssayType,
     DrugbankTargetType,
 )
 from mandos.model.searches import Search
@@ -26,12 +26,10 @@ from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.entries.api_singletons import Apis
-from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
 from mandos.search.pubchem.computed_property_search import (
     ComputedPropertySearch,
-    ComputedPropertyHit,
 )
 from mandos.search.pubchem.dgidb_search import DgiSearch
 from mandos.search.pubchem.ctd_gene_search import CtdGeneSearch
@@ -42,7 +40,7 @@ from mandos.search.pubchem.drugbank_interaction_search import (
     DrugbankGeneralFunctionSearch,
 )
 
-from mandos import logger
+from mandos import logger, MandosMetadata, MandosLogging
 from mandos.search.chembl.binding_search import BindingSearch
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.go_search import GoType, GoSearch
@@ -87,246 +85,6 @@ class Utils:
         return {s.name for s in DataValidityComment.resolve(st)}
 
 
-class _Typer:
-
-    path = typer.Argument(
-        ...,
-        exists=True,
-        dir_okay=False,
-        readable=True,
-        help=doc(
-            """
-            The path to the input file.
-            One of:
-
-              (A) *.txt or *.lines with one InChI Key per line;
-
-              (B) A *.csv, *.tsv, *.tab file (or .gzip variant) with a column called 'inchikey'; OR
-
-              (C) An Apache Arrow *.feather file with a column called 'inchikey'
-        """
-        ),
-    )
-
-    to = typer.Option(
-        None,
-        show_default=False,
-        help=doc(
-            """
-            The path to the output file.
-            If not set, chooses <input-path>-<search>.csv.gz
-            The filename extension should be one of: .csv, .tsv, .tab, .json (with optional .gz/.bz2);
-            .feather; .snappy (or .parquet); or .h5.
-            Feather (.feather), Parquet (.snappy), and tab-delimited (.tsv.gz) are recommended.
-            JSON and HDF5 (.h5) are not recommended. If H5, will add a new dataset named <key> to the archive.
-            Will fail if the file exists unless the `--overwrite` flag is set.
-
-            If only the filename extension is provided (e.g. --to '.feather'), will only change the output format
-            (and filename extension).
-        """
-        ),
-    )
-
-    replace: bool = typer.Option(False, help="Replace output file if they exist. See also: --skip")
-
-    skip: bool = typer.Option(
-        False, help="Skip any search if the output file exists (only warns). See also: --replace"
-    )
-
-    in_cache: bool = typer.Option(
-        False,
-        help="Do not download any data. Fails if the needed data is not cached.",
-        hidden=True,
-    )
-
-    verbose: int = typer.Option(
-        0,
-        "--verbose",
-        "-v",
-        count=True,
-        help="Configure logger to output INFO (use `--verbose --verbose` or `-vv` for DEBUG output)",
-    )
-
-    @staticmethod
-    def key(name: str) -> typer.Option:
-        return typer.Option(
-            name,
-            min=1,
-            max=120,
-            help="""
-            A free-text unique key for the search.
-            Should be a short, <60-character name that describes the search and any parameters.
-            The output file will be named according to a 'sanitized' variant of this value.
-            """,
-        )
-
-    test = typer.Option(
-        False,
-        "--check",
-        help="Do not run searches; just check that the parameters are ok.",
-    )
-
-    taxa = typer.Option(
-        "7742",
-        show_default=False,
-        help=doc(
-            """
-        The IDs or names of UniProt taxa, comma-separated.
-        Taxon names and common names can be used for vertebrate species (where available).
-
-        This can have a significant effect on the search. See the docs fore more info.
-
-        [default: 7742] (Euteleostomi)
-        """
-        ),
-    )
-
-    traversal_strategy = typer.Option(
-        "@null",
-        "--traversal",
-        show_default=False,
-        help=doc(
-            """
-        Target traversal strategy name, file, or class.
-        Dictates the way the network of ChEMBL targets is traversed (from the annotated target as a source).
-        Specifies the network links that are followed and which targets are 'accepted' for final annotations.
-        This option has a dramatic effect on the search. See the docs for more info.
-
-        Can be one of:
-        (A) A standard strategy name, starting with @;
-        (B) The path to a ``*.strat`` file; OR
-        (C) The fully qualified name of a ``TargetTraversal``
-
-        The standard traversal strategies are: {}
-
-        [default: @null] (No traversal; targets as-is)
-        """.format(
-                "; ".join(TargetTraversalStrategies.standard_strategies())
-            )
-        ),
-    )
-
-    target_types = typer.Option(
-        "@molecular",
-        "--targets",
-        show_default=False,
-        help=doc(
-            """
-        The accepted target types, comma-separated.
-
-        NOTE: This affects only the types are are accepted after traversal,
-        and the types must be included in the traversal.
-        This means that this must be AT LEAST as restrictive as the traversal strategy.
-
-        The ChEMBL-defined types are:
-
-          {}
-
-        These special names are also accepted:
-
-          - {}
-
-        [default: @molecular]
-        """.format(
-                "; ".join([s.name for s in TargetType.all_types()]),
-                "\n\n          - ".join(
-                    [f"{k} ({v})" for k, v in TargetType.special_type_names().items()]
-                ),
-            )
-        ),
-    )
-
-    min_confidence = typer.Option(
-        3,
-        "--confidence",
-        min=0,
-        max=9,
-        show_default=False,
-        help=doc(
-            """
-        Minimum target confidence score, inclusive.
-        This is useful to modify in only some cases. More important options are min_pchembl and taxa.
-
-        Values are: {}
-
-        [default: 3]
-        """.format(
-                "; ".join([f"{s.value} ({s.name})" for s in ConfidenceLevel])
-            )
-        ),
-    )
-
-    relations = typer.Option(
-        "<,<=,=",
-        "--relations",
-        show_default=False,
-        help=doc(
-            """
-        Assay activity relations allowed, comma-separated.
-        If post-processing yourself, consider including all.
-        Values are: <, <=, =, >, >=, ~.
-        [default: <,<=,=]
-        """
-        ),
-    )
-
-    min_pchembl = typer.Option(
-        6.0,
-        "--pchembl",
-        min=0.0,
-        show_default=False,
-        help=doc(
-            """
-        Minimum pCHEMBL value, inclusive.
-        If post-processing yourself, consider setting to 0.0.
-        [default: 6.0]
-        """
-        ),
-    )
-
-    banned_flags = typer.Option(
-        "@negative",
-        show_default=False,
-        help=doc(
-            """
-        Exclude activity annotations with data validity flags, comma-separated.
-        It is rare to need to change this.
-
-        Values are: {}.
-
-        Special sets are:
-
-          - @all (all flags are banned)
-
-          - @negative ({})
-
-          - @positive ({})
-
-        [default: @negative]
-        """.format(
-                "; ".join([s.name for s in DataValidityComment]),
-                ", ".join([s.name for s in DataValidityComment.negative_comments()]),
-                ", ".join([s.name for s in DataValidityComment.positive_comments()]),
-            ),
-        ),
-    )
-
-    chembl_trial = typer.Option(
-        0,
-        "--phase",
-        show_default=False,
-        help=doc(
-            """
-        Minimum phase of a clinical trial, inclusive.
-        Values are: 0, 1, 2, 3.
-        [default: 0]
-        """
-        ),
-        min=0,
-        max=3,
-    )
-
-
 class Entry(Generic[S], metaclass=abc.ABCMeta):
     @classmethod
     def cmd(cls) -> str:
@@ -346,6 +104,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         # noinspection PyTypeChecker
         return ReflectionUtils.get_generic_arg(cls, Search)
 
+    # noinspection PyUnusedLocal
     @classmethod
     def test(cls, path: Path, **params) -> None:
         params = dict(params)
@@ -353,15 +112,36 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         cls.run(**params)
 
     @classmethod
-    def _run(cls, built: S, path: Path, to: Optional[Path], check: bool):
-        searcher = Searcher([built], [to], path)
+    def _run(
+        cls,
+        built: S,
+        path: Path,
+        to: Optional[Path],
+        check: bool,
+        log: Optional[Path],
+        quiet: bool,
+        verbose: bool,
+        no_setup: bool,
+    ):
+        if not no_setup:
+            level = EntryMeta.set_logging(verbose, quiet, log)
+            logger.notice(f"Ready. Set log level to {level}")
+        searcher = cls._get_searcher(built, path, to)
+        logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
+        out = searcher.output_paths[built.key]
         if not check:
             searcher.search()
+        logger.notice(f"Done! Wrote to {out}")
         return searcher
 
-    # @classmethod
-    # def build(cls, path: Path, **params: Mapping[str, Union[int, float, str]]) -> Search:
-    #    raise NotImplementedError()
+    @classmethod
+    def _get_searcher(
+        cls,
+        built: S,
+        path: Path,
+        to: Optional[Path],
+    ):
+        return Searcher([built], [to], path)
 
     @classmethod
     def default_param_values(cls) -> Mapping[str, Union[str, float, int]]:
@@ -385,17 +165,21 @@ class EntryChemblBinding(Entry[BindingSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("chembl:binding"),
-        to: Optional[Path] = _Typer.to,
-        taxa: Optional[str] = _Typer.taxa,
-        traversal=_Typer.traversal_strategy,
-        target_types=_Typer.target_types,
-        confidence=_Typer.min_confidence,
-        relations=_Typer.relations,
-        min_pchembl=_Typer.min_pchembl,
-        banned_flags=_Typer.banned_flags,
-        check: bool = _Typer.test,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("chembl:binding"),
+        to: Optional[Path] = EntryArgs.to,
+        taxa: Optional[str] = EntryArgs.taxa,
+        traversal=EntryArgs.traversal_strategy,
+        target_types=EntryArgs.target_types,
+        confidence=EntryArgs.min_confidence,
+        relations=EntryArgs.relations,
+        min_pchembl=EntryArgs.min_pchembl,
+        banned_flags=EntryArgs.banned_flags,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Binding data from ChEMBL.
@@ -431,22 +215,25 @@ class EntryChemblBinding(Entry[BindingSearch]):
             min_pchembl=min_pchembl,
             banned_flags=Utils.get_flags(banned_flags),
         )
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryChemblMechanism(Entry[MechanismSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("chembl:mechanism"),
-        to: Optional[Path] = _Typer.to,
-        taxa: Optional[str] = _Typer.taxa,
-        traversal: str = _Typer.traversal_strategy,
-        target_types: str = _Typer.target_types,
-        min_confidence: Optional[int] = _Typer.min_confidence,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("chembl:mechanism"),
+        to: Optional[Path] = EntryArgs.to,
+        taxa: Optional[str] = EntryArgs.taxa,
+        traversal: str = EntryArgs.traversal_strategy,
+        target_types: str = EntryArgs.target_types,
+        min_confidence: Optional[int] = EntryArgs.min_confidence,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Mechanism of action (MoA) data from ChEMBL.
@@ -471,19 +258,22 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
             allowed_target_types=Utils.get_target_types(target_types),
             min_confidence_score=min_confidence,
         )
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryChemblTrials(Entry[IndicationSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("chembl:trial"),
-        to: Optional[Path] = _Typer.to,
-        min_phase: Optional[int] = _Typer.chembl_trial,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("chembl:trial"),
+        to: Optional[Path] = EntryArgs.to,
+        min_phase: Optional[int] = EntryArgs.chembl_trial,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Diseases from clinical trials listed in ChEMBL.
@@ -493,21 +283,22 @@ class EntryChemblTrials(Entry[IndicationSearch]):
         PREDICATE: "phase <level> trial"
         """
         built = IndicationSearch(key=key, api=Apis.Chembl, min_phase=min_phase)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryChemblAtc(Entry[AtcSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("chembl:atc"),
-        to: Optional[Path] = _Typer.to,
-        levels: str = typer.Option(
-            "1,2,3,4,5", min=1, max=5, help="""List of ATC levels, comma-separated."""
-        ),
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("chembl:atc"),
+        to: Optional[Path] = EntryArgs.to,
+        levels: str = EntryArgs.atc_level,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         ATC codes from ChEMBL.
@@ -519,7 +310,7 @@ class EntryChemblAtc(Entry[AtcSearch]):
         built = AtcSearch(
             key=key, api=Apis.Chembl, levels={int(x.strip()) for x in levels.split(",")}
         )
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
@@ -535,25 +326,22 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("<see above>"),
-        to: Optional[Path] = _Typer.to,
-        taxa: Optional[str] = _Typer.taxa,
-        traversal_strategy: str = _Typer.traversal_strategy,
-        target_types: str = _Typer.target_types,
-        confidence: Optional[int] = _Typer.min_confidence,
-        relations: str = _Typer.relations,
-        min_pchembl: float = _Typer.min_pchembl,
-        banned_flags: Optional[str] = _Typer.banned_flags,
-        binding_search: Optional[str] = typer.Option(
-            None,
-            help="""
-            The fully qualified name of a class inheriting ``BindingSearch``.
-            If specified, all parameters above are passed to its constructor.
-            """,
-        ),
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("<see above>"),
+        to: Optional[Path] = EntryArgs.to,
+        taxa: Optional[str] = EntryArgs.taxa,
+        traversal_strategy: str = EntryArgs.traversal_strategy,
+        target_types: str = EntryArgs.target_types,
+        confidence: Optional[int] = EntryArgs.min_confidence,
+        relations: str = EntryArgs.relations,
+        min_pchembl: float = EntryArgs.min_pchembl,
+        banned_flags: Optional[str] = EntryArgs.banned_flags,
+        binding_search: Optional[str] = EntryArgs.binding_search_name,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         GO terms associated with ChEMBL binding targets.
@@ -593,7 +381,7 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         except (TypeError, ValueError):
             raise InjectionError(f"Failed to build {binding_clazz.__qualname__}")
         built = GoSearch(key, api, cls.go_type(), binding_search)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryGoFunction(_EntryChemblGo):
@@ -618,11 +406,14 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("disease.ctd:mesh"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("disease.ctd:mesh"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Diseases in the CTD.
@@ -634,7 +425,7 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
         PREDICATE: "marker/mechanism evidence for" or "disease evidence for"
         """
         built = DiseaseSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
@@ -651,21 +442,16 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("<see above>"),
-        to: Optional[Path] = _Typer.to,
-        min_score: float = typer.Option(
-            0.0,
-            help="Minimum enrichment score, inclusive. See docs for more info.",
-            min=0.0,
-        ),
-        min_articles: int = typer.Option(
-            0,
-            help="Minimum number of articles for both the compound and object, inclusive.",
-            min=0,
-        ),
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("<see above>"),
+        to: Optional[Path] = EntryArgs.to,
+        min_score: float = EntryArgs.min_cooccurrence_score,
+        min_articles: int = EntryArgs.min_cooccurring_articles,
+        log: Optional[Path] = EntryArgs.log_path,
+        check: bool = EntryArgs.test,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Co-occurrences from PubMed articles.
@@ -690,7 +476,7 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
             key = cls.cmd()
         clazz = cls.get_search_type()
         built = clazz(key, Apis.Pubchem, min_score=min_score, min_articles=min_articles)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSearch]):
@@ -709,11 +495,14 @@ class EntryPubchemDgi(Entry[DgiSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.dgidb:gene"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.dgidb:gene"),
+        to: Optional[Path] = EntryArgs.to,
+        log: Optional[Path] = EntryArgs.log_path,
+        check: bool = EntryArgs.test,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Drug/gene interactions in the DGIDB.
@@ -726,18 +515,21 @@ class EntryPubchemDgi(Entry[DgiSearch]):
         PREDICATE: "interacts with gene"
         """
         built = DgiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryPubchemCgi(Entry[CtdGeneSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.ctd:gene"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.ctd:gene"),
+        to: Optional[Path] = EntryArgs.to,
+        log: Optional[Path] = EntryArgs.log_path,
+        check: bool = EntryArgs.test,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Compound/gene interactions in the DGIDB.
@@ -751,18 +543,21 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
 
         """
         built = CtdGeneSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.drugbank:target"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.drugbank:target"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Protein targets from DrugBank.
@@ -772,18 +567,21 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
         PREDICATE: Action (e.g. "binder", "downregulator", or "agonist")
         """
         built = DrugbankTargetSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.drugbank:target-fn"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.drugbank:target-fn"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         General functions from DrugBank targets.
@@ -793,18 +591,21 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         PREDICATE: against on target (e.g. "binder", "downregulator", or "agonist").
         """
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.drugbank:pk"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.drugbank:pk"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         PK-related proteins from DrugBank.
@@ -819,18 +620,21 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
             DrugbankTargetType.enzyme,
         }
         built = DrugbankTargetSearch(key, Apis.Pubchem, target_types)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.drugbank:pk-fn"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.drugbank:pk-fn"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         DrugBank PK-related protein functions.
@@ -839,19 +643,27 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
 
         PREDICATE: "transported by", "carried by", or "metabolized by"
         """
-        built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check)
+        target_types = {
+            DrugbankTargetType.transporter,
+            DrugbankTargetType.carrier,
+            DrugbankTargetType.enzyme,
+        }
+        built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, target_types)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.drugbank:ddi"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.drugbank:ddi"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Drug/drug interactions listed by DrugBank.
@@ -864,27 +676,23 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
         PREDICATE: "ddi"
         """
         built = DrugbankDdiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryPubchemAssay(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("assay.pubchem:activity"),
-        to: Optional[Path] = _Typer.to,
-        name_must_match: bool = typer.Option(
-            False,
-            help=doc(
-                """
-            Require that the name of the compound(s) exactly matches the compound name on PubChem (case-insensitive)
-        """
-            ),
-        ),
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("assay.pubchem:activity"),
+        to: Optional[Path] = EntryArgs.to,
+        name_must_match: bool = EntryArgs.name_must_match,
         ban_sources: Optional[str] = None,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         PubChem bioactivity results.
@@ -898,21 +706,22 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
 
         SOURCE: "PubChem: <referrer> "(""confirmatory"|"literature"|"other"")"
         """
-        built = BioactivitySearch(
-            key, Apis.Pubchem, assay_types=set(AssayType), compound_name_must_match=name_must_match
-        )
-        return cls._run(built, path, to, check)
+        built = BioactivitySearch(key, Apis.Pubchem, compound_name_must_match=name_must_match)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryDeaSchedule(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("drug.dea:schedule"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("drug.dea:schedule"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         DEA schedules (PENDING).
@@ -928,11 +737,14 @@ class EntryDeaClass(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("drug.dea:class"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("drug.dea:class"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         DEA classes (PENDING).
@@ -948,21 +760,15 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("tox.chemidplus:acute"),
-        to: Optional[Path] = _Typer.to,
-        level: int = typer.Option(
-            2,
-            min=1,
-            max=2,
-            help="""
-          The level in the ChemIDPlus hierarchy of effect names.
-          Level 1: e.g. 'behavioral'
-          Level 2: 'behavioral: excitement'
-          """,
-        ),
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("tox.chemidplus:acute"),
+        to: Optional[Path] = EntryArgs.to,
+        level: int = EntryArgs.acute_effect_level,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Acute effect codes from ChemIDPlus.
@@ -984,18 +790,21 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
             Apis.Pubchem,
             top_level=level == 1,
         )
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryChemidPlusLd50(Entry[Ld50Search]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("tox.chemidplus:ld50"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("tox.chemidplus:ld50"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         LD50 acute effects from ChemIDPlus.
@@ -1010,19 +819,22 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
             - human: true or false
         """
         built = Ld50Search(key, Apis.Pubchem)
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryHmdbTissue(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("hmdb:tissue"),
-        to: Optional[Path] = _Typer.to,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("hmdb:tissue"),
+        to: Optional[Path] = EntryArgs.to,
         min_nanomolar: Optional[float] = None,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Tissue concentrations from HMDB (PENDING).
@@ -1038,12 +850,15 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("hmdb:computed"),
-        to: Optional[Path] = _Typer.to,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("hmdb:computed"),
+        to: Optional[Path] = EntryArgs.to,
         min_nanomolar: Optional[float] = None,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Computed properties from HMDB (PENDING).
@@ -1061,11 +876,14 @@ class EntryPubchemReact(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("inter.pubchem:react"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("inter.pubchem:react"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Metabolic reactions (PENDING).
@@ -1077,56 +895,19 @@ class EntryPubchemReact(Entry[BioactivitySearch]):
         pass
 
 
-def _stringify(keys: Mapping[str, str]):
-    return ", ".join((k if v is None else f"{k} ({v.lower()})" for k, v in keys.items()))
-
-
 class EntryPubchemComputed(Entry[ComputedPropertySearch]):
-
-    KNOWN_USEFUL_KEYS: Mapping[str, str] = {
-        "weight": "Molecular Weight",
-        "xlogp3": None,
-        "hydrogen-bond-donors": "Hydrogen Bond Donor Count",
-        "hydrogen-bond-acceptors": "Hydrogen Bond Acceptor Count",
-        "rotatable-bonds": "Rotatable Bond Count",
-        "exact-mass": None,
-        "monoisotopic-mass": None,
-        "tpsa": "Topological Polar Surface Area",
-        "heavy-atoms": "Heavy Atom Count",
-        "charge": "Formal Charge",
-        "complexity": None,
-    }
-    KNOWN_USELESS_KEYS: Mapping[str, str] = {
-        "components": "Covalently-Bonded Unit Count",
-        "isotope-atoms": "Isotope Atom Count",
-        "defined-atom-stereocenter-count": None,
-        "undefined-atom-stereocenter-count": None,
-        "defined-bond-stereocenter-count": None,
-        "undefined-bond-stereocenter-count": None,
-        "compound-is-canonicalized": None,
-    }
-
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("chem.pubchem:computed"),
-        keys: str = typer.Option(
-            "weight,xlogp3,tpsa,complexity,exact-mass,heavy-atom-count,charge",
-            help="""
-                The keys of the computed properties, comma-separated.
-                Key names are case-insensitive and ignore punctuation like underscores and hyphens.
-
-                Known keys are: {}
-
-                Known, less-useful (metadata-like) keys are: {}
-            """.format(
-                _stringify(KNOWN_USEFUL_KEYS), _stringify(KNOWN_USELESS_KEYS)
-            ),
-        ),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("chem.pubchem:computed"),
+        keys: str = EntryArgs.pubchem_computed_keys,
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Computed properties from PubChem.
@@ -1140,25 +921,28 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         known = {
             k: v
             for k, v in {
-                **EntryPubchemComputed.KNOWN_USEFUL_KEYS,
-                **EntryPubchemComputed.KNOWN_USELESS_KEYS,
+                **EntryArgs.KNOWN_USEFUL_KEYS,
+                **EntryArgs.KNOWN_USELESS_KEYS,
             }
             if v is not None
         }
         keys = {known.get(s.strip(), s) for s in keys.split(",")}
         built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys, source="PubChem")
-        return cls._run(built, path, to, check)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
 class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("drugbank.admet:properties"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("drugbank.admet:properties"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Enzyme predictions from DrugBank (PENDING).
@@ -1173,11 +957,14 @@ class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("drugbank.admet:metabolites"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("drugbank.admet:metabolites"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Metabolites from DrugBank (PENDING).
@@ -1192,11 +979,14 @@ class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("drugbank.admet:dosage"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("drugbank.admet:dosage"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Dosage from DrugBank (PENDING).
@@ -1215,11 +1005,14 @@ class EntryMetaRandom(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = _Typer.path,
-        key: str = _Typer.key("meta:random"),
-        to: Optional[Path] = _Typer.to,
-        check: bool = _Typer.test,
-        verbose: int = _Typer.verbose,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("meta:random"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
     ) -> Searcher:
         """
         Random class assignment (PENDING).

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.tools.common_tools import CommonTools
 
 from mandos import logger
 
@@ -14,7 +15,7 @@ ONE_YEAR = 60 * 60 * 24 * 365
 
 class Globals:
     chembl_settings = ChemblSettings.Instance()
-    is_in_ci = "IS_IN_CI" in os.environ
+    is_in_ci = CommonTools.parse_bool(os.environ.get("IS_IN_CI", "false"))
     if is_in_ci:
         mandos_path = Path(__file__).parent.parent.parent / "tests" / "resources" / ".mandos-cache"
     else:
@@ -26,6 +27,8 @@ class Globals:
     settings_path = mandos_path / "settings.toml"
     chembl_cache = mandos_path / "chembl"
     taxonomy_cache = mandos_path / "taxonomy"
+    disable_chembl = CommonTools.parse_bool(os.environ.get("MANDOS_NO_CHEMBL", "false"))
+    disable_pubchem = CommonTools.parse_bool(os.environ.get("MANDOS_NO_PUBCHEM", "false"))
 
 
 @dataclass(frozen=True, repr=True)
@@ -49,6 +52,7 @@ class Settings:
     pubchem_query_delay_min: float
     pubchem_query_delay_max: float
     pubchem_use_parent: bool
+    taxonomy_filename_format: str
 
     @property
     def chembl_cache_path(self) -> Path:
@@ -103,24 +107,23 @@ class Settings:
             pubchem_query_delay_max=data.get_as("mandos.query.pubchem.delay_sec", float, 0.25),
             pubchem_n_retries=data.get_as("mandos.query.pubchem.n_retries", int, 1),
             pubchem_use_parent=data.get_as("mandos.query.pubchem.use_parent", bool, True),
+            taxonomy_filename_format=data.get_as(
+                "mandos.cache.taxonomy_filename_format", str, "{}.tsv.gz"
+            ),
         )
 
-    def set(self):
-        """
-
-        Returns:
-
-        """
-        instance = Globals.chembl_settings
-        instance.CACHING = True
-        if not Globals.is_in_ci:  # not sure if this is needed
-            instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
-            logger.info(f"Setting ChEMBL cache to {self.chembl_cache_path}")
-        instance.TOTAL_RETRIES = self.chembl_n_retries
-        instance.FAST_SAVE = self.chembl_fast_save
-        instance.TIMEOUT = self.chembl_timeout_sec
-        instance.BACKOFF_FACTOR = self.chembl_backoff_factor
-        instance.CACHE_EXPIRE = self.chembl_expire_sec
+    def configure(self):
+        """"""
+        if not Globals.disable_chembl:
+            instance = Globals.chembl_settings
+            instance.CACHING = True
+            if not Globals.is_in_ci:  # not sure if this is needed
+                instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
+            instance.TOTAL_RETRIES = self.chembl_n_retries
+            instance.FAST_SAVE = self.chembl_fast_save
+            instance.TIMEOUT = self.chembl_timeout_sec
+            instance.BACKOFF_FACTOR = self.chembl_backoff_factor
+            instance.CACHE_EXPIRE = self.chembl_expire_sec
         self.chembl_cache_path.mkdir(exist_ok=True, parents=True)
         self.pubchem_cache_path.mkdir(exist_ok=True, parents=True)
         self.hmdb_cache_path.mkdir(exist_ok=True, parents=True)
@@ -134,7 +137,8 @@ if Globals.settings_path.exists():
 else:
     MANDOS_SETTINGS = Settings.empty()
     logger.info(f"Using default settings (no file at {Globals.settings_path})")
-MANDOS_SETTINGS.set()
+MANDOS_SETTINGS.configure()
+logger.debug(f"Setting ChEMBL cache to {MANDOS_SETTINGS.chembl_cache_path}")
 
 
 __all__ = ["MANDOS_SETTINGS"]

@@ -27,7 +27,7 @@ class TestFind:
         assert 13745754745745 not in tax
 
     def test_empty(self):
-        tax = Taxonomy({})
+        tax = Taxonomy({}, {})
         assert len(tax) == 0
         assert tax.roots == []
 
@@ -69,6 +69,12 @@ class TestFind:
         tax = tax.subtree(117571)
         # number from https://www.uniprot.org/taxonomy/117571
         assert len(tax) == 97993
+
+    def test_real_by_name(self):
+        path = MandosResources.path("7742.tab.gz")
+        tax = Taxonomy.from_path(path)
+        eu = tax.subtrees_by_name("Sarcopterygii")
+        assert len(eu) == 53827
 
 
 if __name__ == "__main__":

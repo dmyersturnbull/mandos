@@ -58,12 +58,13 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
 
     def find(self, inchikey: str) -> Sequence[H]:
         data = self.api.fetch_data(inchikey)
-        allofthem = data.literature.gene_cooccurrences
+        allofthem = self._query(data)
         return [
             self.__class__.get_h()(
                 record_id=None,
                 compound_id=str(data.cid),
-                inchikey=data.names_and_identifiers.inchikey,
+                origin_inchikey=inchikey,
+                matched_inchikey=data.names_and_identifiers.inchikey,
                 compound_name=data.name,
                 predicate=self._predicate(),
                 object_id=dd.neighbor_id,

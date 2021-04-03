@@ -13,7 +13,6 @@ from mandos.model.pubchem_support.pubchem_models import (
     DrugGeneInteraction,
     CoOccurrence,
     Activity,
-    AssayType,
     Bioactivity,
     AcuteEffectEntry,
 )
@@ -272,7 +271,7 @@ class TestPubchemApi:
             {
                 Bioactivity(
                     assay_id=127361,
-                    assay_type=AssayType.confirmatory,
+                    assay_type="confirmatory",
                     assay_ref="ChEMBL",
                     assay_name="Binding affinity towards human monoclonal antibody 2E2 using [3H]cocaine",
                     assay_made_date=date(2018, 9, 8),
@@ -287,7 +286,7 @@ class TestPubchemApi:
                 ),
                 Bioactivity(
                     assay_id=127359,
-                    assay_type=AssayType.confirmatory,
+                    assay_type="confirmatory",
                     assay_ref="ChEMBL",
                     assay_name="Dissociation Constant for human monoclonal antibody 2E2 with [3H]cocaine",
                     assay_made_date=date(2018, 9, 8),

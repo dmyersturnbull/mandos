@@ -12,7 +12,11 @@ from typeddfs import TypedDfs
 from mandos import logger
 
 TaxonomyDf = (
-    TypedDfs.typed("TaxonomyDf").require("taxon").require("parent").require("scientific_name")
+    TypedDfs.typed("TaxonomyDf")
+    .require("taxon")
+    .require("parent")
+    .require("scientific_name")
+    .reserve("common_name")
 ).build()
 
 
@@ -371,7 +375,8 @@ class Taxonomy:
         by_name = defaultdict(set)
         for t in tax:
             by_name[t.name].add(t)
-        return {k: frozenset(v) for k, v in by_name.items()}
+        # NOTE: lower-casing the keys for lookup
+        return {k.lower(): frozenset(v) for k, v in by_name.items()}
 
 
 __all__ = ["Taxon", "Taxonomy", "TaxonomyDf"]

@@ -67,6 +67,8 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             The list of :py:class:`mandos.model.hits.AbstractHit`
         """
         lst = []
+        # set just in case we never iterate
+        i = 0
         for i, compound in enumerate(inchikeys):
             try:
                 x = self.find(compound)
@@ -74,11 +76,11 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
                 logger.info(f"NOT FOUND: {compound}. Skipping.")
                 continue
             except Exception:
-                logger.error(f"Failed on {compound}", exc_info=True)
-                continue
+                logger.exception(f"Failed on {compound}")
+                raise
             lst.extend(x)
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
-        logger.info(
+        logger.notice(
             f"Found {len(lst)} {self.search_name} annotations for {i} of {len(inchikeys)} compounds"
         )
         return lst
@@ -113,8 +115,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # If this magic is too magical, we can make this an abstract method
         # But that would be a lot of excess code and it might be less modular
         x = cls.get_h()
-        actual_h = x.__bases__[0]
-        return [f.name for f in dataclasses.fields(actual_h)]
+        return [f.name for f in dataclasses.fields(x)]
 
     @classmethod
     def get_h(cls):

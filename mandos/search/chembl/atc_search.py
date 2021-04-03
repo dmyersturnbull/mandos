@@ -67,6 +67,12 @@ class AtcSearch(ChemblSearch[AtcHit]):
 
     def _code(self, lookup: str, compound: ChemblCompound, dots: NestedDotDict, level: int):
         # 'level1': 'N', 'level1_description': 'NERVOUS SYSTEM', 'level2': 'N05', ...
+        # Unfortunately ChEMBL doesn't contain the exact compound names for ATC
+        # TODO: These names do not exactly match what ATC uses
+        if level == 5:
+            object_name = compound.name.lower()
+        else:
+            object_name = dots.get(f"level{level}_description")
         return AtcHit(
             None,
             origin_inchikey=lookup,
@@ -75,9 +81,9 @@ class AtcSearch(ChemblSearch[AtcHit]):
             compound_name=compound.name,
             predicate=f"has ATC level {level} code",
             object_id=dots.get(f"level{level}"),
-            object_name=dots.get(f"level{level}_description"),
+            object_name=object_name,
             search_key=self.key,
-            search_class=self.search_name,
+            search_class=self.search_class,
             data_source=self.data_source,
             level=level,
         )

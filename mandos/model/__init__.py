@@ -162,6 +162,9 @@ class CleverEnum(enum.Enum):
 
 
 class MandosResources:
+
+    VERTEBRATA_PATH = None
+
     @classmethod
     def contains(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> bool:
         """Returns whether a resource file (or dir) exists."""
@@ -177,6 +180,9 @@ class MandosResources:
     def json(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> NestedDotDict:
         """Reads a JSON file under ``resources/``."""
         return NestedDotDict.read_json(cls.path(*nodes, suffix=suffix))
+
+
+MandosResources.VERTEBRATA_PATH = MandosResources.path("7742.tab.gz")
 
 
 __all__ = [

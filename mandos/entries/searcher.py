@@ -15,6 +15,7 @@ from pocketutils.tools.path_tools import PathTools
 from typeddfs import TypedDfs, UntypedDf
 
 from mandos import logger
+from mandos.entries.paths import EntryPaths
 from mandos.model import CompoundNotFoundError
 from mandos.model.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.searches import Search
@@ -42,6 +43,7 @@ class SearcherUtils:
         pubchem: bool = True,
         chembl: bool = True,
         hmdb: bool = True,
+        quiet: bool = False,
     ) -> IdMatchFrame:
         # we actually cache the results, even though the underlying APIs cache
         # the reasons for this are a little obscure --
@@ -57,7 +59,7 @@ class SearcherUtils:
         # TODO
         # noinspection PyPep8Naming
         Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
-        logger.notice(f"Using {Chembl}, {Pubchem}")
+        logger.info(f"Using {Chembl}, {Pubchem}")
         key = hash(",".join(inchikeys))
         cached_path = (MANDOS_SETTINGS.match_cache_path / str(key)).with_suffix(".feather")
         if cached_path.exists():
@@ -70,19 +72,21 @@ class SearcherUtils:
                 try:
                     cid = Pubchem.fetch_data(inchikey).cid
                     found_pubchem[inchikey] = str(cid)
-                    logger.info(f"Found:      PubChem {inchikey} ({cid})")
+                    if not quiet:
+                        logger.info(f"Found:      PubChem {inchikey} ({cid})")
                 except CompoundNotFoundError:
                     logger.info(f"NOT FOUND: PubChem {inchikey}")
-                    logger.debug(f"Did not find PubChem {inchikey}", exc_info=True)
+                    logger.trace(f"Did not find PubChem {inchikey}", exc_info=True)
         if chembl:
             for inchikey in inchikeys:
                 try:
                     chid = ChemblUtils(Chembl).get_compound(inchikey).chid
                     found_chembl[inchikey] = chid
-                    logger.info(f"Found:      ChEMBL {inchikey} ({chid})")
+                    if not quiet:
+                        logger.info(f"Found:      ChEMBL {inchikey} ({chid})")
                 except CompoundNotFoundError:
                     logger.info(f"NOT FOUND: ChEMBL {inchikey}")
-                    logger.debug(f"Did not find ChEMBL {inchikey}", exc_info=True)
+                    logger.trace(f"Did not find ChEMBL {inchikey}", exc_info=True)
         df = pd.DataFrame([pd.Series(dict(inchikey=c)) for c in inchikeys])
         df["chembl_id"] = df["inchikey"].map(found_chembl.get)
         df["pubchem_id"] = df["inchikey"].map(found_pubchem.get)
@@ -145,7 +149,7 @@ class Searcher:
         self.input_path: Optional[Path] = input_path
         self.input_df: InputFrame = None
         self.output_paths = {
-            what.key: self._output_path_of(what, path)
+            what.key: EntryPaths.output_path_of(what, input_path, path)
             for what, path in CommonTools.zip_list(searches, to)
         }
 
@@ -160,34 +164,18 @@ class Searcher:
         has_pubchem = any((isinstance(what, PubchemSearch) for what in self.what))
         has_chembl = any((isinstance(what, ChemblSearch) for what in self.what))
         # find the compounds first so the user knows what's missing before proceeding
-        SearcherUtils.dl(inchikeys, pubchem=has_pubchem, chembl=has_chembl)
+        SearcherUtils.dl(inchikeys, pubchem=has_pubchem, chembl=has_chembl, quiet=True)
         for what in self.what:
             output_path = self.output_paths[what.key]
+            metadata_path = output_path.with_suffix(".metadata.json")
             df = what.find_to_df(inchikeys)
             # TODO keep any other columns in input_df
             df.to_csv(output_path)
             params = {k: str(v) for k, v in what.get_params().items() if k not in {"key", "api"}}
             metadata = NestedDotDict(dict(key=what.key, search=what.search_class, params=params))
-            metadata.write_json(output_path.with_suffix(".json"))
-            logger.notice(f"Wrote {what.key} to {output_path}")
+            metadata.write_json(metadata_path)
+            logger.info(f"Wrote {what.key} to {output_path}")
         return self
-
-    def _output_path_of(self, what: Search, to: Optional[Path]) -> Path:
-        if to is None:
-            return self._default_path_of(what)
-        elif str(to).startswith("."):
-            return self._default_path_of(what).with_suffix(str(to))
-        else:
-            return to
-
-    def _default_path_of(self, what: Search) -> Path:
-        parent = self.input_path.parent / (self.input_path.stem + "-output")
-        parent.mkdir(exist_ok=True)
-        child = what.key + ".csv"
-        node = PathTools.sanitize_path_node(child)
-        if (parent / node).resolve() != (parent / child).resolve():
-            logger.debug(f"Path {child} sanitized to {node}")
-        return parent / node
 
 
 __all__ = ["Searcher", "IdMatchFrame", "SearcherUtils"]

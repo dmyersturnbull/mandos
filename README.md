@@ -66,7 +66,7 @@ or run multiple searches with `mandos meta:all compounds.txt --config searches.t
 
 **Output:** One CSV file per annotation type – 10 columns shared between all files, plus type-specific columns.
 The consistent columns are: _record_id_, _inchikey_, _compound_id_, _compound_name_,
-_predicate_, _object_id_, _object_name_, _search_key_, _search_class_, and _data_source_.
+_predicate_, _object_id_, _object_name_, _search_key_, _data_source_, and _universal_id_.
 Additional columns include EC50, original name, species, clinical phase, etc.
 You could concatenate the files for something like the following.
 (_Columns were dropped and renamed for display._)

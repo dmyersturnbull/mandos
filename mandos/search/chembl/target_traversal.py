@@ -46,6 +46,21 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
+class NullTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABCMeta):
+    """"""
+
+    @classmethod
+    @property
+    def api(cls) -> ChemblApi:
+        raise NotImplementedError()
+
+    def traverse(self, target: ChemblTargetGraph) -> Sequence[ChemblTargetGraph]:
+        return self.__call__(target)
+
+    def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTargetGraph]:
+        return [target]
+
+
 class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABCMeta):
     """"""
 
@@ -160,6 +175,8 @@ class TargetTraversalStrategies:
 
     @classmethod
     def by_name(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
+        if name == "@null":  # just slightly more efficient
+            return cls.null(api)
         if MandosResources.contains("strategies", name, suffix=".strat"):
             return cls.from_resource(name, api)
         elif name.endswith(".strat"):
@@ -215,7 +232,13 @@ class TargetTraversalStrategies:
 
     @classmethod
     def null(cls, api: ChemblApi) -> TargetTraversalStrategy:
-        return cls.from_resource("null.txt", api)
+        class NullStrategy(NullTargetTraversalStrategy):
+            @classmethod
+            @property
+            def api(cls) -> ChemblApi:
+                return api
+
+        return NullStrategy()
 
     # noinspection PyAbstractClass
     @classmethod

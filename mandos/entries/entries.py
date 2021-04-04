@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TypeVar, Generic, Union, Mapping, Set, Sequence, Type, Optional
 
 import typer
+from typer.models import OptionInfo
 
 from mandos.entries import EntryMeta
 from mandos.entries.args import EntryArgs
@@ -28,9 +29,7 @@ from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.entries.api_singletons import Apis
 from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
-from mandos.search.pubchem.computed_property_search import (
-    ComputedPropertySearch,
-)
+from mandos.search.pubchem.computed_property_search import ComputedPropertySearch
 from mandos.search.pubchem.dgidb_search import DgiSearch
 from mandos.search.pubchem.ctd_gene_search import CtdGeneSearch
 from mandos.entries.searcher import Searcher
@@ -40,7 +39,7 @@ from mandos.search.pubchem.drugbank_interaction_search import (
     DrugbankGeneralFunctionSearch,
 )
 
-from mandos import logger, MandosMetadata, MandosLogging
+from mandos import logger
 from mandos.search.chembl.binding_search import BindingSearch
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.go_search import GoType, GoSearch
@@ -68,7 +67,9 @@ class Utils:
     @staticmethod
     def get_taxa(taxa: str) -> Sequence[Taxonomy]:
         return [
-            TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path).load(int(taxon))
+            TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path).load(
+                str(taxon).strip()
+            )
             for taxon in taxa.split(",")
         ]
 
@@ -107,9 +108,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
     # noinspection PyUnusedLocal
     @classmethod
     def test(cls, path: Path, **params) -> None:
-        params = dict(params)
-        params["test"] = True
-        cls.run(**params)
+        cls.run(path, **{**params, **dict(check=True)})
 
     @classmethod
     def _run(
@@ -144,9 +143,9 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         return Searcher([built], [to], path)
 
     @classmethod
-    def default_param_values(cls) -> Mapping[str, Union[str, float, int]]:
+    def default_param_values(cls) -> Mapping[str, Union[str, float, int, Path]]:
         return {
-            param: value
+            param: (value.default if isinstance(value, OptionInfo) else value)
             for param, value in ReflectionUtils.default_arg_values(cls.run).items()
             if param not in {"key", "path"}
         }
@@ -168,13 +167,15 @@ class EntryChemblBinding(Entry[BindingSearch]):
         path: Path = EntryArgs.path,
         key: str = EntryArgs.key("chembl:binding"),
         to: Optional[Path] = EntryArgs.to,
-        taxa: Optional[str] = EntryArgs.taxa,
-        traversal=EntryArgs.traversal_strategy,
-        target_types=EntryArgs.target_types,
-        confidence=EntryArgs.min_confidence,
-        relations=EntryArgs.relations,
-        min_pchembl=EntryArgs.min_pchembl,
-        banned_flags=EntryArgs.banned_flags,
+        taxa: str = EntryArgs.taxa,
+        traversal: str = EntryArgs.traversal_strategy,
+        target_types: str = EntryArgs.target_types,
+        confidence: int = EntryArgs.min_confidence,
+        binding: float = EntryArgs.binds_cutoff,
+        nonbinding: float = EntryArgs.does_not_bind_cutoff,
+        relations: str = EntryArgs.relations,
+        min_pchembl: float = EntryArgs.min_pchembl,
+        banned_flags: str = EntryArgs.banned_flags,
         check: bool = EntryArgs.test,
         log: Optional[Path] = EntryArgs.log_path,
         quiet: bool = EntryArgs.quiet,
@@ -190,7 +191,7 @@ class EntryChemblBinding(Entry[BindingSearch]):
 
         OBJECT: ChEMBL preferred target name
 
-        PREDICATE: "binds to"
+        PREDICATE: Either "binds", "does not bind", or "binding <relation> at"
 
         OTHER COLUMNS:
 
@@ -214,6 +215,8 @@ class EntryChemblBinding(Entry[BindingSearch]):
             allowed_relations=Utils.split(relations),
             min_pchembl=min_pchembl,
             banned_flags=Utils.get_flags(banned_flags),
+            binds_cutoff=binding,
+            does_not_bind_cutoff=nonbinding,
         )
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
@@ -923,11 +926,11 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
             for k, v in {
                 **EntryArgs.KNOWN_USEFUL_KEYS,
                 **EntryArgs.KNOWN_USELESS_KEYS,
-            }
+            }.items()
             if v is not None
         }
         keys = {known.get(s.strip(), s) for s in keys.split(",")}
-        built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys, source="PubChem")
+        built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 
@@ -1032,6 +1035,7 @@ Entries = [
     EntryGoFunction,
     EntryGoProcess,
     EntryGoComponent,
+    EntryPubchemComputed,
     EntryPubchemDisease,
     EntryPubchemGeneCoOccurrence,
     EntryPubchemDiseaseCoOccurrence,

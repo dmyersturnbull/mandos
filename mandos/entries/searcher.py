@@ -110,7 +110,7 @@ class SearcherUtils:
         # noinspection PyTypeChecker
         df: UntypedDf = df.drop_duplicates()
         n1 = len(df)
-        logger.info("Read {n1} input compounds")
+        logger.info(f"Read {n1} input compounds")
         if n0 == n1:
             logger.info(f"There were no duplicate rows")
         else:

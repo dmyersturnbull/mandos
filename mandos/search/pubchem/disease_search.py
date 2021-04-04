@@ -16,7 +16,7 @@ class DiseaseSearch(PubchemSearch[DiseaseHit]):
 
     @property
     def data_source(self) -> str:
-        return "Comparative Toxicogenomics Database (CTD)"
+        return "Comparative Toxicogenomics Database (CTD) :: diseases"
 
     def find(self, inchikey: str) -> Sequence[DiseaseHit]:
         data = self.api.fetch_data(inchikey)

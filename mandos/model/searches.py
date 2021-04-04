@@ -52,7 +52,17 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             inchikeys: A list of InChI key strings
         """
         hits = self.find_all(inchikeys)
-        return HitFrame([pd.Series({f: getattr(h, f) for f in self.hit_fields()}) for h in hits])
+        return HitFrame(
+            [
+                pd.Series(
+                    {
+                        **{f: getattr(h, f) for f in self.hit_fields()},
+                        **dict(universal_id=h.universal_id),
+                    }
+                )
+                for h in hits
+            ]
+        )
 
     def find_all(self, inchikeys: Sequence[str]) -> Sequence[H]:
         """
@@ -80,8 +90,12 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
                 raise
             lst.extend(x)
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
+            if i % 10 == 9:
+                logger.notice(
+                    f"Found {len(lst)} {self.search_name} annotations for {i+1} of {len(inchikeys)} compounds"
+                )
         logger.notice(
-            f"Found {len(lst)} {self.search_name} annotations for {i} of {len(inchikeys)} compounds"
+            f"Found {len(lst)} {self.search_name} annotations for {i+1} of {len(inchikeys)} compounds"
         )
         return lst
 
@@ -115,7 +129,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # If this magic is too magical, we can make this an abstract method
         # But that would be a lot of excess code and it might be less modular
         x = cls.get_h()
-        return [f.name for f in dataclasses.fields(x)]
+        return [f.name for f in dataclasses.fields(x) if f.name != "search_class"]
 
     @classmethod
     def get_h(cls):

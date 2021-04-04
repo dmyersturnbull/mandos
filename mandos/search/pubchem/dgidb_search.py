@@ -18,7 +18,7 @@ class DgiSearch(PubchemSearch[DgiHit]):
 
     @property
     def data_source(self) -> str:
-        return "Drug Gene Interaction Database (DGIdb)"
+        return "Drug Gene Interaction Database (DGIdb) :: drug/gene interactions"
 
     def find(self, inchikey: str) -> Sequence[DgiHit]:
         data = self.api.fetch_data(inchikey)

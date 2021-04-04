@@ -27,9 +27,5 @@ class ChemblSearch(Search[H], metaclass=abc.ABCMeta):
         super().__init__(key)
         self.api = api
 
-    @property
-    def data_source(self) -> str:
-        return "ChEMBL"
-
 
 __all__ = ["ChemblHit", "ChemblSearch"]

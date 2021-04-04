@@ -10,8 +10,6 @@ from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
 from mandos.model.chembl_support import ChemblCompound, AssayType
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
 
-logger = logging.getLogger("mandos")
-
 
 @dataclass(frozen=True, order=True, repr=True)
 class FunctionalHit(_ActivityHit):
@@ -28,6 +26,10 @@ class FunctionalSearch(_ActivitySearch[FunctionalHit]):
     """
     Search for ``activity`` of type "F".
     """
+
+    @property
+    def data_source(self) -> str:
+        return "ChEMBL :: functional activity"
 
     @classmethod
     def allowed_assay_types(cls) -> Set[str]:

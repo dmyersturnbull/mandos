@@ -57,6 +57,26 @@ class AbstractHit:
     def __hash__(self):
         return hash(self.record_id)
 
+    @property
+    def universal_id(self) -> str:
+        """
+        Gets an identifier (a hex key) that uniquely identifies the record by its unique attributes.
+        Does **NOT** distinguish between hits with duplicate information and does **NOT**
+        include ``record_id``.
+
+        Returns:
+            A 64-character hexadecimal string
+        """
+        # excluding record_id only because it's not available for some hit types
+        # we'd rather immediately see duplicates if the exist
+        fields = {
+            field
+            for field in self.fields()
+            if field
+            not in {"record_id", "origin_inchikey", "compound_name", "search_key", "search_class"}
+        }
+        return hex(hash(tuple([getattr(self, f) for f in fields])))
+
     @classmethod
     def fields(cls) -> Sequence[str]:
         """

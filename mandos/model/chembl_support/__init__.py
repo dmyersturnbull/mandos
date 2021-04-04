@@ -34,6 +34,7 @@ class ActivityRelation(CleverEnum):
 
 class DataValidityComment(CleverEnum):
     potential_missing_data = enum.auto()
+    potential_transcription_error = enum.auto()
     potential_author_error = enum.auto()
     manually_validated = enum.auto()
     outside_typical_range = enum.auto()
@@ -73,6 +74,7 @@ class DataValidityComment(CleverEnum):
     def negative_comments(cls) -> Set[DataValidityComment]:
         return {
             DataValidityComment.potential_missing_data,
+            DataValidityComment.potential_transcription_error,
             DataValidityComment.potential_author_error,
             DataValidityComment.outside_typical_range,
             DataValidityComment.non_standard_unit_for_type,

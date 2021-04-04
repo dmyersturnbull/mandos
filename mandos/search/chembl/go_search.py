@@ -46,6 +46,10 @@ class GoSearch(ChemblSearch[GoHit]):
         self.go_type = go_type
         self.binding_search = binding_search
 
+    @property
+    def data_source(self) -> str:
+        return "ChEMBL :: GO terms"
+
     def find(self, compound: str) -> Sequence[GoHit]:
         matches = self.binding_search.find(compound)
         terms = []

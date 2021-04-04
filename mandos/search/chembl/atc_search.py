@@ -29,6 +29,10 @@ class AtcSearch(ChemblSearch[AtcHit]):
         super().__init__(key, api)
         self.levels = levels
 
+    @property
+    def data_source(self) -> str:
+        return "ChEMBL :: ATC codes"
+
     def find(self, lookup: str) -> Sequence[AtcHit]:
         """
 

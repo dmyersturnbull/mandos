@@ -28,17 +28,9 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     Search for ``mechanisms``.
     """
 
-    def __init__(
-        self,
-        key: str,
-        api: ChemblApi,
-        taxa: Sequence[Taxonomy],
-        traversal_strategy: str,
-        allowed_target_types: Set[str],
-        min_confidence_score: Optional[int],
-    ):
-        super().__init__(key, api, taxa, traversal_strategy, allowed_target_types)
-        self.min_confidence_score = min_confidence_score
+    @property
+    def data_source(self) -> str:
+        return "ChEMBL :: mechanisms"
 
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         return list(self.api.mechanism.filter(parent_molecule_chembl_id=parent_form.chid))
@@ -47,7 +39,7 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> bool:
         if target.type.name.lower() not in {s.lower() for s in self.allowed_target_types}:
-            logger.warning(f"Excluding {target} with type {target.type}")
+            logger.warning(f"Excluding {target.name} with type {target.type}")
             return False
         return True
 

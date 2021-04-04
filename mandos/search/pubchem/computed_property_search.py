@@ -17,15 +17,14 @@ class ComputedPropertyHit(PubchemHit):
 class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
     """"""
 
-    def __init__(self, key: str, api: PubchemApi, descriptors: Set[str], source: str):
+    def __init__(self, key: str, api: PubchemApi, descriptors: Set[str]):
         super().__init__(key, api)
         self.api = api
         self.descriptors = descriptors
-        self.source = source
 
     @property
     def data_source(self) -> str:
-        return self.source
+        return "PubChem :: computed properties"
 
     def find(self, inchikey: str) -> Sequence[ComputedPropertyHit]:
         data = self.api.fetch_data(inchikey)

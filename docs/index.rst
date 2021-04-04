@@ -96,25 +96,33 @@ More important parameters (such as taxon) are marked as such in the help.
 
 All data fetched from ChEMBL and PubChem are cached under ``~/.mandos``.
 This means that if you modify the parameters for a query and re-run, the results should be returned quickly.
-For example, if you run ``mandos binding compounds.txt --taxon human``, then
-running ``mandos binding compounds.txt --taxon all`` later will be fast.
+For example, if you run ``mandos binding compounds.txt --taxa human``, then
+running ``mandos binding compounds.txt --taxa @all`` later will be fast.
 
 Below is the full list of annotation types that are available at the command-line.
 More can be found in the Python API; these are generally too specialized to be commonly used.
 Some types also warrant dedicated documentation, which can be found in other pages on this site.
+
+.. hint::
+
+    The names of commands are always in the form ``source`` : ``type``, with sub-categories of the
+    source or type joined with a ``.``. For example, in ``drug.dea:schedule``, the source
+    is ``drug.dea`` and the type is ``schedule``. In ``chembl:go.process``, the source
+    is ``chembl`` and the type is ``go.process``.
+    You can always run ``mandos --help`` to see the command names.
 
 ======================= =============================================================================
  search                  description
 ======================= =============================================================================
 chembl:mechanism        ChEMBL molecular mechanism annotations
 chembl:binding          ChEMBL binding activity annotations
-chembl:activity         All ChEMBL activity annotations
+chembl:functional       ChEMBL functional activity annotations
+chembl:admet            ChEMBL ADMET activity annotations
 chembl:atc              ATC codes as listed by ChEMBL
 chembl:trials           ChEMBL indication annotations as MESH IDs
-chembl:go:function      GO Function terms of ChEMBL targets
-chembl:go:process       GO Process terms of ChEMBL targets
-chembl:go:component     GO Component terms of ChEMBL targets
-chembl:metabolite       Metabolites listed on ChEMBL
+chembl:go.function      GO Function terms of ChEMBL targets
+chembl:go.process       GO Process terms of ChEMBL targets
+chembl:go.component     GO Component terms of ChEMBL targets
 summary.ncit:link       Compounds linked from the NCIt summary
 chem.pubchem:computed   Computed chemical properties on PubChem
 drug.livertox:class     LiverTox drug classes

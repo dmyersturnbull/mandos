@@ -23,7 +23,7 @@ hasher = Hasher("sha1")
 
 
 class TaxonomyFactory(metaclass=abc.ABCMeta):
-    def load(self, taxon: int) -> Taxonomy:
+    def load(self, taxon: Union[int, str]) -> Taxonomy:
         raise NotImplementedError()
 
 
@@ -79,7 +79,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
                 # getting the mod date because creation dates are iffy cross-platform
                 # (in fact the Linux kernel doesn't bother to expose them)
                 when = datetime.fromtimestamp(raw_path.stat().st_mtime).strftime("%Y-%m-%d")
-                logger.warn(f"It may be out of date. (File mod date: {when})")
+                logger.warning(f"It may be out of date. (File mod date: {when})")
             else:
                 logger.warning(
                     f"Downloading new taxonomy file for taxon {taxon}. This may take a while."

@@ -48,7 +48,7 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
 
     @property
     def data_source(self) -> str:
-        return "PubChem"
+        return f"PubChem :: {self.cooccurrence_type().name} co-occurrences"
 
     def _predicate(self) -> str:
         raise NotImplementedError()

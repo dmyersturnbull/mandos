@@ -240,29 +240,55 @@ class EntryArgs:
     )
 
     relations = typer.Option(
-        "<,<=,=",
+        "<,<=,=,>=,>",
         "--relations",
         show_default=False,
         help=doc(
             """
         Assay activity relations allowed, comma-separated.
-        If post-processing yourself, consider including all.
+        You should include all if ``cutoff`` is set.
         Values are: <, <=, =, >, >=, ~.
-        [default: <,<=,=]
+        [default: <,<=,=,>=,>]
         """
         ),
     )
 
     min_pchembl = typer.Option(
-        6.0,
-        "--pchembl",
+        0.0,
+        "--min-pchembl",
         min=0.0,
         show_default=False,
         help=doc(
             """
         Minimum pCHEMBL value, inclusive.
-        If post-processing yourself, consider setting to 0.0.
-        [default: 6.0]
+        You should include all if ``cutoff`` is set.
+        [default: 0.0]
+        """
+        ),
+    )
+
+    binds_cutoff = typer.Option(
+        7.0,
+        "--binding",
+        min=0.0,
+        show_default=False,
+        help=doc(
+            """
+        Cutoff of pCHEMBL at which "binds" is declared if the relation is >, >=, =, or ~.
+        [default: 7.0 (100 nanomolar)]
+        """
+        ),
+    )
+
+    does_not_bind_cutoff = typer.Option(
+        4.0,
+        "--nonbinding",
+        min=0.0,
+        show_default=False,
+        help=doc(
+            """
+        Cutoff of pCHEMBL at which "does not bind" is declared if the relation is <, <=, =, or ~.
+        [default: 4.0 (100 micromolar)]
         """
         ),
     )

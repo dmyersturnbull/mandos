@@ -34,7 +34,7 @@ class AcuteEffectSearch(PubchemSearch[AcuteEffectHit]):
 
     @property
     def data_source(self) -> str:
-        return "ChemIDplus"
+        return "ChemIDplus :: acute effects"
 
     def find(self, inchikey: str) -> Sequence[AcuteEffectHit]:
         data = self.api.fetch_data(inchikey)

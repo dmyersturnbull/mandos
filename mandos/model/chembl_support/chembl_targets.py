@@ -71,6 +71,8 @@ class TargetType(CleverEnum):
             st = st.strip()
             if st == "@all":
                 match = TargetType.all_types()
+            elif st == "@any":
+                match = TargetType.all_types()
             elif st == "@known":
                 match = {s for s in TargetType.all_types() if not s.is_unknown}
             elif st == "@protein":
@@ -89,6 +91,7 @@ class TargetType(CleverEnum):
     def special_type_names(cls) -> Mapping[str, str]:
         return {
             "@all": "all types",
+            "@any": "all types",
             "@known": "all types except unknown",
             "@protein": ", ".join([s.name.replace("_", " ") for s in cls.protein_types()]),
             "@molecular": ", ".join([s.name.replace("_", " ") for s in cls.molecular_types()]),

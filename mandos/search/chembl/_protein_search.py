@@ -2,7 +2,7 @@ import abc
 import logging
 import re
 from dataclasses import dataclass
-from typing import Sequence, TypeVar, Set, Union
+from typing import Sequence, TypeVar, Set, Union, Optional
 
 from pocketutils.core.dot_dict import NestedDotDict
 
@@ -44,11 +44,13 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         taxa: Sequence[Taxonomy],
         traversal_strategy: str,
         allowed_target_types: Set[str],
+        min_confidence_score: Optional[int],
     ):
         super().__init__(key, api)
         self.taxa = taxa
         self.traversal_strategy = TargetTraversalStrategies.by_name(traversal_strategy, self.api)
         self.allowed_target_types = allowed_target_types
+        self.min_confidence_score = min_confidence_score
 
     def is_in_taxa(self, species: Union[int, str]) -> bool:
         """

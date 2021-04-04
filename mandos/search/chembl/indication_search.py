@@ -30,6 +30,10 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
         super().__init__(key, api)
         self.min_phase = min_phase
 
+    @property
+    def data_source(self) -> str:
+        return "ChEMBL :: indications"
+
     def find(self, lookup: str) -> Sequence[IndicationHit]:
         """
 

@@ -108,7 +108,7 @@ class MandosLogging:
                 serialize = True if path.suffix == f".json.{e}" else False
                 logger.add(
                     str(path),
-                    level="DEBUG",
+                    level=level,
                     compression=c,
                     serialize=serialize,
                     backtrace=True,

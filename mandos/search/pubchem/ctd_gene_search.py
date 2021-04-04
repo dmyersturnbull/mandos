@@ -18,7 +18,7 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
 
     @property
     def data_source(self) -> str:
-        return "Comparative Toxicogenomics Database (CTD)"
+        return "Comparative Toxicogenomics Database (CTD) :: chemical/gene interactions"
 
     def find(self, inchikey: str) -> Sequence[CtdGeneHit]:
         data = self.api.fetch_data(inchikey)

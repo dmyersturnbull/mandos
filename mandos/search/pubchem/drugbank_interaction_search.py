@@ -37,10 +37,6 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
 
     """"""
 
-    @property
-    def data_source(self) -> str:
-        return "DrugBank"
-
     @classmethod
     def _get_obj(cls, dd: DrugbankInteraction) -> str:
         raise NotImplementedError()
@@ -80,6 +76,10 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
 class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
     """"""
 
+    @property
+    def data_source(self) -> str:
+        return "DrugBank :: target interactions"
+
     @classmethod
     def _get_obj(cls, dd: DrugbankInteraction) -> str:
         return dd.target_name
@@ -91,6 +91,10 @@ class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
 
 class DrugbankGeneralFunctionSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
     """"""
+
+    @property
+    def data_source(self) -> str:
+        return "DrugBank :: non-target interactions"
 
     @classmethod
     def _get_obj(cls, dd: DrugbankInteraction) -> str:

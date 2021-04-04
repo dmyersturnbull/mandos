@@ -2,6 +2,8 @@ import re
 from dataclasses import dataclass
 from typing import Sequence, Optional
 
+from loguru import logger
+
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -20,7 +22,7 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
 
     @property
     def data_source(self) -> str:
-        return "DrugBank"
+        return "DrugBank :: drug/drug interactions"
 
     def find(self, inchikey: str) -> Sequence[DrugbankDdiHit]:
         data = self.api.fetch_data(inchikey)
@@ -29,14 +31,22 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
             kind = self._guess_type(dd.description)
             up_or_down = self._guess_up_down(dd.description)
             spec = None
+            predicate = None
             if kind == "risk":
                 spec = self._guess_adverse(dd.description)
+                predicate = f"{kind} :: {up_or_down} risk of {spec} with"
             elif kind == "activity":
                 spec = self._guess_activity(dd.description)
+                predicate = f"{kind} :: {up_or_down} {spec} activity with"
             elif kind == "PK":
                 spec = self._guess_pk(dd.description)
+                predicate = f"{kind} :: {up_or_down} {spec} with"
             elif kind == "efficacy":
                 spec = self._guess_efficacy(dd.description)
+                predicate = f"{kind} :: {up_or_down} efficacy of {spec} with"
+            if predicate is None:
+                logger.info(f"Did not extract info from '{dd.description}'")
+                continue
             hits.append(
                 DrugbankDdiHit(
                     record_id=None,
@@ -44,7 +54,7 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
                     matched_inchikey=data.names_and_identifiers.inchikey,
                     compound_id=str(data.cid),
                     compound_name=data.name,
-                    predicate="has DDI with",
+                    predicate=predicate,
                     object_id=dd.drug_drugbank_id,
                     object_name=dd.drug_drugbank_id,
                     search_key=self.key,
@@ -60,10 +70,10 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
 
     def _guess_up_down(self, desc: str) -> str:
         if "increase" in desc:
-            return "increase"
+            return "increases"
         elif "decrease" in desc:
-            return "decrease"
-        return "unknown"
+            return "decreases"
+        return "changes"
 
     def _guess_efficacy(self, desc: str) -> Optional[str]:
         match = re.compile("efficacy of (.+)").search(desc)

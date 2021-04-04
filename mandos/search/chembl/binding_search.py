@@ -20,15 +20,15 @@ class BindingHit(_ActivityHit):
     std_type: str
     standard_relation: str
 
-    @property
-    def predicate(self) -> str:
-        return "activity"
-
 
 class BindingSearch(_ActivitySearch[BindingHit]):
     """
     Search for ``activity`` of type "B".
     """
+
+    @property
+    def data_source(self) -> str:
+        return "ChEMBL :: binding activity"
 
     @classmethod
     def allowed_assay_types(cls) -> Set[str]:
@@ -44,13 +44,29 @@ class BindingSearch(_ActivitySearch[BindingHit]):
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
         from_super = self._extract(lookup, compound, data)
+        rel = from_super.req_as("standard_relation", str)
+        pchembl = from_super.req_as("pchembl_value", float)
+        if (
+            self.binds_cutoff is not None
+            and pchembl >= self.binds_cutoff
+            and rel in {"=", "~", "<", "<="}
+        ):
+            predicate = f"binds"
+        elif (
+            self.does_not_bind_cutoff is not None
+            and pchembl <= self.does_not_bind_cutoff
+            and rel in {"=", "~", ">", ">="}
+        ):
+            predicate = f"does not bind"
+        else:
+            predicate = f"binding {rel} at"
         hit = BindingHit(
             record_id=from_super.req_as("activity_id", str),
             origin_inchikey=lookup,
             matched_inchikey=compound.inchikey,
             compound_id=compound.chid,
             compound_name=compound.name,
-            predicate="binds to",
+            predicate=predicate,
             object_id=best_target.chembl,
             object_name=best_target.name,
             search_key=self.key,
@@ -60,9 +76,9 @@ class BindingSearch(_ActivitySearch[BindingHit]):
             taxon_id=from_super.get("taxon_id"),
             taxon_name=from_super.get("taxon_name"),
             src_id=from_super.req_as("src_id", str),
-            pchembl=from_super.req_as("pchembl_value", float),
+            pchembl=pchembl,
             std_type=from_super.req_as("standard_type", str),
-            standard_relation=from_super.req_as("standard_relation", str),
+            standard_relation=rel,
         )
         return [hit]
 

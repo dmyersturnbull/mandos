@@ -34,13 +34,14 @@ class Commands:
 
     @staticmethod
     def search(
+        path: Path = EntryArgs.path,
         config: Path = typer.Argument(
             None,
             help=".toml config file. See docs.",
             exists=True,
             dir_okay=False,
             readable=True,
-        )
+        ),
     ) -> None:
         """
         Run multiple searches.

@@ -35,19 +35,23 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         allowed_relations: Set[str],
         min_pchembl: Optional[float],
         banned_flags: Set[str],
+        binds_cutoff: Optional[float] = None,
+        does_not_bind_cutoff: Optional[float] = None,
     ):
-        super().__init__(key, api, taxa, traversal_strategy, allowed_target_types)
-        self.min_confidence_score = min_confidence_score
+        super().__init__(
+            key, api, taxa, traversal_strategy, allowed_target_types, min_confidence_score
+        )
         self.allowed_relations = allowed_relations
         self.min_pchembl = min_pchembl
         self.banned_flags = banned_flags
+        self.binds_cutoff = binds_cutoff
+        self.does_not_bind_cutoff = does_not_bind_cutoff
 
     @classmethod
     def allowed_assay_types(cls) -> Set[str]:
         raise NotImplementedError()
 
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
-
         filters = dict(
             parent_molecule_chembl_id=parent_form.chid,
             assay_type__iregex=self._set_to_regex(self.allowed_assay_types()),
@@ -71,12 +75,14 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
             or (data.req_as("assay_type", str) not in self.allowed_assay_types())
             or (len(self.taxa) > 0 and not self.is_in_taxa(data.get_as("target_tax_id", int)))
             or (self.min_pchembl is not None and data.get("pchembl_value") is None)
-            or self.min_pchembl is not None
-            and data.req_as("pchembl_value", float) < self.min_pchembl
+            or (
+                self.min_pchembl is not None
+                and data.req_as("pchembl_value", float) < self.min_pchembl
+            )
         ):
             return False
         if data.get("data_validity_comment") is not None:
-            logger.warning(
+            logger.info(
                 f"Activity annotation for {lookup} has flag '{data.get('data_validity_comment')} (ok)"
             )
         # The `target_organism` doesn't always match the `assay_organism`
@@ -85,7 +91,7 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         # So there's no need to filter by it
         assay = self.api.assay.get(data.req_as("assay_chembl_id", str))
         if target.type.name.lower() not in {s.lower() for s in self.allowed_target_types}:
-            logger.warning(f"Excluding {target} with type {target.type}")
+            logger.warning(f"Excluding {target.name} with type {target.type}")
             return False
         confidence_score = assay.get("confidence_score")
         if self.min_confidence_score is not None:
@@ -111,22 +117,17 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
             tax_id = tax.id
             tax_name = tax.name
         return NestedDotDict(
-            dict(
-                record_id=data.req_as("activity_id", str),
-                origin_inchikey=lookup,
-                matched_inchikey=compound.inchikey,
-                compound_id=compound.chid,
-                compound_name=compound.name,
-                taxon_id=tax_id,
-                taxon_name=tax_name,
-                pchembl=data.req_as("pchembl_value", float),
-                std_type=data.req_as("standard_type", str),
-                src_id=data.req_as("src_id", str),
-                exact_target_id=data.req_as("target_chembl_id", str),
-                tissue=data.get_as("tissue", str),
-                cell_type=data.get_as("cell_type", str),
-                subcellular_region=data.get("subcellular_region", str),
-            )
+            {
+                **dict(
+                    origin_inchikey=lookup,
+                    matched_inchikey=compound.inchikey,
+                    compound_id=compound.chid,
+                    compound_name=compound.name,
+                    taxon_id=tax_id,
+                    taxon_name=tax_name,
+                ),
+                **data,
+            }
         )
 
     assay_type: AssayType

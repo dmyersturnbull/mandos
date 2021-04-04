@@ -21,7 +21,7 @@ class TrialSearch(PubchemSearch[TrialHit]):
 
     @property
     def data_source(self) -> str:
-        return "ClinicalTrials.gov"
+        return "ClinicalTrials.gov :: trials"
 
     def __init__(
         self,

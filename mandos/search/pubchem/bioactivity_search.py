@@ -38,7 +38,7 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
 
     @property
     def data_source(self) -> str:
-        return "PubChem"
+        return "PubChem :: bioassays"
 
     def find(self, inchikey: str) -> Sequence[BioactivityHit]:
         data = self.api.fetch_data(inchikey)

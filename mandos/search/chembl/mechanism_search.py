@@ -20,7 +20,6 @@ class MechanismHit(ProteinHit):
     action_type: str
     direct_interaction: bool
     description: str
-    src_id: str
 
 
 class MechanismSearch(ProteinSearch[MechanismHit]):
@@ -66,7 +65,6 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
             search_class=self.search_class,
             data_source=self.data_source,
             exact_target_id=data.req_as("target_chembl_id", str),
-            src_id=data.req_as("src_id", str),
             action_type=data.req_as("action_type", str),
             direct_interaction=data.req_as("direct_interaction", bool),
             description=data.req_as("mechanism_of_action", str),

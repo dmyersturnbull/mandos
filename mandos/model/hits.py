@@ -65,7 +65,7 @@ class AbstractHit:
         include ``record_id``.
 
         Returns:
-            A 64-character hexadecimal string
+            A 16-character hexadecimal string
         """
         # excluding record_id only because it's not available for some hit types
         # we'd rather immediately see duplicates if the exist
@@ -75,7 +75,9 @@ class AbstractHit:
             if field
             not in {"record_id", "origin_inchikey", "compound_name", "search_key", "search_class"}
         }
-        return hex(hash(tuple([getattr(self, f) for f in fields])))
+        hexed = hex(hash(tuple([getattr(self, f) for f in fields])))
+        # remove negative signs -- still unique
+        return hexed.replace("-", "").replace("0x", "")
 
     @classmethod
     def fields(cls) -> Sequence[str]:

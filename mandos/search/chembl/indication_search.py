@@ -20,7 +20,6 @@ class IndicationHit(ChemblHit):
     """
 
     max_phase: int
-    first_approval_year: str
 
 
 class IndicationSearch(ChemblSearch[IndicationHit]):
@@ -69,9 +68,8 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
             search_key=self.key,
             search_class=self.search_class,
-            data_source=self.data_source + " :: " + indication.req_as("references", str),
+            data_source=self.data_source,
             max_phase=phase,
-            first_approval_year=indication.req_as("first_approval", str),
         )
 
 

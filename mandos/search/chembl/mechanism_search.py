@@ -1,13 +1,11 @@
 from dataclasses import dataclass
-from typing import Sequence, Set, Optional
+from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
-from mandos.model.chembl_api import ChemblApi
 from mandos.model.chembl_support import ChemblCompound
 from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
 
 
@@ -18,9 +16,6 @@ class MechanismHit(ProteinHit):
     """
 
     action_type: str
-    direct_interaction: bool
-    description: str
-    src_id: str
 
 
 class MechanismSearch(ProteinSearch[MechanismHit]):
@@ -52,7 +47,7 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     ) -> Sequence[MechanismHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
-        predicate = data.req_as("action_type", str) + " of"
+        predicate = data.req_as("action_type", str).lower() + " of"
         x = MechanismHit(
             record_id=data["mec_id"],
             origin_inchikey=lookup,
@@ -66,10 +61,7 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
             search_class=self.search_class,
             data_source=self.data_source,
             exact_target_id=data.req_as("target_chembl_id", str),
-            src_id=data.req_as("src_id", str),
             action_type=data.req_as("action_type", str),
-            direct_interaction=data.req_as("direct_interaction", bool),
-            description=data.req_as("mechanism_of_action", str),
         )
         return [x]
 

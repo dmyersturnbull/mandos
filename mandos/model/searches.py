@@ -13,6 +13,25 @@ from mandos.model import CompoundNotFoundError, ReflectionUtils
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
 
+class SearchError(Exception):
+    """
+    Wrapper for any exception raised in ``find`` except for ``CompoundNotFoundError``.
+    """
+
+    def __init__(
+        self,
+        *args,
+        inchikey: str = None,
+        search_key: str = None,
+        search_class: str = None,
+        **kwargs,
+    ):
+        super().__init__(*args, *kwargs)
+        self.inchikey = inchikey
+        self.search_key = search_key
+        self.search_class = search_class
+
+
 class Search(Generic[H], metaclass=abc.ABCMeta):
     """
     Something to search and how to do it.
@@ -86,8 +105,12 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
                 logger.info(f"NOT FOUND: {compound}. Skipping.")
                 continue
             except Exception:
-                logger.exception(f"Failed on {compound}")
-                raise
+                raise SearchError(
+                    f"Failed {self.key} [{self.search_class}] on compound {compound}",
+                    compound=compound,
+                    search_key=self.key,
+                    search_class=self.search_class,
+                )
             lst.extend(x)
             logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
             if i % 10 == 9:

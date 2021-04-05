@@ -828,7 +828,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
         # the order of this dict is crucial
         keys = {
             "genename": Mapx.req_is(str, nullable=True),
-            "geneclaimname": Mapx.req_is(str, nullable=True),
+            "geneclaimname": Mapx.get_str(nullable=True),
             "interactionclaimsource": Mapx.req_is(str, nullable=True),
             "interactiontypes": Mapx.split("|", nullable=True),
             "pmids": Mapx.split(",", nullable=True),

@@ -167,6 +167,28 @@ class Mapx:
         return int_date
 
     @classmethod
+    def get_str(cls, nullable: bool = False) -> Callable[[str], Optional[str]]:
+        def get_str(value):
+            if nullable and value is None:
+                return None
+            elif not isinstance(value, (int, float, str)):
+                raise TypeError(f"{value} is a {type(value)}, not int-like")
+            return str(value)
+
+        return get_str
+
+    @classmethod
+    def get_float(cls, nullable: bool = False) -> Callable[[str], Optional[str]]:
+        def get_float(value):
+            if nullable and value is None:
+                return None
+            elif not isinstance(value, (int, float, str)):
+                raise TypeError(f"{value} is a {type(value)}, not int-like")
+            return float(value)
+
+        return get_float
+
+    @classmethod
     def get_int(cls, nullable: bool = False) -> Callable[[str], Optional[int]]:
         def get_int(value):
             if nullable and value is None:

@@ -23,10 +23,14 @@ class InjectionError(LookupError):
     """"""
 
 
+class MultipleMatchesError(ValueError):
+    """"""
+
+
+T = TypeVar("T", covariant=True)
+
+
 class ReflectionUtils:
-
-    T = TypeVar("T", covariant=True)
-
     @classmethod
     def get_generic_arg(cls, clazz: Type[T], bound: Optional[Type[T]] = None) -> Type:
         """

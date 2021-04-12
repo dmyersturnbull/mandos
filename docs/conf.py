@@ -2,15 +2,18 @@
 Sphinx config file.
 Uses several extensions to get API docs and sourcecode.
 https://www.sphinx-doc.org/en/master/usage/configuration.html
+https://github.com/JamesALeedham/Sphinx-Autosummary-Recursion/blob/master/docs/conf.py
 """
-
+import sys
 from pathlib import Path
 from typing import Optional, Type, TypeVar
 
 import tomlkit
+from sphinx.ext.autosummary import templates
 
 # This assumes that we have the full project root above, containing pyproject.toml
 _root = Path(__file__).parent.parent.absolute()
+sys.path.insert(0, _root)
 _toml = tomlkit.loads((_root / "pyproject.toml").read_text(encoding="utf8"))
 
 T = TypeVar("T")
@@ -48,27 +51,50 @@ copyright = find("tool.tyrannosaurus.sources.copyright")
 _license = find("tool.tyrannosaurus.sources.doc_license")
 _license_url = find("tool.tyrannosaurus.sources.doc_license_url")
 if _license is not None and _license_url is not None:
+    _license = _license.strip("'", "")
     copyright += f', <a href="{_license_url}">{_license}</a>'
 elif _license is not None:
     copyright += f", {_license}"
+
+# Paths
+templates_path = ["_templates"]
+html_static_path = ["_static"]
+exclude_patterns = ["_build", "_templates", "Thumbs.db", ".*", "~*", "*~", "*#"]
 
 # Load extensions
 # These should be in docs/requirements.txt
 # Napoleon is bundled in Sphinx, so we don't need to list it there
 extensions = [
-    "autoapi.extension",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx_autodoc_typehints",
     "sphinx.ext.napoleon",
     "sphinx_copybutton",
+    "sphinxcontrib.mermaid",
     "sphinx_rtd_theme",
 ]
-master_doc = "index"
-napoleon_include_special_with_doc = True
-autoapi_type = "python"
-autoapi_dirs = [str(_root / project)]
-autoapi_keep_files = True
-autoapi_python_class_content = "both"
-autoapi_options = ["private-members=true"]
 
+# Configure API docs generation
+autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autoclass_content = "both"  # Add __init__ doc (ie. params) to class summaries
+html_show_sourcelink = False  # Remove 'view source code' from top of page (for html, not python)
+autodoc_inherit_docstrings = True  # If no docstring, inherit from base class
+# set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
+add_module_names = False  # Remove namespaces from class/method signatures
+autosummary_imported_members = True
+autodoc_default_flags = [
+    # Make sure that any autodoc declarations show the right members
+    "members",
+    "inherited-members",
+    "private-members",
+    "show-inheritance",
+]
+
+# intersphinx_mapping = {
+#    "python": ("https://docs.python.org/3/", None),
+# }
+
+# Theme configuration
 # The vast majority of Sphinx themes are unmaintained
 # This includes the commonly used alabaster theme
 # The readthedocs theme is pretty good anyway
@@ -80,8 +106,17 @@ html_theme_options = dict(
     navigation_depth=False,
     style_external_links=True,
 )
+html_context = dict(
+    display_github=True,
+    github_user="dmyersturnbull",
+    github_repo="mandos",
+    github_version="main",
+    conf_py_path="/docs/",
+)
 
-exclude_patterns = ["_build", "Thumbs.db", ".*", "~*", "*~", "*#"]
+# Doc types to build
+sphinx_enable_epub_build = False
+sphinx_enable_pdf_build = False
 
 
 if __name__ == "__main__":

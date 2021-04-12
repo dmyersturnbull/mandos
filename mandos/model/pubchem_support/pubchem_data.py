@@ -11,7 +11,6 @@ from typing import Tuple as Tup
 from urllib.parse import unquote as url_unescape
 
 import orjson
-from pocketutils.core.exceptions import MultipleMatchesError
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
@@ -19,6 +18,7 @@ from pocketutils.tools.string_tools import StringTools
 from mandos import logger
 
 # noinspection PyProtectedMember
+from mandos.model import MultipleMatchesError
 from mandos.model.pubchem_support._nav_fns import Filter, Mapx, Flatmap
 
 # noinspection PyProtectedMember

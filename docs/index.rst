@@ -2,16 +2,17 @@ Mandos
 ====================================
 
 .. toctree::
+    :maxdepth: 1
+
     binding
     taxa
     traversal
     literature
     misc
     searches
-    analysis
     preprocessing
     settings
-    :maxdepth: 1
+    API reference <_autosummary/mandos>
 
 
 For an input chemical compound, Mandos extracts a wealth of information about its known
@@ -161,3 +162,15 @@ drugbank:metabolite     Names of known metabolites from DrugBank
 drugbank:admet          Properties predicted from admetSAR via DrugBank
 meta:random             Random values 1...n (with replacement)
 ======================= =============================================================================
+
+
+The end
+=======
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+
+.. _`Source`: https://github.com/dmyersturnbull/mandos
+.. _`Issues & Questions`: (https://github.com/dmyersturnbull/mandos/issues)
+.. _`Contributing`: https://github.com/dmyersturnbull/mandos/blob/main/CONTRIBUTING.md\

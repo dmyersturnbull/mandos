@@ -1,7 +1,6 @@
 from __future__ import annotations
 import abc
 import enum
-import sys
 import sre_compile
 import re
 from pathlib import Path
@@ -30,7 +29,6 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
     """"""
 
     @classmethod
-    @property
     def api(cls) -> ChemblApi:
         raise NotImplementedError()
 
@@ -50,7 +48,6 @@ class NullTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABCMeta
     """"""
 
     @classmethod
-    @property
     def api(cls) -> ChemblApi:
         raise NotImplementedError()
 
@@ -65,24 +62,22 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
     """"""
 
     @classmethod
-    @property
     def edges(cls) -> Set[TargetEdgeReqs]:
         raise NotImplementedError()
 
     @classmethod
-    @property
     def acceptance(cls) -> Mapping[TargetEdgeReqs, Acceptance]:
         raise NotImplementedError()
 
     def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTarget]:
-        found = target.traverse(self.edges)
+        found = target.traverse(self.edges())
         return [f.target for f in found if self.accept(f)]
 
     def accept(self, target: TargetNode) -> bool:
         if target.link_reqs is None:
             # typically for root nodes -- we'll have a self-loop to check, too
             return False
-        acceptance_type = self.acceptance[target.link_reqs]
+        acceptance_type = self.acceptance()[target.link_reqs]
         return (
             acceptance_type is Acceptance.always
             or (acceptance_type is Acceptance.at_start and target.is_start)
@@ -213,17 +208,14 @@ class TargetTraversalStrategies:
 
         class Strategy(StandardTargetTraversalStrategy):
             @classmethod
-            @property
             def edges(cls) -> Set[TargetEdgeReqs]:
                 return edges
 
             @classmethod
-            @property
             def acceptance(cls) -> Mapping[TargetEdgeReqs, Acceptance]:
                 return accept
 
             @classmethod
-            @property
             def api(cls) -> ChemblApi:
                 return api
 
@@ -234,7 +226,6 @@ class TargetTraversalStrategies:
     def null(cls, api: ChemblApi) -> TargetTraversalStrategy:
         class NullStrategy(NullTargetTraversalStrategy):
             @classmethod
-            @property
             def api(cls) -> ChemblApi:
                 return api
 
@@ -256,7 +247,6 @@ class TargetTraversalStrategies:
 
         class X(clz):
             @classmethod
-            @property
             def api(cls) -> ChemblApi:
                 return api
 

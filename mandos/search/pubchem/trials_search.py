@@ -1,11 +1,9 @@
-import abc
-import re
 from dataclasses import dataclass
 from typing import Sequence, Set, Optional
 
 from pocketutils.tools.common_tools import CommonTools
 
-from mandos.model.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -17,7 +15,7 @@ class TrialHit(PubchemHit):
 
 
 class TrialSearch(PubchemSearch[TrialHit]):
-    """"""
+    """ """
 
     @property
     def data_source(self) -> str:

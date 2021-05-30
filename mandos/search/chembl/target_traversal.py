@@ -8,9 +8,9 @@ from typing import Dict, Sequence, Type, Set, Optional, Mapping
 from typing import Tuple as Tup
 
 from mandos.model import MandosResources, ReflectionUtils
-from mandos.model.chembl_api import ChemblApi
-from mandos.model.chembl_support.chembl_targets import TargetType, ChemblTarget
-from mandos.model.chembl_support.chembl_target_graphs import (
+from mandos.model.apis.chembl_api import ChemblApi
+from mandos.model.apis.chembl_support.chembl_targets import TargetType, ChemblTarget
+from mandos.model.apis.chembl_support import (
     ChemblTargetGraph,
     TargetNode,
     TargetEdgeReqs,
@@ -26,7 +26,7 @@ class Acceptance(enum.Enum):
 
 
 class TargetTraversalStrategy(metaclass=abc.ABCMeta):
-    """"""
+    """ """
 
     @classmethod
     def api(cls) -> ChemblApi:
@@ -45,7 +45,7 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
 
 
 class NullTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABCMeta):
-    """"""
+    """ """
 
     @classmethod
     def api(cls) -> ChemblApi:
@@ -59,7 +59,7 @@ class NullTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABCMeta
 
 
 class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABCMeta):
-    """"""
+    """ """
 
     @classmethod
     def edges(cls) -> Set[TargetEdgeReqs]:

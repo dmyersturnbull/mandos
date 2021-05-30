@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from typing import Sequence, Optional
+from typing import Sequence
 
-from mandos.model.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class AcuteEffectHit(PubchemHit):
-    """"""
+    """ """
 
     organism: str
     human: bool
@@ -19,14 +19,14 @@ class AcuteEffectHit(PubchemHit):
 
 @dataclass(frozen=True, order=True, repr=True)
 class Ld50Hit(PubchemHit):
-    """"""
+    """ """
 
     organism: str
     human: bool
 
 
 class AcuteEffectSearch(PubchemSearch[AcuteEffectHit]):
-    """"""
+    """ """
 
     def __init__(self, key: str, api: PubchemApi, top_level: bool):
         super().__init__(key, api)

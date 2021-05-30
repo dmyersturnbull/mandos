@@ -1,7 +1,7 @@
 import pytest
 
-from mandos.model.pubchem_support._nav_fns import Filter, Flatmap
-from mandos.model.pubchem_support._nav import JsonNavigator
+from mandos.model.apis.pubchem_support import Filter, Flatmap
+from mandos.model.apis.pubchem_support import JsonNavigator
 
 
 class TestNav:

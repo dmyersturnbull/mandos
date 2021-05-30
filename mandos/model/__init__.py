@@ -15,16 +15,20 @@ from pocketutils.core.dot_dict import NestedDotDict
 from mandos import logger
 
 
+class Api(metaclass=abc.ABCMeta):
+    """ """
+
+
 class CompoundNotFoundError(LookupError):
-    """"""
+    """ """
 
 
 class InjectionError(LookupError):
-    """"""
+    """ """
 
 
 class MultipleMatchesError(ValueError):
-    """"""
+    """ """
 
 
 T = TypeVar("T", covariant=True)
@@ -190,6 +194,7 @@ MandosResources.VERTEBRATA_PATH = MandosResources.path("7742.tab.gz")
 
 
 __all__ = [
+    "Api",
     "CompoundNotFoundError",
     "MandosResources",
     "CleverEnum",

@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 from typing import Sequence
 
-from mandos.model.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class DgiHit(PubchemHit):
-    """"""
+    """ """
 
 
 class DgiSearch(PubchemSearch[DgiHit]):
-    """"""
+    """ """
 
     def __init__(self, key: str, api: PubchemApi):
         super().__init__(key, api)

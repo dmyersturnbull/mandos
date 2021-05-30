@@ -12,9 +12,9 @@ import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
-from mandos.model.pubchem_api import PubchemCompoundLookupError, PubchemApi
-from mandos.model.pubchem_support.pubchem_data import PubchemData
-from mandos.model.querying_pubchem_api import QueryingPubchemApi
+from mandos.model.apis.pubchem_api import PubchemCompoundLookupError, PubchemApi
+from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
+from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 
 
 class CachingPubchemApi(PubchemApi):

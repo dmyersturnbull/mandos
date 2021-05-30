@@ -3,7 +3,6 @@ PubChem querying API.
 """
 from __future__ import annotations
 
-import logging
 import re
 import time
 from urllib.error import HTTPError
@@ -17,8 +16,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 
 from mandos import logger
-from mandos.model.pubchem_api import PubchemCompoundLookupError, PubchemApi
-from mandos.model.pubchem_support.pubchem_data import PubchemData
+from mandos.model.apis.pubchem_api import PubchemCompoundLookupError, PubchemApi
+from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 
 
 class QueryingPubchemApi(PubchemApi):

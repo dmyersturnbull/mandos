@@ -23,7 +23,7 @@ TaxonomyDf = (
 @total_ordering
 @dataclass()
 class Taxon:
-    """"""
+    """ """
 
     # we can't use frozen=True because we have both parents and children
     # instead, just use properties

@@ -1,5 +1,4 @@
 from __future__ import annotations
-import logging
 import enum
 
 from pocketutils.core.dot_dict import NestedDotDict
@@ -7,9 +6,9 @@ from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 
 from mandos import logger
-from mandos.model.chembl_api import ChemblApi
+from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model import CompoundNotFoundError, CleverEnum
-from mandos.model.chembl_support import ChemblCompound
+from mandos.model.apis.chembl_support import ChemblCompound
 
 
 class MolStructureType(CleverEnum):
@@ -112,3 +111,6 @@ class ChemblUtils:
             return NestedDotDict(result)
         except (HTTPError, RequestException):
             raise CompoundNotFoundError(f"Failed to find compound {inchikey}")
+
+
+__all__ = ["MolStructureType", "ChemblUtils"]

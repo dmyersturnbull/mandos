@@ -19,14 +19,14 @@ from mandos import logger
 
 # noinspection PyProtectedMember
 from mandos.model import MultipleMatchesError
-from mandos.model.pubchem_support._nav_fns import Filter, Mapx, Flatmap
+from mandos.model.apis.pubchem_support._nav_fns import Filter, Mapx, Flatmap
 
 # noinspection PyProtectedMember
-from mandos.model.pubchem_support._nav_model import FilterFn
+from mandos.model.apis.pubchem_support._nav_model import FilterFn
 
 # noinspection PyProtectedMember
-from mandos.model.pubchem_support._nav import JsonNavigator
-from mandos.model.pubchem_support.pubchem_models import (
+from mandos.model.apis.pubchem_support._nav import JsonNavigator
+from mandos.model.apis.pubchem_support.pubchem_models import (
     ComputedProperty,
     Codes,
     CoOccurrenceType,
@@ -61,7 +61,7 @@ class Patterns:
 
 
 class PubchemDataView(metaclass=abc.ABCMeta):
-    """"""
+    """ """
 
     def __init__(self, data: NestedDotDict):
         self._data = data
@@ -118,7 +118,7 @@ class PubchemDataView(metaclass=abc.ABCMeta):
 
 
 class PubchemMiniDataView(PubchemDataView, metaclass=abc.ABCMeta):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -130,7 +130,7 @@ class PubchemMiniDataView(PubchemDataView, metaclass=abc.ABCMeta):
 
 
 class TitleAndSummary(PubchemDataView):
-    """"""
+    """ """
 
     @property
     def safety(self) -> FrozenSet[str]:
@@ -147,7 +147,7 @@ class TitleAndSummary(PubchemDataView):
 
 
 class RelatedRecords(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -169,7 +169,7 @@ class RelatedRecords(PubchemMiniDataView):
 
 
 class NamesAndIdentifiers(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -243,7 +243,7 @@ class NamesAndIdentifiers(PubchemMiniDataView):
 
 
 class ChemicalAndPhysicalProperties(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -339,7 +339,7 @@ class ChemicalAndPhysicalProperties(PubchemMiniDataView):
 
 
 class DrugAndMedicationInformation(PubchemDataView):
-    """"""
+    """ """
 
     @property
     def mini(self) -> JsonNavigator:
@@ -447,7 +447,7 @@ class DrugAndMedicationInformation(PubchemDataView):
 
 
 class PharmacologyAndBiochemistry(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -577,7 +577,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
 
 
 class SafetyAndHazards(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -605,7 +605,7 @@ class SafetyAndHazards(PubchemMiniDataView):
 
 
 class Toxicity(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -630,7 +630,7 @@ class Toxicity(PubchemMiniDataView):
 
 
 class AssociatedDisordersAndDiseases(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -654,7 +654,7 @@ class AssociatedDisordersAndDiseases(PubchemMiniDataView):
 
 
 class Literature(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -799,7 +799,7 @@ class Literature(PubchemMiniDataView):
 
 
 class Patents(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -817,7 +817,7 @@ class Patents(PubchemMiniDataView):
 
 
 class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -909,7 +909,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
 
 
 class BiologicalTestResults(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:
@@ -943,7 +943,7 @@ class BiologicalTestResults(PubchemMiniDataView):
 
 
 class Classification(PubchemMiniDataView):
-    """"""
+    """ """
 
     @property
     def _whoami(self) -> str:

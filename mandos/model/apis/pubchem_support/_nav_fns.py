@@ -20,8 +20,7 @@ from typing import (
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools
 
-from mandos import logger
-from mandos.model.pubchem_support._nav_model import FilterFn
+from mandos.model.apis.pubchem_support._nav_model import FilterFn
 
 T = TypeVar("T")
 

@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from typing import Sequence, TypeVar, Set
 
-from mandos.model.pubchem_api import PubchemApi
-from mandos.model.pubchem_support.pubchem_models import DrugbankTargetType, DrugbankInteraction
+from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_support.pubchem_models import DrugbankTargetType, DrugbankInteraction
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class _DrugbankInteractionHit(PubchemHit):
-    """"""
+    """ """
 
     gene_symbol: str
     protein_id: str
@@ -19,12 +19,12 @@ class _DrugbankInteractionHit(PubchemHit):
 
 @dataclass(frozen=True, order=True, repr=True)
 class DrugbankTargetHit(_DrugbankInteractionHit):
-    """"""
+    """ """
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class DrugbankGeneralFunctionHit(_DrugbankInteractionHit):
-    """"""
+    """ """
 
 
 T = TypeVar("T", bound=_DrugbankInteractionHit, covariant=True)
@@ -74,7 +74,7 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
 
 
 class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
-    """"""
+    """ """
 
     @property
     def data_source(self) -> str:
@@ -90,7 +90,7 @@ class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
 
 
 class DrugbankGeneralFunctionSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
-    """"""
+    """ """
 
     @property
     def data_source(self) -> str:

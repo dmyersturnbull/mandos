@@ -1,10 +1,9 @@
 from datetime import date
-from pathlib import Path
 
 import pytest
 
-from mandos.model.caching_pubchem_api import CachingPubchemApi
-from mandos.model.pubchem_support.pubchem_models import (
+from mandos.model.apis.caching_pubchem_api import CachingPubchemApi
+from mandos.model.apis.pubchem_support.pubchem_models import (
     Codes,
     CoOccurrenceType,
     AtcCode,
@@ -17,7 +16,7 @@ from mandos.model.pubchem_support.pubchem_models import (
     AcuteEffectEntry,
 )
 
-from .. import get_test_resource
+from tests import get_test_resource
 
 
 class TestPubchemData:

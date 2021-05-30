@@ -2,9 +2,9 @@ import abc
 from dataclasses import dataclass
 from typing import Sequence, TypeVar
 
-from mandos.model.pubchem_api import PubchemApi
-from mandos.model.pubchem_support.pubchem_data import PubchemData
-from mandos.model.pubchem_support.pubchem_models import CoOccurrenceType
+from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
+from mandos.model.apis.pubchem_support.pubchem_models import CoOccurrenceType
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -18,24 +18,24 @@ class CoOccurrenceHit(PubchemHit, metaclass=abc.ABCMeta):
 
 @dataclass(frozen=True, order=True, repr=True)
 class DiseaseCoOccurrenceHit(CoOccurrenceHit):
-    """"""
+    """ """
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class GeneCoOccurrenceHit(CoOccurrenceHit):
-    """"""
+    """ """
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class ChemicalCoOccurrenceHit(CoOccurrenceHit):
-    """"""
+    """ """
 
 
 H = TypeVar("H", bound=CoOccurrenceHit, covariant=True)
 
 
 class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
-    """"""
+    """ """
 
     def __init__(self, key: str, api: PubchemApi, min_score: int, min_articles: int):
         super().__init__(key, api)

@@ -4,8 +4,8 @@ from typing import Mapping, Optional
 
 import typer
 
-from mandos.model.chembl_support import DataValidityComment
-from mandos.model.chembl_support.chembl_targets import TargetType, ConfidenceLevel
+from mandos.model.apis.chembl_support import DataValidityComment
+from mandos.model.apis.chembl_support.chembl_targets import TargetType, ConfidenceLevel
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 
 

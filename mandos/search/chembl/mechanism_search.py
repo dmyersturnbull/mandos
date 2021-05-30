@@ -4,8 +4,8 @@ from typing import Sequence
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
-from mandos.model.chembl_support import ChemblCompound
-from mandos.model.chembl_support.chembl_target_graphs import ChemblTargetGraph
+from mandos.model.apis.chembl_support import ChemblCompound
+from mandos.model.apis.chembl_support import ChemblTargetGraph
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
 
 

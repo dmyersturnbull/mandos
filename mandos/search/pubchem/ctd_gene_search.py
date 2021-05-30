@@ -7,14 +7,14 @@ from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 @dataclass(frozen=True, order=True, repr=True)
 class CtdGeneHit(PubchemHit):
-    """"""
+    """ """
 
     taxon_id: Optional[int]
     taxon_name: Optional[str]
 
 
 class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
-    """"""
+    """ """
 
     @property
     def data_source(self) -> str:

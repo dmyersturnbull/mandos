@@ -1,7 +1,7 @@
 import pytest
 
 from mandos.cli import Commands, Searcher
-from mandos.model.chembl_api import ChemblApi
+from mandos.model.apis.chembl_api import ChemblApi
 from chembl_webresource_client.new_client import new_client as Chembl
 from mandos.search.chembl.indication_search import IndicationSearch
 

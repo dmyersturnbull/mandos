@@ -1,5 +1,4 @@
 import abc
-import logging
 import re
 from dataclasses import dataclass
 from typing import Sequence, TypeVar, Set, Union, Optional
@@ -7,17 +6,17 @@ from typing import Sequence, TypeVar, Set, Union, Optional
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
-from mandos.model.chembl_api import ChemblApi
-from mandos.model.chembl_support import ChemblCompound
-from mandos.model.chembl_support.chembl_targets import TargetFactory
-from mandos.model.chembl_support.chembl_target_graphs import (
+from mandos.model.apis.chembl_api import ChemblApi
+from mandos.model.apis.chembl_support import ChemblCompound
+from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
+from mandos.model.apis.chembl_support import (
     ChemblTargetGraph,
     ChemblTargetGraphFactory,
 )
-from mandos.model.chembl_support.chembl_utils import ChemblUtils
+from mandos.model.apis.chembl_support import ChemblUtils
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl import ChemblHit, ChemblSearch
-from mandos.search.chembl.target_traversal import TargetTraversalStrategies, TargetTraversalStrategy
+from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 
 
 @dataclass(frozen=True, order=True, repr=True)

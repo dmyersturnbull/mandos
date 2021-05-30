@@ -9,8 +9,8 @@ from typing import Union, Optional, FrozenSet, Sequence, Mapping, Set
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.string_tools import StringTools
 
-from mandos.model import MandosResources, CleverEnum
-from mandos.model.pubchem_support._nav_fns import Mapx
+from mandos.model import MandosResources
+from mandos.model.apis.pubchem_support._nav_fns import Mapx
 
 hazards = {
     d["code"]: d for d in NestedDotDict.read_toml(MandosResources.path("hazards.toml"))["signals"]
@@ -117,10 +117,10 @@ class Codes:
         """
 
     class GenecardSymbol(GeneId):
-        """"""
+        """ """
 
     class UniprotId(GeneId):
-        """"""
+        """ """
 
     class PubchemCompoundId(Code):
         """
@@ -132,38 +132,38 @@ class Codes:
             return int(self)
 
     class AtcCode(Code):
-        """"""
+        """ """
 
     class PubmedId(Code):
-        """"""
+        """ """
 
     class Doi(Code):
-        """"""
+        """ """
 
     class MeshCode(Code):
-        """"""
+        """ """
 
     class PdbId(Code):
-        """"""
+        """ """
 
     class MeshHeading(Code):
-        """"""
+        """ """
 
     class MeshSubheading(Code):
-        """"""
+        """ """
 
     class DrugbankCompoundId(Code):
-        """"""
+        """ """
 
     class DeaSchedule(Code):
-        """"""
+        """ """
 
         @property
         def value(self) -> int:
             return Mapx.roman_to_arabic(1, 5)(self)
 
     class GhsCode(Code):
-        """"""
+        """ """
 
 
 class CoOccurrenceType(enum.Enum):
@@ -479,7 +479,7 @@ class CoOccurrence:
 
 @dataclass(frozen=True, repr=True, eq=True)
 class DrugGeneInteraction:
-    """"""
+    """ """
 
     gene_name: Optional[str]
     gene_claim_id: Optional[str]

@@ -3,11 +3,11 @@ from typing import Mapping
 import pytest
 from chembl_webresource_client.new_client import new_client as Chembl
 
-from mandos.model.chembl_support.chembl_targets import (
+from mandos.model.apis.chembl_support.chembl_targets import (
     TargetFactory,
     TargetType,
 )
-from mandos.model.chembl_support.chembl_target_graphs import (
+from mandos.model.apis.chembl_support import (
     TargetNode,
     TargetEdgeReqs,
     TargetRelType,

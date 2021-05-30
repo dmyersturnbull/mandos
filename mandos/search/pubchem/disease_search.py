@@ -1,8 +1,6 @@
-import abc
 from dataclasses import dataclass
 from typing import Sequence
 
-from mandos.model.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -12,7 +10,7 @@ class DiseaseHit(PubchemHit):
 
 
 class DiseaseSearch(PubchemSearch[DiseaseHit]):
-    """"""
+    """ """
 
     @property
     def data_source(self) -> str:

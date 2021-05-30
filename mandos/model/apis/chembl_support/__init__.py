@@ -7,7 +7,7 @@ from mandos.model import CleverEnum, CompoundNotFoundError
 
 
 class ChemblCompoundLookupError(CompoundNotFoundError):
-    """"""
+    """ """
 
 
 class ActivityRelation(CleverEnum):
@@ -84,7 +84,7 @@ class DataValidityComment(CleverEnum):
 
 @dataclass(frozen=True, order=True, repr=True)
 class ChemblCompound:
-    """"""
+    """ """
 
     chid: str
     inchikey: str

@@ -4,20 +4,18 @@ Run searches and write files.
 
 from __future__ import annotations
 
-import gzip
 from pathlib import Path
 from typing import Sequence, Optional, Dict
 
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
-from pocketutils.tools.path_tools import PathTools
 from typeddfs import TypedDfs, UntypedDf
 
 from mandos import logger
 from mandos.entries.paths import EntryPaths
 from mandos.model import CompoundNotFoundError
-from mandos.model.chembl_support.chembl_utils import ChemblUtils
+from mandos.model.apis.chembl_support import ChemblUtils
 from mandos.model.searches import Search
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.search.chembl import ChemblSearch

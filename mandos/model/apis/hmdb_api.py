@@ -1,10 +1,12 @@
+import abc
+
 import defusedxml.ElementTree as Xml
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
+from mandos.model import Api
 
 
-class HmdbApi:
+class HmdbApi(Api, metaclass=abc.ABCMeta):
     def fetch(self, hmdb_id: str) -> NestedDotDict:
         raise NotImplementedError()
 

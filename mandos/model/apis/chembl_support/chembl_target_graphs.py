@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from functools import total_ordering
 from typing import Optional, Set, Sequence, Tuple as Tup, Type
 
-from mandos.model.chembl_api import ChemblApi
-from mandos.model.chembl_support.chembl_targets import ChemblTarget, TargetType, TargetFactory
+from mandos.model.apis.chembl_api import ChemblApi
+from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType, TargetFactory
 
 
 @dataclass(frozen=True, order=True, repr=True)

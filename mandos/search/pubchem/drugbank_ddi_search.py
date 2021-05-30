@@ -9,7 +9,7 @@ from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 @dataclass(frozen=True, order=True, repr=True)
 class DrugbankDdiHit(PubchemHit):
-    """"""
+    """ """
 
     type: str
     effect_target: Optional[str]
@@ -18,7 +18,7 @@ class DrugbankDdiHit(PubchemHit):
 
 
 class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
-    """"""
+    """ """
 
     @property
     def data_source(self) -> str:

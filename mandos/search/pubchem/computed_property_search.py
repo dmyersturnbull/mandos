@@ -1,11 +1,7 @@
-import abc
 from dataclasses import dataclass
-from typing import Sequence, Set, Optional
+from typing import Sequence, Set
 
-from pocketutils.tools.common_tools import CommonTools
-
-from mandos.model.pubchem_api import PubchemApi
-from mandos.model.pubchem_support.pubchem_models import ClinicalTrialsGovUtils
+from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -15,7 +11,7 @@ class ComputedPropertyHit(PubchemHit):
 
 
 class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
-    """"""
+    """ """
 
     def __init__(self, key: str, api: PubchemApi, descriptors: Set[str]):
         super().__init__(key, api)

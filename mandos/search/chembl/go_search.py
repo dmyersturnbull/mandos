@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import abc
 import enum
-import logging
 from dataclasses import dataclass
 from typing import Sequence, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
-from mandos.model.chembl_api import ChemblApi
+from mandos.model.apis.chembl_api import ChemblApi
 from mandos.search.chembl import ChemblHit, ChemblSearch
 from mandos.search.chembl.binding_search import BindingSearch, BindingHit
 

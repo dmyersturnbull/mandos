@@ -1,18 +1,15 @@
-import re
 from dataclasses import dataclass
-from typing import Sequence, Optional, Set
+from typing import Sequence, Optional
 
-from loguru import logger
-
-from mandos.model.pubchem_api import PubchemApi
-from mandos.model.pubchem_support.pubchem_data import PubchemData
-from mandos.model.pubchem_support.pubchem_models import Activity, Bioactivity
+from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
+from mandos.model.apis.pubchem_support.pubchem_models import Activity, Bioactivity
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
 @dataclass(frozen=True, order=True, repr=True)
 class BioactivityHit(PubchemHit):
-    """"""
+    """ """
 
     target_abbrev: Optional[str]
     activity: str
@@ -25,7 +22,7 @@ class BioactivityHit(PubchemHit):
 
 
 class BioactivitySearch(PubchemSearch[BioactivityHit]):
-    """"""
+    """ """
 
     def __init__(
         self,

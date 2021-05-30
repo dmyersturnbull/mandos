@@ -14,10 +14,10 @@ from typer.models import OptionInfo
 from mandos.entries import EntryMeta
 from mandos.entries.args import EntryArgs
 from mandos.model import ReflectionUtils, InjectionError
-from mandos.model.chembl_api import ChemblApi
-from mandos.model.chembl_support import DataValidityComment
-from mandos.model.chembl_support.chembl_targets import TargetType
-from mandos.model.pubchem_support.pubchem_models import (
+from mandos.model.apis.chembl_api import ChemblApi
+from mandos.model.apis.chembl_support import DataValidityComment
+from mandos.model.apis.chembl_support.chembl_targets import TargetType
+from mandos.model.apis.pubchem_support.pubchem_models import (
     ClinicalTrialsGovUtils,
     CoOccurrenceType,
     DrugbankTargetType,
@@ -27,6 +27,7 @@ from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.entries.api_singletons import Apis
+from mandos.search.g2p.g2p_interaction_search import G2pInteractionSearch
 from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
 from mandos.search.pubchem.computed_property_search import ComputedPropertySearch
@@ -58,7 +59,7 @@ U = TypeVar("U", covariant=True, bound=CoOccurrenceSearch)
 
 
 class Utils:
-    """"""
+    """ """
 
     @staticmethod
     def split(st: str) -> Set[str]:
@@ -483,15 +484,15 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
 
 
 class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSearch]):
-    """"""
+    """ """
 
 
 class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurrenceSearch]):
-    """"""
+    """ """
 
 
 class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccurrenceSearch]):
-    """"""
+    """ """
 
 
 class EntryPubchemDgi(Entry[DgiSearch]):
@@ -822,6 +823,39 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
             - human: true or false
         """
         built = Ld50Search(key, Apis.Pubchem)
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+
+
+class EntryG2pInteractions(Entry[G2pInteractionSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = EntryArgs.path,
+        key: str = EntryArgs.key("g2p:interactions"),
+        to: Optional[Path] = EntryArgs.to,
+        check: bool = EntryArgs.test,
+        log: Optional[Path] = EntryArgs.log_path,
+        quiet: bool = EntryArgs.quiet,
+        verbose: bool = EntryArgs.verbose,
+        no_setup: bool = EntryArgs.no_setup,
+    ) -> Searcher:
+        """
+        Target interactions with affinities from Guide to Pharmacology.
+
+        OBJECT: A molecular target
+
+        PREDICATE: "agonism at", etc.
+
+        OTHER COLUMNS:
+
+            - affinity: log affinity value
+            - measurement: e.g. pIC50
+            - primary: whether it is the primary target of the drug
+            - selective: whether it is selective for that target
+            - endogenous: whether the interaction is endogenous
+            - organism: e.g. 'human', 'pig'
+        """
+        built = G2pInteractionSearch(key, Apis.G2p)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
 

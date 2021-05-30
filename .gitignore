@@ -25,7 +25,6 @@ tmp/
 *.so
 
 # Python temp and build files
-docs/html/
 __pycache__/
 __pypackages__/
 *.py[cod]
@@ -38,6 +37,8 @@ dist/
 eggs/
 sdist/
 docs/_build
+docs/html/
+docs/_autosummary
 cython_debug/
 
 # Hidden files that are definitely unwanted (redundant)

@@ -3,19 +3,20 @@ from dataclasses import dataclass
 from typing import TypeVar
 
 from mandos.model.hits import AbstractHit
-from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model.apis.g2p_api import G2pApi
+from mandos.model.apis.g2p_data import G2pData, G2pInteraction
 from mandos.model.searches import Search
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
 
 @dataclass(frozen=True, order=True, repr=True)
-class PubchemHit(AbstractHit, metaclass=abc.ABCMeta):
+class G2pHit(AbstractHit, metaclass=abc.ABCMeta):
     """ """
 
 
-class PubchemSearch(Search[H], metaclass=abc.ABCMeta):
-    def __init__(self, key: str, api: PubchemApi):
+class G2pSearch(Search[H], metaclass=abc.ABCMeta):
+    def __init__(self, key: str, api: G2pApi):
         """
         Constructor.
 
@@ -28,4 +29,4 @@ class PubchemSearch(Search[H], metaclass=abc.ABCMeta):
         self.api = api
 
 
-__all__ = ["PubchemHit", "PubchemSearch"]
+__all__ = ["G2pHit", "G2pSearch"]

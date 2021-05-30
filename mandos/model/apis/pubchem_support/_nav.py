@@ -17,7 +17,7 @@ from typing import (
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.base_tools import BaseTools
 
-from mandos.model.pubchem_support._nav_model import FilterFn
+from mandos.model.apis.pubchem_support._nav_model import FilterFn
 
 
 T = TypeVar("T", covariant=True)
@@ -70,7 +70,7 @@ def _get_conversion_fn(fn: Union[None, str, Callable[[Any], Any]]) -> Callable[[
 
 @dataclass(frozen=True, eq=True)
 class AbstractJsonNavigator:
-    """"""
+    """ """
 
 
 @dataclass(frozen=True, eq=True)

@@ -10,13 +10,12 @@ from typing import Optional, Set, Mapping
 from urllib3.util.retry import MaxRetryError
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
 from mandos.model import CleverEnum
-from mandos.model.chembl_api import ChemblApi
+from mandos.model.apis.chembl_api import ChemblApi
 
 
 class TargetNotFoundError(ValueError):
-    """"""
+    """ """
 
 
 @enum.unique

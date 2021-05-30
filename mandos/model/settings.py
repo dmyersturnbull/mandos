@@ -33,7 +33,7 @@ class Globals:
 
 @dataclass(frozen=True, repr=True)
 class Settings:
-    """"""
+    """ """
 
     is_testing: bool
     cache_path: Path
@@ -61,6 +61,10 @@ class Settings:
     @property
     def pubchem_cache_path(self) -> Path:
         return self.cache_path / "pubchem"
+
+    @property
+    def g2p_cache_path(self) -> Path:
+        return self.cache_path / "g2p"
 
     @property
     def hmdb_cache_path(self) -> Path:
@@ -113,7 +117,7 @@ class Settings:
         )
 
     def configure(self):
-        """"""
+        """ """
         if not Globals.disable_chembl:
             instance = Globals.chembl_settings
             instance.CACHING = True
@@ -126,6 +130,7 @@ class Settings:
             instance.CACHE_EXPIRE = self.chembl_expire_sec
         self.chembl_cache_path.mkdir(exist_ok=True, parents=True)
         self.pubchem_cache_path.mkdir(exist_ok=True, parents=True)
+        self.g2p_cache_path.mkdir(exist_ok=True, parents=True)
         self.hmdb_cache_path.mkdir(exist_ok=True, parents=True)
         self.taxonomy_cache_path.mkdir(exist_ok=True, parents=True)
         self.match_cache_path.mkdir(exist_ok=True, parents=True)

@@ -110,7 +110,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "chembl-webresource-client"
-version = "0.10.2"
+version = "0.10.4"
 description = "Python client fot accessing ChEMBL webservices."
 category = "main"
 optional = false
@@ -119,7 +119,7 @@ python-versions = "*"
 [package.dependencies]
 easydict = "*"
 requests = ">=2.18.4"
-requests-cache = ">=0.4.7"
+requests-cache = ">=0.6.0"
 urllib3 = "*"
 
 [[package]]
@@ -1037,7 +1037,8 @@ chardet = [
     {file = "chardet-4.0.0.tar.gz", hash = "sha256:0d6f53a15db4120f2b08c94f11e7d93d2c911ee118b6b30a04ec3ee8310179fa"},
 ]
 chembl-webresource-client = [
-    {file = "chembl-webresource-client-0.10.2.tar.gz", hash = "sha256:1d83f9bfdd7ad1e76bebdcf94f4c6dc82d1985a8fcc44740ba30f6f4c98a062e"},
+    {file = "chembl-webresource-client-0.10.4.tar.gz", hash = "sha256:dcb1fac2c6124d2bc6080e9e97ea7dbafd308fbd8b4016eae9dca7e93652f1ad"},
+    {file = "chembl_webresource_client-0.10.4-py2-none-any.whl", hash = "sha256:2ac2759afe81b2e76dc82d2f6e1d56b483ece8fa37b1f7396447d37341773f27"},
 ]
 click = [
     {file = "click-7.1.2-py2.py3-none-any.whl", hash = "sha256:dacca89f4bfadd5de3d7489b7c8a566eee0d3676333fbb50030263894c38c0dc"},

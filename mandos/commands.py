@@ -6,13 +6,10 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
 import typer
-import pandas as pd
-from typeddfs import TypedDfs
 
-from mandos import logger
 from mandos.analysis import SimilarityDf
 from mandos.analysis.concordance import TauConcordanceCalculator
 from mandos.analysis.distances import JPrimeMatrixCalculator
@@ -21,7 +18,6 @@ from mandos.analysis.reification import ReifiedExporter
 from mandos.model import MiscUtils, START_NTP_TIMESTAMP
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
-from mandos.model.taxonomy import TaxonomyDf
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.entries.multi_searches import MultiSearch
 from mandos.entries.searcher import SearcherUtils
@@ -44,6 +40,36 @@ class MiscCommands:
         MultiSearch(path, config).search()
 
     @staticmethod
+    def serve(
+        port: int = Opt.val("A port to serve on", default=1540),
+        db: str = Opt.val("The name of the MySQL database", default="mandos"),
+    ) -> None:
+        r"""
+        Start the REST server.
+
+        The connection information is stored in your global settings file.
+        """
+
+    @staticmethod
+    def deposit(
+        path: Path = CommonArgs.file_input,
+        db: str = Opt.val("The name of the MySQL database", default="mandos"),
+        host: str = Opt.val(
+            "Database hostname (ignored if ``--socket`` is passed", default="127.0.0.1"
+        ),
+        socket: Optional[str] = Opt.val("Path to a Unix socket (if set, ``--host`` is ignored)"),
+        user: Optional[str] = Opt.val("Database username (empty if not set)"),
+        password: Optional[str] = Opt.val("Database password (empty if not set)"),
+    ) -> None:
+        r"""
+        Export to a relational database.
+
+        Saves data from Mandos search commands to a database for serving via REST.
+
+        See also: ``:serve``.
+        """
+
+    @staticmethod
     def find(
         path: Path = CommonArgs.compounds,
         to: Path = Opt.out_path(
@@ -59,6 +85,7 @@ class MiscCommands:
         pubchem: bool = typer.Option(True, help="Download data from PubChem"),
         chembl: bool = typer.Option(True, help="Download data from ChEMBL"),
         hmdb: bool = typer.Option(True, help="Download data from HMDB"),
+        complain: bool = Opt.flag("Log each time a compound is not found"),
     ) -> None:
         r"""
         Fetches and caches compound data.
@@ -68,13 +95,18 @@ class MiscCommands:
         default = str(path) + "-ids" + START_NTP_TIMESTAMP + MANDOS_SETTINGS.default_table_suffix
         to = MiscUtils.adjust_filename(to, default, replace)
         inchikeys = SearcherUtils.read(path)
-        df = SearcherUtils.dl(inchikeys, pubchem=pubchem, chembl=chembl, hmdb=hmdb)
+        df = SearcherUtils.dl(
+            inchikeys, pubchem=pubchem, chembl=chembl, hmdb=hmdb, complain=complain
+        )
         df.write_file(to)
         typer.echo(f"Wrote to {to}")
 
     @staticmethod
     def build_taxonomy(
         taxa: str = CommonArgs.taxa,
+        forbid: str = Opt.val(
+            r"""Exclude descendents of these taxa IDs or names (comma-separated).""", default=""
+        ),
         to: Path = typer.Option(
             None,
             help=rf"""
@@ -92,34 +124,15 @@ class MiscCommands:
 
         Writes a taxonomy of given taxa and their descendants to a table.
         """
-        taxon_ids = [
-            int(taxon.strip()) if taxon.strip().isdigit() else taxon.strip()
-            for taxon in taxa.split(",")
-        ]
-        # get the filename
-        # by default we'll just use the inputs
-        concat = ",".join([str(t) for t in taxon_ids])
+        concat = taxa + "-" + forbid
+        taxa = CommonArgs.parse_taxa(taxa)
+        forbid = CommonArgs.parse_taxa(forbid)
         default = concat + "-" + START_NTP_TIMESTAMP + MANDOS_SETTINGS.default_table_suffix
         to = MiscUtils.adjust_filename(to, default, replace)
+        my_tax = TaxonomyFactories.get_smart_taxonomy(taxa, forbid)
+        my_tax = my_tax.to_df()
         to.parent.mkdir(exist_ok=True, parents=True)
-        # TODO: this is quite inefficient
-        # we're potentially reading in the vertebrata file multiple times
-        # we could instead read it in, then concatenate the matching subtrees
-        # however, this is moderately efficient if you ask for, e.g., Mammalia and Plantae
-        # then it'll download Plantae but just get Mammalia from the resource-file Vertebrata
-        logger.error(to)
-        taxes = []
-        for taxon in taxon_ids:
-            tax = TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path).load(taxon)
-            taxes.append(tax.to_df())
-        final_tax = TaxonomyDf(pd.concat(taxes, ignore_index=True))
-        final_tax = final_tax.drop_duplicates().sort_values("taxon")
-        # if it's text, just write one taxon ID per line
-        is_text = any((to.name.endswith(".txt" + c) for c in {"", ".gz", ".zip", ".xz", ".bz2"}))
-        if is_text:
-            final_tax = TypedDfs.wrap(final_tax[["taxon"]])
-        # write the file
-        final_tax.write_file(to)
+        my_tax.write_file(to)
 
     @staticmethod
     def dl_tax(
@@ -168,7 +181,8 @@ class MiscCommands:
             """
         ),
         allow: str = CommonArgs.taxa,
-        forbid: List[str] = CommonArgs.taxa,
+        forbid: str = CommonArgs.taxa,
+        replace: bool = CommonArgs.replace,
     ):
         """
         Filter by taxa.
@@ -182,6 +196,22 @@ class MiscCommands:
 
         See also: :filter, which is more general.
         """
+        concat = allow + "-" + forbid
+        allow = CommonArgs.parse_taxa(allow)
+        forbid = CommonArgs.parse_taxa(forbid)
+        if to is None:
+            to = path.parent / (concat + MANDOS_SETTINGS.default_table_suffix)
+        default = str(path) + "-filter-taxa-" + concat + MANDOS_SETTINGS.default_table_suffix
+        to = MiscUtils.adjust_filename(to, default, replace)
+        df = HitFrame.read_file(path)
+        my_tax = TaxonomyFactories.get_smart_taxonomy(allow, forbid)
+        cols = [c for c in ["taxon", "taxon_id", "taxon_name"] if c in df.columns]
+
+        def permit(row) -> bool:
+            return any((my_tax.get_by_id_or_name(getattr(row, c)) is not None for c in cols))
+
+        df = df[df.apply(permit)]
+        df.write_file(to)
 
     @staticmethod
     def filter(
@@ -260,7 +290,7 @@ class MiscCommands:
         replace: bool = CommonArgs.replace,
     ) -> None:
         """
-        Outputs reified RDF data.
+        Outputs reified semantic triples.
         """
         default = str(path) + "-reified.nt"
         to = MiscUtils.adjust_filename(to, default, replace)
@@ -312,7 +342,7 @@ class MiscCommands:
 
             Example columns:
 
-                ``inchikey    compound_id    is_hit    score_alpha``
+                inchikey    compound_id    is_hit    score_alpha
 
             {CommonArgs.input_formats}
             """
@@ -409,7 +439,7 @@ class MiscCommands:
         replace: bool = CommonArgs.replace,
     ) -> None:
         r"""
-        Calculates correlation between matrices.
+        Calculate correlation between matrices.
 
         Values are calculated over bootstrap, outputting a dataframe (CSV by default).
 

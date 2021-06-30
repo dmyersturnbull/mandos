@@ -115,6 +115,10 @@ class Taxon:
         return self.id < other.id
 
 
+TaxaIdsAndNames = Union[int, str, Taxon, Iterable[Union[int, str, Taxon]]]
+TaxonIdOrName = Union[int, str, Taxon]
+
+
 @dataclass()
 class _Taxon(Taxon):
     """
@@ -166,6 +170,15 @@ class Taxonomy:
         # this probably isn't actually possible
         if len(self) == 0:
             logger.warning(f"{self} contains 0 taxa")
+
+    @classmethod
+    def from_trees(cls, taxonomies: Sequence[Taxonomy]) -> Taxonomy:
+        # we need to rewrite the ancestors, which from_df already does
+        # so we'll just use that
+        dfs = [tree.to_df() for tree in taxonomies]
+        df = TaxonomyDf(pd.concat(dfs, ignore_index=True))
+        df = df.drop_duplicates().sort_values("taxon")
+        return Taxonomy.from_df(df)
 
     @classmethod
     def from_list(cls, taxa: Sequence[Taxon]) -> Taxonomy:
@@ -244,9 +257,36 @@ class Taxonomy:
     def leaves(self) -> Sequence[Taxon]:
         return [k for k in self.taxa if len(k.children) == 0]
 
+    def exclude_subtree(self, item: Union[int, Taxon]) -> Taxonomy:
+        descendents = self.get_by_id_or_name(item)
+        for i in set(descendents):
+            descendents += i.descendents
+        by_id = {d.id: d for d in descendents}
+        by_name = self.__class__._build_by_name(by_id.values())
+        return Taxonomy(by_id, by_name)
+
+    def exclude_subtrees_by_ids_or_names(self, items: TaxaIdsAndNames) -> Taxonomy:
+        if isinstance(items, (int, str, Taxon)):
+            items = [items]
+        bad_taxa = self.subtrees_by_ids_or_names(items).taxa
+        by_id = {i: t for i, t in self._by_id.items() if i not in bad_taxa}
+        by_name = self.__class__._build_by_name(by_id.values())
+        return Taxonomy(by_id, by_name)
+
     def subtree(self, item: int) -> Taxonomy:
         item = self[item]
         descendents = {item, *item.descendents}
+        by_id = {d.id: d for d in descendents}
+        by_name = self.__class__._build_by_name(by_id.values())
+        return Taxonomy(by_id, by_name)
+
+    def subtrees_by_ids_or_names(self, items: TaxaIdsAndNames) -> Taxonomy:
+        if isinstance(items, (int, str, Taxon)):
+            items = [items]
+        descendents: Set[Taxon] = set()
+        for item in items:
+            for taxon in self.get_by_id_or_name(item):
+                descendents += {taxon, *taxon.descendents}
         by_id = {d.id: d for d in descendents}
         by_name = self.__class__._build_by_name(by_id.values())
         return Taxonomy(by_id, by_name)
@@ -255,9 +295,13 @@ class Taxonomy:
         """
         Returns the taxonomy that rooted at each of the taxa with the specified scientific name.
         """
+        return self.subtrees_by_names(item)
+
+    def subtrees_by_names(self, items: Iterable[str]) -> Taxonomy:
         descendents: Set[Taxon] = set()
-        for taxon in self._by_name.get(item, []):
-            descendents.update({taxon, *taxon.descendents})
+        for item in items:
+            for taxon in self._by_name.get(item, []):
+                descendents.update({taxon, *taxon.descendents})
         by_id = {d.id: d for d in descendents}
         by_name = self.__class__._build_by_name(by_id.values())
         return Taxonomy(by_id, by_name)
@@ -308,6 +352,30 @@ class Taxonomy:
             item = item.name
         return self._by_name.get(item, frozenset(set()))
 
+    def get_all_by_id_or_name(self, items: Iterable[Union[int, str, Taxon]]) -> FrozenSet[Taxon]:
+        """
+        Gets all taxa that match any number of IDs or names.
+        """
+        matching = []
+        for item in items:
+            matching += self.get_by_id_or_name(item)
+        # finally de-duplicates (making this fn useful)
+        return frozenset(matching)
+
+    def get_by_id_or_name(self, item: Union[int, str, Taxon]) -> FrozenSet[Taxon]:
+        """
+        Gets all taxa that match an ID or name.
+        """
+        if isinstance(item, Taxon):
+            item = item.id
+        if isinstance(item, int):
+            taxon = self._by_id.get(item)
+            return frozenset([]) if taxon is None else frozenset([taxon])
+        elif isinstance(item, str):
+            return self._by_name.get(item, frozenset(set()))
+        else:
+            raise TypeError(f"Unknown type {type(item)} of {item}")
+
     def req(self, item: int) -> Taxon:
         """
         Gets a single taxon by its ID.
@@ -317,7 +385,7 @@ class Taxonomy:
             item = item.id
         return self[item]
 
-    def get(self, item: int) -> Optional[Taxon]:
+    def get(self, item: Union[int, Taxon]) -> Optional[Taxon]:
         """
         Corresponds to ``dict.get``.
 

@@ -4,7 +4,7 @@ Common argument processing and arguments for Typer.
 
 from inspect import cleandoc
 from pathlib import Path
-from typing import Mapping, Optional, TypeVar, Sequence
+from typing import Optional, TypeVar, Sequence, Union
 
 import typer
 from mandos.model.settings import MANDOS_SETTINGS
@@ -146,7 +146,30 @@ class Opt(_Args):
         return _Args._arg(doc, *names, default=False, req=False, **kwargs)
 
 
+def _strip(s: str) -> str:
+    return s.strip().strip("'").strip('"').strip()
+
+
 class CommonArgs:
+    @staticmethod
+    def parse_taxon_id_or_name(taxon: Union[int, str]) -> Union[int, str]:
+        if isinstance(taxon, str):
+            return taxon
+        elif isinstance(taxon, str) and taxon.isdigit():
+            return int(taxon)
+        raise ValueError(f"Taxon {taxon} must be an ID or name")
+
+    @staticmethod
+    def parse_taxon_id(taxon: Union[int, str]) -> int:
+        try:
+            return int(taxon)
+        except ValueError:
+            raise ValueError(f"Taxon {taxon} must be an exact ID") from None
+
+    @staticmethod
+    def parse_taxa(taxa: str) -> Sequence[Union[int, str]]:
+        taxa = [_strip(t) for t in taxa.split(",")]
+        return [CommonArgs.parse_taxon_id_or_name(t) for t in taxa]
 
     output_formats = r"""
         The filename extension must be one of: .feather; .snappy/.parquet;

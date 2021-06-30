@@ -38,7 +38,7 @@ def _init_commands():
     cli.registered_commands.extend(
         [
             CommandInfo(":search", callback=MiscCommands.search),
-            CommandInfo(":export:taxa", callback=MiscCommands.build_taxonomy),
+            CommandInfo(":export:tax-tree", callback=MiscCommands.build_taxonomy),
             CommandInfo(":tax:dl", callback=MiscCommands.dl_tax, hidden=True),
             CommandInfo(":cache", callback=MiscCommands.find),
             CommandInfo(":concat", callback=MiscCommands.concat),
@@ -47,9 +47,11 @@ def _init_commands():
             CommandInfo(":export:copy", callback=MiscCommands.copy),
             CommandInfo(":export:state", callback=MiscCommands.state),
             CommandInfo(":export:reify", callback=MiscCommands.reify),
+            CommandInfo(":export:db", callback=MiscCommands.deposit),
+            CommandInfo(":serve", callback=MiscCommands.serve),
             CommandInfo(":calc:scores", callback=MiscCommands.score),
             CommandInfo(":calc:matrix", callback=MiscCommands.matrix),
-            CommandInfo(":calc:concordance", callback=MiscCommands.concordance),
+            CommandInfo(":calc:matrix-concordance", callback=MiscCommands.concordance),
         ]
     )
 

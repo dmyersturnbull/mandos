@@ -8,7 +8,7 @@ import abc
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Union, Iterable, Optional, Sequence
 
 import pandas as pd
 import requests
@@ -56,40 +56,40 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         return tree
 
     def _load(self, taxon: Union[int, str]) -> Taxonomy:
-        if isinstance(taxon, str) and taxon.isdigit():
-            taxon = int(taxon)
-        path = self._resolve_non_vertebrate_final(taxon)
-        if isinstance(taxon, int):
-            if path.exists():
-                return Taxonomy.from_path(path)
-        vertebrata = Taxonomy.from_path(MandosResources.VERTEBRATA_PATH)
-        if isinstance(taxon, int) and taxon in vertebrata:
+        exact = self.load_vertebrate(taxon)
+        if exact is not None:
+            logger.info(f"Taxon {taxon} found in cached file")
+            return exact
+        vertebrate = self.load_vertebrate(taxon)
+        if vertebrate is not None:
             logger.info(f"Taxon {taxon} found in the vertebrata cache")
-            return vertebrata.subtree(taxon)
-        elif isinstance(taxon, str):
-            match = vertebrata.req_only_by_name(taxon).id
-            logger.info(f"Taxon {match} found in the vertebrata cache")
-            return vertebrata.subtree(match)
-        if isinstance(taxon, int):
-            raw_path = self._resolve_non_vertebrate_raw(taxon)
-            if raw_path.exists():
-                logger.warning(
-                    f"Raw download for taxonomy of {taxon} found at {raw_path}. Converting it."
-                )
-                # getting the mod date because creation dates are iffy cross-platform
-                # (in fact the Linux kernel doesn't bother to expose them)
-                when = datetime.fromtimestamp(raw_path.stat().st_mtime).strftime("%Y-%m-%d")
-                logger.warning(f"It may be out of date. (File mod date: {when})")
-            else:
-                logger.warning(
-                    f"Downloading new taxonomy file for taxon {taxon}. This may take a while."
-                )
-                self._download(raw_path, taxon)
-            self._fix(raw_path, taxon, path)
-            logger.warning(f"Cached taxonomy at {path}.")
-            return Taxonomy.from_path(path)
+            return vertebrate
+        raise LookupError(f"Could not find taxon {taxon}; try passing an ID instead")
+
+    def load_exact(self, taxon: int) -> Optional[Taxonomy]:
+        path = self._resolve_non_vertebrate_final(taxon)
+        return Taxonomy.from_path(path) if path.exists() else None
+
+    def load_vertebrate(self, taxon: Union[int, str]) -> Optional[Taxonomy]:
+        vertebrata = Taxonomy.from_path(MandosResources.VERTEBRATA_PATH)
+        vertebrate = vertebrata.subtrees_by_ids_or_names([taxon])
+        return vertebrate if vertebrate.n_taxa() > 0 else None
+
+    def load_dl(self, taxon: Union[int, str]) -> Taxonomy:
+        raw_path = self._resolve_non_vertebrate_raw(taxon)
+        if raw_path.exists():
+            logger.warning(f"Converting temp file for taxon {taxon} at {raw_path} .")
+            # getting the mod date because creation dates are iffy cross-platform
+            # (in fact the Linux kernel doesn't bother to expose them)
+            when = datetime.fromtimestamp(raw_path.stat().st_mtime).strftime("%Y-%m-%d")
+            logger.warning(f"It may be out of date. (File mod date: {when})")
         else:
-            raise LookupError(f"Could not find taxon {taxon}; try passing an ID instead")
+            logger.info(f"Downloading new taxonomy file for taxon {taxon} .")
+            self._download(raw_path, taxon)
+        path = self._resolve_non_vertebrate_final(taxon)
+        self._fix(raw_path, taxon, path)
+        logger.info(f"Cached taxonomy at {path} .")
+        return Taxonomy.from_path(path)
 
     def _resolve_non_vertebrate_final(self, taxon: int) -> Path:
         raise NotImplementedError()
@@ -180,16 +180,38 @@ class TaxonomyFactories:
     """
 
     @classmethod
-    def from_vertebrata(cls) -> TaxonomyFactory:
+    def from_vertebrata(cls) -> UniprotTaxonomyCache:
         return CacheDirTaxonomyCache(MandosResources.VERTEBRATA_PATH)
 
     @classmethod
-    def from_uniprot(cls, cache_dir: Path) -> TaxonomyFactory:
+    def from_uniprot(
+        cls, cache_dir: Path = MANDOS_SETTINGS.taxonomy_cache_path
+    ) -> UniprotTaxonomyCache:
         return CacheDirTaxonomyCache(cache_dir)
 
     @classmethod
-    def from_fixed_file(cls, cache_dir: Path) -> TaxonomyFactory:
+    def from_fixed_file(
+        cls, cache_dir: Path = MANDOS_SETTINGS.taxonomy_cache_path
+    ) -> TaxonomyFactory:
         return FixedFileTaxonomyFactory(cache_dir)
+
+    @classmethod
+    def get_smart_taxonomy(
+        cls,
+        allow: Iterable[Union[int, str]],
+        forbid: Iterable[Union[int, str]],
+        cache_dir: Path = MANDOS_SETTINGS.taxonomy_cache_path,
+    ) -> Taxonomy:
+        vertebrata = cls.from_vertebrata().load(7742)
+        vertebrates = vertebrata.subtrees_by_ids_or_names(allow)
+        invertebrates: Sequence[Taxonomy] = [
+            cls.from_uniprot(cache_dir).load(taxon)
+            for taxon in allow
+            if vertebrata.get_by_id_or_name(taxon) is None
+        ]
+        my_tax = Taxonomy.from_trees([vertebrates, *invertebrates])
+        my_tax = my_tax.exclude_subtrees_by_ids_or_names(forbid)
+        return my_tax
 
 
 __all__ = ["TaxonomyFactory", "TaxonomyFactories"]

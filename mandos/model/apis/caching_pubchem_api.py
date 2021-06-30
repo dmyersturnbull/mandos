@@ -53,7 +53,7 @@ class CachingPubchemApi(PubchemApi):
         return self._cache_dir / "data" / f"{inchikey}{ext}"
 
     def similarity_path(self, inchikey: str):
-        ext = ".tab.gz" if self._compress else ".tab"
+        ext = ".feather"
         return self._cache_dir / "similarity" / f"{inchikey}{ext}"
 
     def _write_json(self, encoded: str, path: Path) -> None:

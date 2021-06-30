@@ -7,6 +7,7 @@ from pathlib import Path
 from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
+from suretime import Suretime
 
 from mandos import logger
 
@@ -36,6 +37,7 @@ class Settings:
     """ """
 
     is_testing: bool
+    ntp_continent: str
     cache_path: Path
     cache_gzip: bool
     chembl_expire_sec: int
@@ -53,6 +55,7 @@ class Settings:
     pubchem_query_delay_max: float
     pubchem_use_parent: bool
     taxonomy_filename_format: str
+    default_table_suffix: str
 
     @property
     def chembl_cache_path(self) -> Path:
@@ -91,6 +94,9 @@ class Settings:
         #  117571
         return cls(
             is_testing=data.get_as("mandos.is_testing", bool, False),
+            ntp_continent=data.get_as(
+                "mandos.continent_code", Suretime.Types.NtpContinents.of, "north-america"
+            ),
             cache_path=data.get_as("mandos.cache.path", Path, Globals.mandos_path).expanduser(),
             cache_gzip=data.get_as("mandos.cache.gzip", bool),
             chembl_expire_sec=data.get_as("mandos.query.chembl.expire_sec", int, ONE_YEAR),
@@ -112,8 +118,9 @@ class Settings:
             pubchem_n_retries=data.get_as("mandos.query.pubchem.n_retries", int, 1),
             pubchem_use_parent=data.get_as("mandos.query.pubchem.use_parent", bool, True),
             taxonomy_filename_format=data.get_as(
-                "mandos.cache.taxonomy_filename_format", str, "{}.tsv.gz"
+                "mandos.cache.taxonomy_filename_format", str, "{}.feather"
             ),
+            default_table_suffix=data.get_as("mandos.default_table_suffix", str, ".feather"),
         )
 
     def configure(self):

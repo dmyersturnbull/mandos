@@ -1,7 +1,8 @@
 import re
 from dataclasses import dataclass
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Mapping, Any
 
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -27,23 +28,31 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
             for interaction in dd.interactions:
                 for predicate in self._predicate(data.name, dd.gene_name, interaction):
                     results.append(
-                        CtdGeneHit(
-                            record_id=None,
-                            origin_inchikey=inchikey,
-                            matched_inchikey=data.names_and_identifiers.inchikey,
-                            compound_id=str(data.cid),
-                            compound_name=data.name,
+                        self._create_hit(
+                            inchikey=inchikey,
+                            c_id=str(data.cid),
+                            c_origin=inchikey,
+                            c_matched=data.names_and_identifiers.inchikey,
+                            c_name=data.name,
                             predicate=predicate,
+                            statement=predicate,
                             object_id=dd.gene_name,
                             object_name=dd.gene_name,
-                            search_key=self.key,
-                            search_class=self.search_class,
-                            data_source=self.data_source,
                             taxon_id=dd.tax_id,
                             taxon_name=dd.tax_name,
                         )
                     )
         return results
+
+    @property
+    def static_data(self) -> Mapping[str, Any]:
+        return dict(
+            search_key=self.key,
+            search_class=self.search_class,
+            data_source=self.data_source,
+            run_date=MiscUtils.utc(),
+            cache_date=None,
+        )
 
     def _predicate(self, compound: str, gene: str, interaction: str) -> Sequence[str]:
         # TODO: Sometimes synonyms of the compound are used (e.g. "Crack Cocaine")

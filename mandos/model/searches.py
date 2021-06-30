@@ -8,7 +8,7 @@ import pandas as pd
 
 from mandos import logger
 from mandos.model.hits import AbstractHit, HitFrame
-from mandos.model import CompoundNotFoundError, ReflectionUtils
+from mandos.model import CompoundNotFoundError, ReflectionUtils, MiscUtils
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -71,17 +71,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             inchikeys: A list of InChI key strings
         """
         hits = self.find_all(inchikeys)
-        return HitFrame(
-            [
-                pd.Series(
-                    {
-                        **{f: getattr(h, f) for f in self.hit_fields()},
-                        **dict(universal_id=h.universal_id),
-                    }
-                )
-                for h in hits
-            ]
-        )
+        return HitFrame.from_hits(hits)
 
     def find_all(self, inchikeys: Sequence[str]) -> Sequence[H]:
         """
@@ -160,6 +150,39 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         Returns the underlying hit TypeVar, ``H``.
         """
         return ReflectionUtils.get_generic_arg(cls, AbstractHit)
+
+    def _create_hit(
+        self,
+        c_origin: str,
+        c_matched: str,
+        c_id: str,
+        c_name: str,
+        predicate: str,
+        statement: str,
+        object_id: str,
+        object_name: str,
+        **kwargs,
+    ) -> H:
+        entry = dict(
+            record_id=None,
+            search_key=self.key,
+            search_class=self.search_class,
+            data_source=self.data_source,
+            run_date=MiscUtils.utc(),
+            cache_date=None,
+            value=1,
+            compound_id=c_id,
+            origin_inchikey=c_origin,
+            matched_inchikey=c_matched,
+            compound_name=c_name,
+            predicate=predicate,
+            statement=statement,
+            object_id=object_id,
+            object_name=object_name,
+        )
+        clazz = self.__class__.get_h()
+        # noinspection PyArgumentList
+        return clazz({**entry, **kwargs})
 
     def __repr__(self) -> str:
         return ", ".join([k + "=" + str(v) for k, v in self.get_params().items()])

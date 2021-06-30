@@ -4,6 +4,7 @@ from typing import Sequence, Set, Optional
 from pocketutils.tools.common_tools import CommonTools
 
 from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -48,21 +49,19 @@ class TrialSearch(PubchemSearch[TrialHit]):
                 continue
             for did, condition in CommonTools.zip_list(dd.disease_ids, dd.conditions):
                 hits.append(
-                    TrialHit(
-                        record_id=dd.ctid,
-                        compound_id=str(data.cid),
-                        origin_inchikey=inchikey,
-                        matched_inchikey=data.names_and_identifiers.inchikey,
-                        compound_name=data.name,
-                        predicate=f"was a {dd.mapped_status} {dd.mapped_phase} trial intervention for",
+                    self._create_hit(
+                        inchikey=inchikey,
+                        c_id=str(data.cid),
+                        c_origin=inchikey,
+                        c_matched=data.names_and_identifiers.inchikey,
+                        c_name=data.name,
+                        predicate=f"trials:{dd.mapped_status}:phase{dd.mapped_phase}",
+                        statement=f"was a {dd.mapped_status} {dd.mapped_phase} trial intervention for",
                         object_id=did,
                         object_name=condition,
-                        search_key=self.key,
-                        search_class=self.search_class,
-                        data_source=self.data_source,
                         phase=dd.mapped_phase,
                         status=dd.mapped_status,
-                        interventions=" || ".join(dd.interventions),
+                        interventions=MiscUtils.serialize_list(dd.interventions),
                     )
                 )
         return hits

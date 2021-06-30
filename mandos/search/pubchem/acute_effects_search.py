@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -43,18 +44,16 @@ class AcuteEffectSearch(PubchemSearch[AcuteEffectHit]):
             for effect in dd.effects:
                 effect_name = effect.category.lower() if self.top_level else effect.lower()
                 results.append(
-                    AcuteEffectHit(
-                        record_id=str(dd.gid),
-                        origin_inchikey=inchikey,
-                        matched_inchikey=data.names_and_identifiers.inchikey,
-                        compound_id=str(data.cid),
-                        compound_name=data.name,
-                        predicate=f"causes effect",
+                    self._create_hit(
+                        inchikey=inchikey,
+                        c_id=str(data.cid),
+                        c_origin=inchikey,
+                        c_matched=data.names_and_identifiers.inchikey,
+                        c_name=data.name,
+                        predicate="effect",
+                        statement="causes effect",
                         object_id=effect_name,
                         object_name=effect_name,
-                        search_key=self.key,
-                        search_class=self.search_class,
-                        data_source=self.data_source,
                         effect=effect.lower(),
                         organism=dd.organism,
                         human=dd.organism.is_human,
@@ -78,18 +77,13 @@ class Ld50Search(PubchemSearch[Ld50Hit]):
             if dd.test_type != "LD50":
                 continue
             results.append(
-                Ld50Hit(
-                    record_id=str(dd.gid),
-                    origin_inchikey=inchikey,
-                    matched_inchikey=data.names_and_identifiers.inchikey,
-                    compound_id=str(data.cid),
-                    compound_name=data.name,
+                self._create_hit(
+                    Ld50Hit,
+                    inchikey=inchikey,
+                    data=data,
                     predicate="has LD50",
                     object_id=str(dd.mg_per_kg),
                     object_name=str(dd.mg_per_kg),
-                    search_key=self.key,
-                    search_class=self.search_class,
-                    data_source=self.data_source,
                     organism=dd.organism,
                     human=dd.organism.is_human,
                 )

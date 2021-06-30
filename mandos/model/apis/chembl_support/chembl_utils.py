@@ -32,7 +32,8 @@ class ChemblUtils:
 
         """
         targets = self.api.target.filter(target_chembl_id=chembl)
-        assert len(targets) == 1
+        if len(targets) != 1:
+            raise AssertionError(f"There are {len(targets)} targets: {targets}")
         return NestedDotDict(targets[0])
 
     def get_compound(self, inchikey: str) -> ChemblCompound:

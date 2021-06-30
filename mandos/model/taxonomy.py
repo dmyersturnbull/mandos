@@ -173,7 +173,8 @@ class Taxonomy:
         by_name = cls._build_by_name(by_id.values())
         tax = Taxonomy(by_id, by_name)
         # catch duplicate values
-        assert len(tax._by_id) == len(taxa), f"{len(tax._by_id)} != {len(taxa)}"
+        if len(tax._by_id) != len(taxa):
+            raise AssertionError(f"{len(tax._by_id)} != {len(taxa)}")
         return tax
 
     @classmethod

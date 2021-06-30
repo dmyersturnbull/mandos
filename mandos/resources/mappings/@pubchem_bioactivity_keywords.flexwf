@@ -1,0 +1,17 @@
+assay                        ||| keyword
+############################ ||| ############
+.*inhibit.*                  ||| inhibit
+.*bind.*                     ||| bind
+.*displace.*                 ||| displace
+.*affinity.*                 ||| affinity
+.*bind.*                     ||| bind
+.*in vivo.*                  ||| in vivo
+.*in vitro.*                 ||| in vitro
+.*activity.*                 ||| activity
+.*reuptake.*                 ||| reuptake
+.*?(?:^)|(\s+)uptake.*       ||| uptake
+.*antagoni[sz].*             ||| antagonize
+.*agonism.*                  ||| agonize
+.*activat(?:e)|(?:ation).*   ||| activate
+.*disrupt.*                  ||| disrupt
+.*block.*                    ||| block

@@ -3,9 +3,10 @@ from typing import Sequence, Optional, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos.model import MiscUtils
 from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
 from mandos.model.apis.chembl_support import ChemblCompound
-from mandos.model.apis.chembl_support import ChemblTargetGraph
+from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -42,18 +43,16 @@ class FunctionalSearch(_ActivitySearch[FunctionalHit]):
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
         from_super = self._extract(lookup, compound, data)
-        hit = FunctionalHit(
-            record_id=from_super.req_as("activity_id", str),
-            origin_inchikey=lookup,
-            matched_inchikey=compound.inchikey,
-            compound_id=compound.chid,
-            compound_name=compound.name,
-            predicate="has functional activity for",
+        hit = self._create_hit(
+            c_origin=lookup,
+            c_matched=compound.inchikey,
+            c_id=compound.chid,
+            c_name=compound.name,
+            predicate="activity:functional",
+            statement="has functional activity for",
             object_id=best_target.chembl,
             object_name=best_target.name,
-            search_key=self.key,
-            search_class=self.search_class,
-            data_source=self.data_source,
+            record_id=from_super.req_as("activity_id", str),
             exact_target_id=from_super.req_as("target_chembl_id", str),
             taxon_id=from_super.get("taxon_id"),
             taxon_name=from_super.get("taxon_name"),

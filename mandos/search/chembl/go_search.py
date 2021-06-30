@@ -8,6 +8,7 @@ from typing import Sequence, Union
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.apis.chembl_api import ChemblApi
+from mandos.model import MiscUtils
 from mandos.search.chembl import ChemblHit, ChemblSearch
 from mandos.search.chembl.binding_search import BindingSearch, BindingHit
 
@@ -56,7 +57,7 @@ class GoSearch(ChemblSearch[GoHit]):
             terms.extend(self._process(compound, match, target))
         return terms
 
-    def _process(self, lookup: str, match: BindingHit, target: NestedDotDict) -> Sequence[GoHit]:
+    def _process(self, lookup: str, compound: BindingHit, target: NestedDotDict) -> Sequence[GoHit]:
         terms = set()
         if target.get("target_components") is not None:
             for comp in target["target_components"]:
@@ -67,20 +68,17 @@ class GoSearch(ChemblSearch[GoHit]):
         hits = []
         for xref_id, xref_name in terms:
             hits.append(
-                GoHit(
-                    None,
-                    origin_inchikey=lookup,
-                    matched_inchikey=match.matched_inchikey,
-                    compound_id=match.compound_id,
-                    compound_name=match.compound_name,
-                    predicate=f"is associated with {self.go_type.name} term",
+                self._create_hit(
+                    c_origin=lookup,
+                    c_matched=compound.matched_inchikey,
+                    c_id=compound.compound_id,
+                    c_name=compound.compound_name,
+                    predicate=f"go:{self.go_type.name}",
+                    statement=f"is associated with {self.go_type.name} term",
                     object_id=xref_id,
                     object_name=xref_name,
-                    search_key=self.key,
-                    search_class=self.search_class,
-                    data_source=self.data_source,
                     go_type=self.go_type.name,
-                    binding=match,
+                    binding=compound,
                 )
             )
         return hits

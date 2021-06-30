@@ -5,7 +5,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
 from mandos.model.apis.chembl_support import ChemblCompound
-from mandos.model.apis.chembl_support import ChemblTargetGraph
+from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
+from mandos.model import MiscUtils
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
 
 
@@ -47,23 +48,22 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     ) -> Sequence[MechanismHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
-        predicate = data.req_as("action_type", str).lower() + " of"
-        x = MechanismHit(
-            record_id=data["mec_id"],
-            origin_inchikey=lookup,
-            matched_inchikey=compound.inchikey,
-            compound_id=compound.chid,
-            compound_name=compound.name,
+        predicate = "moa:" + data.req_as("action_type", str).lower()
+        statement = data.req_as("action_type", str).lower() + " of"
+        hit = self._create_hit(
+            c_origin=lookup,
+            c_matched=compound.inchikey,
+            c_id=compound.chid,
+            c_name=compound.name,
             predicate=predicate,
+            statement=statement,
             object_id=best_target.chembl,
             object_name=best_target.name,
-            search_key=self.key,
-            search_class=self.search_class,
-            data_source=self.data_source,
+            record_id=data["mec_id"],
             exact_target_id=data.req_as("target_chembl_id", str),
             action_type=data.req_as("action_type", str),
         )
-        return [x]
+        return [hit]
 
 
 __all__ = ["MechanismHit", "MechanismSearch"]

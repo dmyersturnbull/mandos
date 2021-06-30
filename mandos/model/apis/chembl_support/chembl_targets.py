@@ -58,9 +58,9 @@ class TargetType(CleverEnum):
     @classmethod
     def resolve(cls, types: str) -> Set[TargetType]:
         """
-        Resolve a bunch of target types in a comma-separated list,
-        allowing for special types prefixed by an ``@``: ``@all``, ``@known``, ``@protein``, ``@molecular``, and
-        ``@nonmolecular``
+        Resolve a bunch of target types in a comma-separated list.
+        Allows for special types prefixed by an ``@``: ``@all``, ``@known``, ``@protein``, ``@molecular``,
+        and ``@nonmolecular``.
 
         Args:
             types: A string like ``'@protein,nucleic_acid``
@@ -215,7 +215,8 @@ class TargetFactory:
             targets = self.api.target.filter(target_chembl_id=chembl)
         except MaxRetryError:
             raise TargetNotFoundError(f"NOT FOUND: Target {chembl}")
-        assert len(targets) == 1, f"Found {len(targets)} targets for {chembl}"
+        if len(targets) != 1:
+            raise AssertionError(f"Found {len(targets)} targets for {chembl}")
         target = NestedDotDict(targets[0])
         return ChemblTarget(
             chembl=target["target_chembl_id"],

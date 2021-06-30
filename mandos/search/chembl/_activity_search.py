@@ -7,7 +7,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound, AssayType
-from mandos.model.apis.chembl_support import ChemblTargetGraph
+from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch, H
 
@@ -29,18 +29,16 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         key: str,
         api: ChemblApi,
         taxa: Sequence[Taxonomy],
-        traversal_strategy: str,
-        allowed_target_types: Set[str],
-        min_confidence_score: Optional[int],
+        traversal: str,
+        target_types: Set[str],
+        min_conf_score: Optional[int],
         allowed_relations: Set[str],
         min_pchembl: Optional[float],
         banned_flags: Set[str],
         binds_cutoff: Optional[float] = None,
         does_not_bind_cutoff: Optional[float] = None,
     ):
-        super().__init__(
-            key, api, taxa, traversal_strategy, allowed_target_types, min_confidence_score
-        )
+        super().__init__(key, api, taxa, traversal, target_types, min_conf_score)
         self.allowed_relations = allowed_relations
         self.min_pchembl = min_pchembl
         self.banned_flags = banned_flags
@@ -82,8 +80,8 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         ):
             return False
         if data.get("data_validity_comment") is not None:
-            logger.info(
-                f"Activity annotation for {lookup} has flag '{data.get('data_validity_comment')} (ok)"
+            logger.debug(
+                f"Activity for {lookup} has flag '{data.get('data_validity_comment')} (ok)"
             )
         # The `target_organism` doesn't always match the `assay_organism`
         # Ex: see assay CHEMBL823141 / document CHEMBL1135642 for homo sapiens in xenopus laevis
@@ -91,7 +89,7 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         # So there's no need to filter by it
         assay = self.api.assay.get(data.req_as("assay_chembl_id", str))
         if target.type.name.lower() not in {s.lower() for s in self.allowed_target_types}:
-            logger.warning(f"Excluding {target.name} with type {target.type}")
+            logger.debug(f"Excluding {target.name} with type {target.type}")
             return False
         confidence_score = assay.get("confidence_score")
         if self.min_confidence_score is not None:
@@ -129,11 +127,6 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
                 **data,
             }
         )
-
-    assay_type: AssayType
-    tissue: Optional[str]
-    cell_type: Optional[str]
-    subcellular_region: Optional[str]
 
 
 __all__ = ["_ActivitySearch", "_ActivityHit"]

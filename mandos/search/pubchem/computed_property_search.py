@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence, Set
 
 from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -31,18 +32,16 @@ class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
         for dd in data.chemical_and_physical_properties.computed:
             if self._standardize_key(dd.key) in descriptors:
                 results.append(
-                    ComputedPropertyHit(
-                        record_id=None,
-                        compound_id=str(data.cid),
-                        origin_inchikey=inchikey,
-                        matched_inchikey=data.names_and_identifiers.inchikey,
-                        compound_name=data.name,
+                    self._create_hit(
+                        inchikey=inchikey,
+                        c_id=str(data.cid),
+                        c_origin=inchikey,
+                        c_matched=data.names_and_identifiers.inchikey,
+                        c_name=data.name,
                         predicate="has " + dd.key.lower(),
+                        statement="property:" + dd.key.lower(),
                         object_id=dd.value,
                         object_name=dd.value,
-                        search_key=self.key,
-                        search_class=self.search_class,
-                        data_source=self.data_source,
                     )
                 )
         return results

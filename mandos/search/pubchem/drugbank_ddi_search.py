@@ -1,9 +1,11 @@
 import re
 from dataclasses import dataclass
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Tuple
 
 from loguru import logger
 
+from mandos.model.apis.pubchem_support.pubchem_models import DrugbankDdi
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -30,36 +32,18 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
         for dd in data.biomolecular_interactions_and_pathways.drugbank_ddis:
             kind = self._guess_type(dd.description)
             up_or_down = self._guess_up_down(dd.description)
-            spec = None
-            predicate = None
-            if kind == "risk":
-                spec = self._guess_adverse(dd.description)
-                predicate = f"{kind} :: {up_or_down} risk of {spec} with"
-            elif kind == "activity":
-                spec = self._guess_activity(dd.description)
-                predicate = f"{kind} :: {up_or_down} {spec} activity with"
-            elif kind == "PK":
-                spec = self._guess_pk(dd.description)
-                predicate = f"{kind} :: {up_or_down} {spec} with"
-            elif kind == "efficacy":
-                spec = self._guess_efficacy(dd.description)
-                predicate = f"{kind} :: {up_or_down} efficacy of {spec} with"
-            if predicate is None:
-                logger.info(f"Did not extract info from '{dd.description}'")
-                continue
+            spec, predicate, statement = self._guess_predicate(dd, kind, up_or_down)
             hits.append(
-                DrugbankDdiHit(
-                    record_id=None,
-                    origin_inchikey=inchikey,
-                    matched_inchikey=data.names_and_identifiers.inchikey,
-                    compound_id=str(data.cid),
-                    compound_name=data.name,
+                self._create_hit(
+                    inchikey=inchikey,
+                    c_id=str(data.cid),
+                    c_origin=inchikey,
+                    c_matched=data.names_and_identifiers.inchikey,
+                    c_name=data.name,
                     predicate=predicate,
+                    statement=statement,
                     object_id=dd.drug_drugbank_id,
                     object_name=dd.drug_drugbank_id,
-                    search_key=self.key,
-                    search_class=self.search_class,
-                    data_source=self.data_source,
                     type=kind,
                     effect_target=spec,
                     change=up_or_down,
@@ -68,12 +52,37 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
             )
         return hits
 
+    def _guess_predicate(
+        self, dd: DrugbankDdi, kind: str, up_or_down: str
+    ) -> Optional[Tuple[str, str, str]]:
+        spec, predicate, statement = None, None, None
+        if kind == "risk":
+            spec = self._guess_adverse(dd.description)
+            predicate = f"interaction:{kind}:risk:{up_or_down}:{spec}"
+            statement = f"{kind} :: {up_or_down}s risk of {spec} with"
+        elif kind == "activity":
+            spec = self._guess_activity(dd.description)
+            predicate = f"interaction:{kind}:activity:{up_or_down}:{spec}"
+            statement = f"{kind} :: {up_or_down}s {spec} activity with"
+        elif kind == "PK":
+            spec = self._guess_pk(dd.description)
+            predicate = f"interaction:{kind}:pk:{up_or_down}:{spec}"
+            statement = f"{kind} :: {up_or_down}s {spec} with"
+        elif kind == "efficacy":
+            spec = self._guess_efficacy(dd.description)
+            predicate = f"interaction:{kind}:efficacy:{up_or_down}:{spec}"
+            statement = f"{kind} :: {up_or_down}s efficacy of {spec} with"
+        if spec is None:
+            logger.info(f"Did not extract info from '{dd.description}'")
+            return None
+        return spec, predicate, statement
+
     def _guess_up_down(self, desc: str) -> str:
         if "increase" in desc:
-            return "increases"
+            return "increase"
         elif "decrease" in desc:
-            return "decreases"
-        return "changes"
+            return "decrease"
+        return "change"
 
     def _guess_efficacy(self, desc: str) -> Optional[str]:
         match = re.compile("efficacy of (.+)").search(desc)

@@ -22,7 +22,7 @@ class TestIndicationSearch:
             "D001007",
             "D003866",
         }
-        assert {t.object_name.lower() for t in triples} == {
+        assert {t.obj.lower() for t in triples} == {
             "schizophrenia",
             "panic disorder",
             "dementia",
@@ -30,7 +30,7 @@ class TestIndicationSearch:
             "depressive disorder",
             "anxiety disorders",
         }
-        assert {t.predicate for t in triples} == {"phase-4 indication", "phase-3 indication"}
+        assert {t.pred for t in triples} == {"phase-4 indication", "phase-3 indication"}
 
     def test_cocaine_hcl(self):
         api = ChemblApi.wrap(Chembl)
@@ -40,8 +40,8 @@ class TestIndicationSearch:
         assert triples[0].compound_name.lower() == "cocaine"
         assert triples[0].compound_id == "CHEMBL370805"
         assert triples[0].object_id == "D000758"
-        assert triples[0].object_name == "Anesthesia"
-        assert triples[0].predicate == "phase-4 indication"
+        assert triples[0].obj == "Anesthesia"
+        assert triples[0].pred == "phase-4 indication"
 
 
 if __name__ == "__main__":

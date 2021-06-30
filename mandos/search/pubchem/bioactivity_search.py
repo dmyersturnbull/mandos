@@ -4,6 +4,7 @@ from typing import Sequence, Optional
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.pubchem_support.pubchem_models import Activity, Bioactivity
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -48,21 +49,21 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
     def process(self, inchikey: str, data: PubchemData, dd: Bioactivity) -> BioactivityHit:
         target_name, target_abbrev, species = dd.target_name_abbrev_species
         data_source = f"{self.data_source}: {dd.assay_ref} ({dd.assay_type})"
+        predicate = f"bioactivity:{dd.activity.name.lower()}"
         if dd.activity in {Activity.inconclusive, Activity.unspecified}:
-            predicate = "has " + dd.activity.name + " activity for"
+            statement = "has " + dd.activity.name + " activity for"
         else:
-            predicate = "is " + dd.activity.name + " against"
-        return BioactivityHit(
-            record_id=None,
-            origin_inchikey=inchikey,
-            matched_inchikey=data.names_and_identifiers.inchikey,
-            compound_id=str(data.cid),
-            compound_name=data.name,
+            statement = "is " + dd.activity.name + " against"
+        return self._create_hit(
+            inchikey=inchikey,
+            c_id=str(data.cid),
+            c_origin=inchikey,
+            c_matched=data.names_and_identifiers.inchikey,
+            c_name=data.name,
             predicate=predicate,
+            statement=statement,
             object_id=dd.gene_id,
             object_name=target_name,
-            search_key=self.key,
-            search_class=self.search_class,
             data_source=data_source,
             target_abbrev=target_abbrev,
             activity=dd.activity.name.lower(),

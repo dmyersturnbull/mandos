@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Sequence, Set
+from typing import Sequence, Set, Optional, Tuple
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.apis.chembl_support import ChemblCompound
-from mandos.model.apis.chembl_support import ChemblTargetGraph
+from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
+from mandos.model import MiscUtils
 from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
 
 
@@ -44,32 +45,17 @@ class BindingSearch(_ActivitySearch[BindingHit]):
         from_super = self._extract(lookup, compound, data)
         rel = from_super.req_as("standard_relation", str)
         pchembl = from_super.req_as("pchembl_value", float)
-        if (
-            self.binds_cutoff is not None
-            and pchembl >= self.binds_cutoff
-            and rel in {"=", "~", "<", "<="}
-        ):
-            predicate = f"binds"
-        elif (
-            self.does_not_bind_cutoff is not None
-            and pchembl <= self.does_not_bind_cutoff
-            and rel in {"=", "~", ">", ">="}
-        ):
-            predicate = f"does not bind"
-        else:
-            predicate = f"binding {rel} at"
-        hit = BindingHit(
-            record_id=from_super.req_as("activity_id", str),
-            origin_inchikey=lookup,
-            matched_inchikey=compound.inchikey,
-            compound_id=compound.chid,
-            compound_name=compound.name,
+        predicate, statement = self._predicate(pchembl, rel)
+        hit = self._create_hit(
+            c_origin=lookup,
+            c_matched=compound.inchikey,
+            c_id=compound.chid,
+            c_name=compound.name,
             predicate=predicate,
+            statement=statement,
             object_id=best_target.chembl,
             object_name=best_target.name,
-            search_key=self.key,
-            search_class=self.search_class,
-            data_source=self.data_source,
+            record_id=from_super.req_as("activity_id", str),
             exact_target_id=from_super.req_as("target_chembl_id", str),
             taxon_id=from_super.get("taxon_id"),
             taxon_name=from_super.get("taxon_name"),
@@ -79,6 +65,21 @@ class BindingSearch(_ActivitySearch[BindingHit]):
             standard_relation=rel,
         )
         return [hit]
+
+    def _predicate(self, pchembl: float, rel: str) -> Tuple[str, str]:
+        if (
+            self.binds_cutoff is not None
+            and pchembl >= self.binds_cutoff
+            and rel in {"=", "~", "<", "<="}
+        ):
+            return "binding:yes", "binds"
+        if (
+            self.does_not_bind_cutoff is not None
+            and pchembl <= self.does_not_bind_cutoff
+            and rel in {"=", "~", ">", ">="}
+        ):
+            return "binding:no", "does not bind"
+        return f"binding:{rel}", f"binding {rel}"
 
 
 __all__ = ["BindingHit", "BindingSearch"]

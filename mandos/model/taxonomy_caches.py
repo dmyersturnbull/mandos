@@ -58,8 +58,8 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
     def _load(self, taxon: Union[int, str]) -> Taxonomy:
         if isinstance(taxon, str) and taxon.isdigit():
             taxon = int(taxon)
+        path = self._resolve_non_vertebrate_final(taxon)
         if isinstance(taxon, int):
-            path = self._resolve_non_vertebrate_final(taxon)
             if path.exists():
                 return Taxonomy.from_path(path)
         vertebrata = Taxonomy.from_path(MandosResources.VERTEBRATA_PATH)
@@ -106,7 +106,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
                 shutil.copyfileobj(r.raw, f)
         hasher.to_write(raw_path).write()
 
-    def _fix(self, raw_path: Path, taxon: int, final_path: Path):
+    def _fix(self, raw_path: Path, taxon: int, final_path: Path) -> None:
         # now process it!
         # unfortunately it won't include an entry for the root ancestor (`taxon`)
         # so, we'll add it in (in ``df.append`` below)
@@ -121,7 +121,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             pd.Series(dict(taxon=taxon, scientific_name=scientific_name, parent=0)),
             ignore_index=True,
         )
-        # write it to a csv.gz
+        # write it to a feather / csv / whatever
         df["parent"] = df["parent"].astype(int)
         df.write_file(final_path)
 
@@ -164,7 +164,7 @@ class CacheDirTaxonomyCache(UniprotTaxonomyCache):
     def _resolve_non_vertebrate_raw(self, taxon: int) -> Path:
         # this is what is downloaded from PubChem
         # the filename is the same
-        return self._get_resource(f"taxonomy-ancestor_{taxon}.tab.gz")
+        return self._get_resource(f"taxonomy-ancestor_{taxon}.feather")
 
     def _get_resource(self, *nodes: Union[Path, str]) -> Path:
         path = MandosResources.path(*nodes)

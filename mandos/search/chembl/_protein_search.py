@@ -9,11 +9,11 @@ from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
-from mandos.model.apis.chembl_support import (
+from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraph,
     ChemblTargetGraphFactory,
 )
-from mandos.model.apis.chembl_support import ChemblUtils
+from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl import ChemblHit, ChemblSearch
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
@@ -56,9 +56,6 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         Returns true if the ChEMBL species is contained in any of our taxonomies.
         """
         return any((taxon.contains(species) for taxon in self.taxa))
-
-    def _set_to_regex(self, values) -> str:
-        return "(" + "|".join([f"(?:{re.escape(v)})" for v in values]) + ")"
 
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         raise NotImplementedError()
@@ -139,7 +136,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
 
         """
         if data.get("target_chembl_id") is None:
-            logger.debug(f"target_chembl_id missing from mechanism '{data}' for compound {lookup}")
+            logger.debug(f"target_chembl_id missing from '{data}' for compound {lookup}")
             return []
         chembl_id = data["target_chembl_id"]
         factory = TargetFactory(self.api)
@@ -156,6 +153,9 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         for ancestor in ancestors:
             lst.extend(self.to_hit(lookup, compound, data, ancestor))
         return lst
+
+    def _set_to_regex(self, values) -> str:
+        return "(" + "|".join([f"(?:{re.escape(v)})" for v in values]) + ")"
 
 
 __all__ = ["ProteinHit", "ProteinSearch"]

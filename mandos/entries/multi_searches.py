@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, Union, Type
 
 import typer
+from mandos.model.settings import MANDOS_SETTINGS
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import MandosLogging
@@ -50,7 +51,7 @@ class MultiSearch:
         # for now, I'm only allowing true "metadata" keys
         self.meta = toml.sub("meta")
         # TODO: allow specifying a directory, not just format (suffix)
-        self.format = self.meta.get_as("to", str, ".feather")
+        self.format = self.meta.get_as("to", str, MANDOS_SETTINGS.default_table_suffix)
         if not self.format.startswith("."):
             raise ValueError(
                 f"Value to='{self.format}' does not start with '.'. Only a filename extension is permitted."

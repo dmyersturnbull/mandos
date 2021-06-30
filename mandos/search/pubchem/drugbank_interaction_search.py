@@ -1,8 +1,10 @@
+import abc
 from dataclasses import dataclass
 from typing import Sequence, TypeVar, Set
 
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankTargetType, DrugbankInteraction
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -41,27 +43,19 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
     def _get_obj(cls, dd: DrugbankInteraction) -> str:
         raise NotImplementedError()
 
-    @classmethod
-    def _get_predicate(cls, dd: DrugbankInteraction) -> str:
-        raise NotImplementedError()
-
     def find(self, inchikey: str) -> Sequence[T]:
         data = self.api.fetch_data(inchikey)
-        # noinspection PyPep8Naming
-        H = self.__class__.get_h()
         return [
-            H(
-                record_id=dd.record_id,
-                origin_inchikey=inchikey,
-                matched_inchikey=data.names_and_identifiers.inchikey,
-                compound_id=str(data.cid),
-                compound_name=data.name,
+            self._create_hit(
+                inchikey=inchikey,
+                c_id=str(data.cid),
+                c_origin=inchikey,
+                c_matched=data.names_and_identifiers.inchikey,
+                c_name=data.name,
                 predicate=self._get_predicate(dd),
+                statement=self._get_statement(dd),
                 object_id=self._get_obj(dd),
                 object_name=self._get_obj(dd),
-                search_key=self.key,
-                search_class=self.search_class,
-                data_source=self.data_source,
                 gene_symbol=dd.gene_symbol,
                 protein_id=dd.protein_id,
                 target_type=dd.target_type.name,
@@ -71,6 +65,16 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
             for dd in data.biomolecular_interactions_and_pathways.drugbank_interactions
             if dd.target_type in self.target_types
         ]
+
+    @classmethod
+    def _get_predicate(cls, dd: DrugbankInteraction) -> str:
+        action = "generic" if dd.action is None else dd.action
+        return dd.target_type.name + ":" + action
+
+    @classmethod
+    def _get_statement(cls, dd: DrugbankInteraction) -> str:
+        action = "" if dd.action is None else (" :: " + dd.action) + " on"
+        return dd.target_type.name + action
 
 
 class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
@@ -84,10 +88,6 @@ class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
     def _get_obj(cls, dd: DrugbankInteraction) -> str:
         return dd.target_name
 
-    @classmethod
-    def _get_predicate(cls, dd: DrugbankInteraction) -> str:
-        return dd.target_type.name + ("" if dd.action is None else (" :: " + dd.action) + " on")
-
 
 class DrugbankGeneralFunctionSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
     """ """
@@ -99,10 +99,6 @@ class DrugbankGeneralFunctionSearch(_DrugbankInteractionSearch[_DrugbankInteract
     @classmethod
     def _get_obj(cls, dd: DrugbankInteraction) -> str:
         return dd.target_name if dd.general_function is None else dd.general_function
-
-    @classmethod
-    def _get_predicate(cls, dd: DrugbankInteraction) -> str:
-        return ("action" if dd.action is None else dd.action) + " on"
 
 
 __all__ = [

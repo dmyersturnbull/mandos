@@ -6,8 +6,9 @@ from typing import Sequence, Set
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.chembl_support import ChemblUtils
+from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.chembl_support import ChemblCompound
+from mandos.model import MiscUtils
 from mandos.search.chembl import ChemblSearch, ChemblHit
 
 
@@ -75,18 +76,15 @@ class AtcSearch(ChemblSearch[AtcHit]):
             object_name = compound.name.lower()
         else:
             object_name = dots.get(f"level{level}_description")
-        return AtcHit(
-            None,
-            origin_inchikey=lookup,
-            matched_inchikey=compound.inchikey,
-            compound_id=compound.chid,
-            compound_name=compound.name,
-            predicate=f"has ATC level {level} code",
+        return self._create_hit(
+            c_origin=lookup,
+            c_matched=compound.inchikey,
+            c_id=compound.chid,
+            c_name=compound.name,
+            predicate=f"atc:level{level}",
+            statement=f"has ATC level {level} code",
             object_id=dots.get(f"level{level}"),
             object_name=object_name,
-            search_key=self.key,
-            search_class=self.search_class,
-            data_source=self.data_source,
             level=level,
         )
 

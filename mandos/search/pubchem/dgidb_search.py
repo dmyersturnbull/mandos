@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 
@@ -25,24 +26,22 @@ class DgiSearch(PubchemSearch[DgiHit]):
         results = []
         for dd in data.biomolecular_interactions_and_pathways.drug_gene_interactions:
             interactions = (
-                ["interacts with"]
+                [("interaction:generic", "interacts with")]
                 if len(dd.interactions) == 0
-                else [s + " for" for s in dd.interactions]
+                else [("interaction" + s, s + " for") for s in dd.interactions]
             )
-            for interaction in interactions:
+            for predicate, statement in interactions:
                 results.append(
-                    DgiHit(
-                        record_id=None,
-                        origin_inchikey=inchikey,
-                        matched_inchikey=data.names_and_identifiers.inchikey,
-                        compound_id=str(data.cid),
-                        compound_name=data.name,
-                        predicate=interaction,
+                    self._create_hit(
+                        inchikey=inchikey,
+                        c_id=str(data.cid),
+                        c_origin=inchikey,
+                        c_matched=data.names_and_identifiers.inchikey,
+                        c_name=data.name,
+                        predicate=predicate,
+                        statement=statement,
                         object_id=dd.gene_claim_id,
                         object_name=dd.gene_name,
-                        search_key=self.key,
-                        search_class=self.search_class,
-                        data_source=self.data_source,
                     )
                 )
         return results

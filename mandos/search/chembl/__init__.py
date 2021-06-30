@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.searches import Search
 from mandos.model.hits import AbstractHit
-
+from mandos.model import MiscUtils
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 

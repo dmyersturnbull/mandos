@@ -10,7 +10,7 @@ from typing import Tuple as Tup
 from mandos.model import MandosResources, ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_targets import TargetType, ChemblTarget
-from mandos.model.apis.chembl_support import (
+from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraph,
     TargetNode,
     TargetEdgeReqs,

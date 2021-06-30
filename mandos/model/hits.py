@@ -1,29 +1,48 @@
 import dataclasses
+import html
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional, Sequence
 
+import pandas as pd
 from typeddfs import TypedDfs
+
+from mandos.model import ReflectionUtils
+
+
+def _camelcase(s: str):
+    return "".join(w.title() if i > 0 else w for i, w in enumerate(s.split("_")))
+
+
+@dataclass(frozen=True, repr=True, order=True)
+class Pair:
+    """
+    Predicate, object pairs.
+    """
+
+    pred: str
+    obj: str
 
 
 @dataclass(frozen=True, repr=True, order=True)
 class Triple:
     """
-    Compound, predicate, object.
+    Usually compound, predicate, object.
     """
 
-    inchikey: str
-    compound_id: str
-    compound_name: str
-    predicate: str
-    object_name: str
-    object_id: str
+    sub: str
+    pred: str
+    obj: str
 
     @property
-    def statement(self) -> str:
+    def n_triples(self) -> str:
         """
-        Returns a simple text statement.
+        Returns a simple text statement in n-triples format.
         """
-        return f'"{self.inchikey}"\t"{self.predicate}"\t"{self.object_name}"'
+        s = self.sub
+        p = html.escape(self.pred, quote=True)
+        o = html.escape(self.obj, quote=True)
+        return f'"{s}" "{p}" "{o}" .'
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -38,21 +57,42 @@ class AbstractHit:
     compound_id: str
     compound_name: str
     predicate: str
+    statement: str
     object_id: str
     object_name: str
+    value: float
     search_key: str
     search_class: str
     data_source: str
+    run_date: datetime
+    cache_date: Optional[datetime]
+    # is_hit: Optional[bool] = None
+    # score: Optional[float] = None
+    # x_score_1: Optional[float] = None
+    # x_score_2: Optional[float] = None
+
+    @property
+    def hit_class(self) -> str:
+        return self.__class__.__name__
+
+    def reify(self) -> Sequence[Triple]:
+        uid = self.universal_id
+        state = Triple(uid, "rdf:type", "rdf:statement")
+        pred = Triple(uid, "rdf:predicate", self.predicate)
+        obj = Triple(uid, "rdf:object", self.object_name)
+        exclude = {"origin_inchikey", "predicate", "extra_cols", "score_1", "score_2", "is_hit"}
+        others = [
+            Triple(uid, "mandos:" + _camelcase(field), getattr(self, field))
+            for field in self.fields()
+            if field not in exclude
+        ]
+        return [state, pred, obj, *others]
 
     def to_triple(self) -> Triple:
-        return Triple(
-            inchikey=self.origin_inchikey,
-            compound_id=self.compound_id,
-            compound_name=self.compound_name,
-            predicate=self.predicate,
-            object_id=self.object_id,
-            object_name=self.object_name,
-        )
+        return Triple(sub=self.origin_inchikey, pred=self.predicate, obj=self.object_name)
+
+    def to_pair(self) -> Pair:
+        return Pair(pred=self.predicate, obj=self.object_name)
 
     def __hash__(self):
         return hash(self.record_id)
@@ -89,12 +129,43 @@ class AbstractHit:
 
 HitFrame = (
     TypedDfs.typed("HitFrame")
-    .require("record_id")
-    .require("inchikey", "compound_id", "compound_name")
-    .require("predicate")
-    .require("object_id", "object_name")
-    .require("search_key", "search_class", "data_source")
+    .require("record_id", dtype=str)
+    .require("inchikey", "compound_id", "compound_name", dtype=str)
+    .require("predicate", "statement", dtype=str)
+    .require("object_id", "object_name", dtype=str)
+    .require("search_key", "search_class", "data_source", dtype=str)
+    .require("hit_class", dtype=str)
+    .require("cache_date", "run_date", dtype=str)
+    .reserve("is_hit", dtype=bool)
+    .reserve("score", *[f"x_score_{i}" for i in range(1, 10)], dtype=float)
 ).build()
 
 
-__all__ = ["AbstractHit", "Triple", "HitFrame"]
+def _from_hits(cls, hits: Sequence[AbstractHit]) -> HitFrame:
+    data = []
+    for hit in hits:
+        x = {f: getattr(hit, f) for f in cls.hit_fields()}
+        x["universal_id"] = hit.universal_id
+        x["hit_class"] = hit.hit_class
+        data.append(x)
+    return HitFrame([pd.Series(x) for x in data])
+
+
+def _to_hits(self: HitFrame) -> Sequence[AbstractHit]:
+    hits = []
+    for row in self.iterrows():
+        clazz = ReflectionUtils.injection(row.hit_class, AbstractHit)
+        # ignore extra columns
+        # if cols are missing, let it fail on clazz.__init__
+        data = {f: getattr(row, f) for f in self.columns if f in row.__dict__}
+        # noinspection PyArgumentList
+        hit = clazz(**data)
+        hits.append(hit)
+    return hits
+
+
+HitFrame.from_hits = _from_hits
+HitFrame.to_hits = _to_hits
+
+
+__all__ = ["AbstractHit", "HitFrame", "Pair", "Triple"]

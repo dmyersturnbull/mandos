@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import abc
 import inspect
-import logging
 import enum
 import sys
 import typing
 from pathlib import Path
-from typing import Optional, Union, Type, TypeVar, Generic, Mapping, Any
+from datetime import datetime
+from typing import Optional, Union, Type, TypeVar, Mapping, Any, Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
-
+from pocketutils.tools.common_tools import CommonTools
+from suretime import Suretime
 
 from mandos import logger
+from mandos.model.settings import MANDOS_SETTINGS
 
 
 class Api(metaclass=abc.ABCMeta):
@@ -163,7 +165,7 @@ class CleverEnum(enum.Enum):
             unk = cls._unmatched_type()
             if unk is None:
                 raise
-            logger.error(f"Target type {key} not found. Using TargetType.unknown.")
+            logger.error(f"Value {key} not found. Using TargetType.unknown.")
             if not isinstance(unk, cls):
                 raise AssertionError(f"Wrong type {type(unk)} (lookup: {s})")
             return unk
@@ -185,12 +187,65 @@ class MandosResources:
         return path.with_suffix(path.suffix if suffix is None else suffix)
 
     @classmethod
+    def a_path(cls, *nodes: Union[Path, str], suffixes: Optional[typing.Set[str]] = None) -> Path:
+        """Gets a path of a test resource file under ``resources/``, ignoring suffix."""
+        path = Path(Path(__file__).parent.parent, "resources", *nodes)
+        return CommonTools.only(
+            [
+                p
+                for p in path.parent.glob(path.stem + "*")
+                if p.is_file() and (suffixes is None or p.suffix in suffixes)
+            ]
+        )
+
+    @classmethod
     def json(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> NestedDotDict:
         """Reads a JSON file under ``resources/``."""
         return NestedDotDict.read_json(cls.path(*nodes, suffix=suffix))
 
 
-MandosResources.VERTEBRATA_PATH = MandosResources.path("7742.tab.gz")
+class MiscUtils:
+    """
+    These are here to make sure I always use the same NTP server, etc.
+    """
+
+    @classmethod
+    def adjust_filename(cls, to: Optional[Path], default: str, replace: bool) -> Path:
+        if to is None:
+            return Path(default)
+        elif str(to).startswith("."):
+            return Path(default).with_suffix(str(to))
+        elif to.is_dir() or to.suffix == "":
+            return to / default
+        if replace or not to.exists():
+            return to
+        raise FileExistsError(f"File {to} already exists")
+
+    @classmethod
+    def ntp_utc(cls) -> datetime:
+        ntp = Suretime.tagged.now_utc_ntp(
+            ntp_server=MANDOS_SETTINGS.ntp_continent, ntp_clock="client-sent"
+        )
+        return ntp.use_clock_as_dt.dt
+
+    @classmethod
+    def utc(cls) -> datetime:
+        return Suretime.tagged.now_utc_sys().dt
+
+    @classmethod
+    def serialize_list(cls, lst: Sequence[str]) -> str:
+        return " || ".join([str(x) for x in lst])
+
+    @classmethod
+    def deserialize_list(cls, s: str) -> Sequence[str]:
+        return s.split(" || ")
+
+
+START_NTP_TIME = MiscUtils.ntp_utc()
+START_NTP_TIMESTAMP = START_NTP_TIME.isoformat(timespec="milliseconds")
+
+
+MandosResources.VERTEBRATA_PATH = MandosResources.a_path("7742")
 
 
 __all__ = [
@@ -200,4 +255,7 @@ __all__ = [
     "CleverEnum",
     "ReflectionUtils",
     "InjectionError",
+    "MiscUtils",
+    "START_NTP_TIME",
+    "START_NTP_TIMESTAMP",
 ]

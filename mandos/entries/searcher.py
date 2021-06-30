@@ -15,7 +15,7 @@ from typeddfs import TypedDfs, UntypedDf
 from mandos import logger
 from mandos.entries.paths import EntryPaths
 from mandos.model import CompoundNotFoundError
-from mandos.model.apis.chembl_support import ChemblUtils
+from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.searches import Search
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.search.chembl import ChemblSearch

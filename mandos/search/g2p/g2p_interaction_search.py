@@ -34,19 +34,15 @@ class G2pInteractionSearch(G2pSearch[G2pInteractionHit]):
         return results
 
     def process(self, inchikey: str, ligand: G2pData, inter: G2pInteraction) -> G2pInteractionHit:
-        predicate = f"{inter.action} at"
-        return G2pInteractionHit(
-            record_id=None,
-            origin_inchikey=inchikey,
-            matched_inchikey=ligand.inchikey,
-            compound_id=str(ligand.g2pid),
-            compound_name=ligand.name,
-            predicate=predicate,
+        return self._create_hit(
+            c_origin=inchikey,
+            c_matched=ligand.inchikey,
+            c_id=str(ligand.g2pid),
+            c_name=ligand.name,
+            predicate=f"interaction:{inter.action}",
+            statement=f"{inter.action} at",
             object_id=inter.target_id,
             object_name=inter.target,
-            search_key=self.key,
-            search_class=self.search_class,
-            data_source=self.data_source,
             action=inter.action,
             affinity=inter.affinity_median,
             measurement=inter.affinity_units,

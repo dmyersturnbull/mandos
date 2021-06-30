@@ -7,7 +7,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
-from mandos.model.apis.chembl_support import ChemblUtils
+from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
+from mandos.model import MiscUtils
 from mandos.search.chembl import ChemblHit, ChemblSearch
 
 
@@ -55,18 +56,15 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
         self, lookup: str, compound: ChemblCompound, indication: NestedDotDict
     ) -> IndicationHit:
         phase = indication.req_as("max_phase_for_ind", int)
-        return IndicationHit(
-            record_id=indication.req_as("drugind_id", str),
-            origin_inchikey=lookup,
-            matched_inchikey=compound.inchikey,
-            compound_id=compound.chid,
-            compound_name=compound.name,
-            predicate=f"used in a phase {phase} trial for",
+        return self._create_hit(
+            c_origin=lookup,
+            c_matched=compound.inchikey,
+            c_id=compound.chid,
+            c_name=compound.name,
+            predicate=f"trial:phase{phase}",
+            statement=f"used in a phase {phase} trial for",
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
-            search_key=self.key,
-            search_class=self.search_class,
-            data_source=self.data_source,
             max_phase=phase,
         )
 

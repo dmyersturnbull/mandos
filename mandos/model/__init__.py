@@ -241,8 +241,8 @@ class MiscUtils:
         return s.split(" || ")
 
 
-START_NTP_TIME = MiscUtils.ntp_utc()
-START_NTP_TIMESTAMP = START_NTP_TIME.isoformat(timespec="milliseconds")
+START_TIME = MiscUtils.utc()
+START_TIMESTAMP = START_TIME.isoformat(timespec="milliseconds")
 
 
 MandosResources.VERTEBRATA_PATH = MandosResources.a_path("7742")
@@ -256,6 +256,6 @@ __all__ = [
     "ReflectionUtils",
     "InjectionError",
     "MiscUtils",
-    "START_NTP_TIME",
-    "START_NTP_TIMESTAMP",
+    "START_TIME",
+    "START_TIMESTAMP",
 ]

@@ -2,7 +2,7 @@ import dataclasses
 import html
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Type
 
 import pandas as pd
 from typeddfs import TypedDfs
@@ -141,31 +141,29 @@ HitFrame = (
 ).build()
 
 
-def _from_hits(cls, hits: Sequence[AbstractHit]) -> HitFrame:
-    data = []
-    for hit in hits:
-        x = {f: getattr(hit, f) for f in cls.hit_fields()}
-        x["universal_id"] = hit.universal_id
-        x["hit_class"] = hit.hit_class
-        data.append(x)
-    return HitFrame([pd.Series(x) for x in data])
+class HitUtils:
+    @classmethod
+    def hits_to_df(cls, hits: Sequence[AbstractHit]) -> HitFrame:
+        data = []
+        for hit in hits:
+            x = {f: getattr(hit, f) for f in hit.__class__.fields()}
+            x["universal_id"] = hit.universal_id
+            x["hit_class"] = hit.hit_class
+            data.append(x)
+        return HitFrame([pd.Series(x) for x in data])
+
+    @classmethod
+    def df_to_hits(cls, self: HitFrame) -> Sequence[AbstractHit]:
+        hits = []
+        for row in self.iterrows():
+            clazz = ReflectionUtils.injection(row.hit_class, AbstractHit)
+            # ignore extra columns
+            # if cols are missing, let it fail on clazz.__init__
+            data = {f: getattr(row, f) for f in self.columns if f in row.__dict__}
+            # noinspection PyArgumentList
+            hit = clazz(**data)
+            hits.append(hit)
+        return hits
 
 
-def _to_hits(self: HitFrame) -> Sequence[AbstractHit]:
-    hits = []
-    for row in self.iterrows():
-        clazz = ReflectionUtils.injection(row.hit_class, AbstractHit)
-        # ignore extra columns
-        # if cols are missing, let it fail on clazz.__init__
-        data = {f: getattr(row, f) for f in self.columns if f in row.__dict__}
-        # noinspection PyArgumentList
-        hit = clazz(**data)
-        hits.append(hit)
-    return hits
-
-
-HitFrame.from_hits = _from_hits
-HitFrame.to_hits = _to_hits
-
-
-__all__ = ["AbstractHit", "HitFrame", "Pair", "Triple"]
+__all__ = ["AbstractHit", "HitFrame", "Pair", "Triple", "HitUtils"]

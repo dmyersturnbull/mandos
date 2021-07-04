@@ -12,7 +12,7 @@ from typing import Union, Sequence, Mapping, Set, Optional
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.hits import AbstractHit, HitFrame
+from mandos.model.hits import AbstractHit, HitFrame, HitUtils
 
 _Type = Union[str, int, float, datetime]
 
@@ -94,7 +94,7 @@ class Filtration:
 
     def apply(self, df: HitFrame) -> HitFrame:
         hits = [h for h in df.to_hits() if self.keep(h)]
-        return HitFrame.from_hits(hits)
+        return HitUtils.hits_to_df(hits)
 
     def keep(self, hit: AbstractHit) -> bool:
         if hit.search_key not in self._x:

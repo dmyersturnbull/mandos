@@ -15,7 +15,7 @@ from mandos.analysis.concordance import TauConcordanceCalculator
 from mandos.analysis.distances import JPrimeMatrixCalculator
 from mandos.analysis.filtration import Filtration
 from mandos.analysis.reification import ReifiedExporter
-from mandos.model import MiscUtils, START_NTP_TIMESTAMP
+from mandos.model import MiscUtils, START_TIMESTAMP
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy_caches import TaxonomyFactories
@@ -92,7 +92,7 @@ class MiscCommands:
 
         Useful to check what you can see before running a search.
         """
-        default = str(path) + "-ids" + START_NTP_TIMESTAMP + MANDOS_SETTINGS.default_table_suffix
+        default = str(path) + "-ids" + START_TIMESTAMP + MANDOS_SETTINGS.default_table_suffix
         to = MiscUtils.adjust_filename(to, default, replace)
         inchikeys = SearcherUtils.read(path)
         df = SearcherUtils.dl(
@@ -127,7 +127,7 @@ class MiscCommands:
         concat = taxa + "-" + forbid
         taxa = CommonArgs.parse_taxa(taxa)
         forbid = CommonArgs.parse_taxa(forbid)
-        default = concat + "-" + START_NTP_TIMESTAMP + MANDOS_SETTINGS.default_table_suffix
+        default = concat + "-" + START_TIMESTAMP + MANDOS_SETTINGS.default_table_suffix
         to = MiscUtils.adjust_filename(to, default, replace)
         my_tax = TaxonomyFactories.get_smart_taxonomy(taxa, forbid)
         my_tax = my_tax.to_df()

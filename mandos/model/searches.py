@@ -7,7 +7,7 @@ from typing import Generic, Sequence, TypeVar
 import pandas as pd
 
 from mandos import logger
-from mandos.model.hits import AbstractHit, HitFrame
+from mandos.model.hits import AbstractHit, HitFrame, HitUtils
 from mandos.model import CompoundNotFoundError, ReflectionUtils, MiscUtils
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
@@ -71,7 +71,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             inchikeys: A list of InChI key strings
         """
         hits = self.find_all(inchikeys)
-        return HitFrame.from_hits(hits)
+        return HitUtils.hits_to_df(hits)
 
     def find_all(self, inchikeys: Sequence[str]) -> Sequence[H]:
         """
@@ -182,7 +182,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         )
         clazz = self.__class__.get_h()
         # noinspection PyArgumentList
-        return clazz({**entry, **kwargs})
+        return clazz(**entry, **kwargs)
 
     def __repr__(self) -> str:
         return ", ".join([k + "=" + str(v) for k, v in self.get_params().items()])

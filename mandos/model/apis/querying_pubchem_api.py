@@ -3,20 +3,21 @@ PubChem querying API.
 """
 from __future__ import annotations
 
+import io
 import re
 import time
-from urllib.error import HTTPError
 from datetime import datetime, timezone
-from typing import Optional, Sequence, Union, FrozenSet, Mapping
+from typing import FrozenSet, Mapping, Optional, Sequence, Union
+from urllib.error import HTTPError
 
-import io
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 
 from mandos import logger
-from mandos.model.apis.pubchem_api import PubchemCompoundLookupError, PubchemApi
+from mandos.model.apis.pubchem_api import (PubchemApi,
+                                           PubchemCompoundLookupError)
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 
 

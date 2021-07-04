@@ -4,9 +4,9 @@ PubChem querying API.
 from __future__ import annotations
 
 import abc
-from typing import Optional, Union, FrozenSet
+from typing import FrozenSet, Optional, Union
 
-from mandos.model import CompoundNotFoundError, Api
+from mandos.model import Api, CompoundNotFoundError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 
 

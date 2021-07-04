@@ -1,6 +1,6 @@
+import enum
 from dataclasses import dataclass
 from typing import List, Optional
-import enum
 
 
 class TrueFalseUnknown(enum.Enum):

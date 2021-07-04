@@ -2,9 +2,9 @@ import abc
 from dataclasses import dataclass
 from typing import TypeVar
 
-from mandos.model.hits import AbstractHit
 from mandos.model.apis.g2p_api import G2pApi
 from mandos.model.apis.g2p_data import G2pData, G2pInteraction
+from mandos.model.hits import AbstractHit
 from mandos.model.searches import Search
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)

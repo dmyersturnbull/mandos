@@ -1,24 +1,13 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import (
-    List,
-    Union,
-    Sequence,
-    Callable,
-    Set,
-    FrozenSet,
-    Any,
-    Optional,
-    Type,
-    TypeVar,
-    Iterable,
-)
+from typing import (Any, Callable, FrozenSet, Iterable, List, Optional,
+                    Sequence, Set, Type, TypeVar, Union)
 
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.base_tools import BaseTools
 
 from mandos.model.apis.pubchem_support._nav_model import FilterFn
-
 
 T = TypeVar("T", covariant=True)
 V = TypeVar("V", covariant=True)

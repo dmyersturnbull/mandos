@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from mandos.model.hits import HitFrame, AbstractHit, Pair, Triple
+from mandos.model.hits import AbstractHit, HitFrame, Pair, Triple
 
 
 @dataclass(frozen=True, order=True, repr=True)

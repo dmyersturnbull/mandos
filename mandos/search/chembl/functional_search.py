@@ -1,12 +1,13 @@
 from dataclasses import dataclass
-from typing import Sequence, Optional, Set
+from typing import Optional, Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model import MiscUtils
-from mandos.search.chembl._activity_search import _ActivitySearch, _ActivityHit
 from mandos.model.apis.chembl_support import ChemblCompound
-from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
+from mandos.model.apis.chembl_support.chembl_target_graphs import \
+    ChemblTargetGraph
+from mandos.search.chembl._activity_search import _ActivityHit, _ActivitySearch
 
 
 @dataclass(frozen=True, order=True, repr=True)

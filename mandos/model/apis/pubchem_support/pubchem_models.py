@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import enum
 import re
 import typing
 from dataclasses import dataclass
 from datetime import date
-from typing import Union, Optional, FrozenSet, Sequence, Mapping, Set
+from typing import FrozenSet, Mapping, Optional, Sequence, Set, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.string_tools import StringTools

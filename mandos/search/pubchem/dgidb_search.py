@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Sequence
 
-from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model import MiscUtils
+from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 

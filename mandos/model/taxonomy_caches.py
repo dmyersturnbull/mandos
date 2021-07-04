@@ -8,7 +8,7 @@ import abc
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Union, Iterable, Optional, Sequence
+from typing import Iterable, Optional, Sequence, Union
 
 import pandas as pd
 import requests
@@ -16,8 +16,8 @@ from pocketutils.core.hashers import Hasher
 
 from mandos import logger
 from mandos.model import MandosResources
-from mandos.model.taxonomy import Taxonomy
 from mandos.model.settings import MANDOS_SETTINGS
+from mandos.model.taxonomy import Taxonomy
 
 hasher = Hasher("sha1")
 

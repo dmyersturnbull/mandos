@@ -1,11 +1,10 @@
 import pytest
-
-from mandos.search.chembl.atc_search import AtcSearch, AtcHit
-from mandos.model.apis.chembl_api import ChemblApi
 from chembl_webresource_client.new_client import new_client as _Chembl
 
-from .. import get_test_resource
+from mandos.model.apis.chembl_api import ChemblApi
+from mandos.search.chembl.atc_search import AtcHit, AtcSearch
 
+from .. import get_test_resource
 
 Chembl = ChemblApi.wrap(_Chembl)
 

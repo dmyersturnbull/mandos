@@ -1,10 +1,9 @@
 import abc
 from pathlib import Path
-from typing import Callable, Sequence, Optional, Mapping, Any
+from typing import Any, Callable, Mapping, Optional, Sequence
 
-import orjson
 import defusedxml.ElementTree as Xml
-
+import orjson
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 

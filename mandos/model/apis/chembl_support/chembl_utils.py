@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import enum
 
 from pocketutils.core.dot_dict import NestedDotDict
@@ -6,8 +7,8 @@ from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 
 from mandos import logger
+from mandos.model import CleverEnum, CompoundNotFoundError
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model import CompoundNotFoundError, CleverEnum
 from mandos.model.apis.chembl_support import ChemblCompound
 
 

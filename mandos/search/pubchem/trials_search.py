@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Sequence, Set, Optional
+from typing import Optional, Sequence, Set
 
 from pocketutils.tools.common_tools import CommonTools
 
-from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model import MiscUtils
+from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 

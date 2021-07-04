@@ -2,16 +2,14 @@ import dataclasses
 import html
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence
 
 import pandas as pd
 from typeddfs import TypedDfs
 
 from mandos.model import ReflectionUtils
 
-
-def _camelcase(s: str):
-    return "".join(w.title() if i > 0 else w for i, w in enumerate(s.split("_")))
+HIT_FIELD_TYPE = frozenset([str, int, float, datetime])
 
 
 @dataclass(frozen=True, repr=True, order=True)
@@ -75,22 +73,11 @@ class AbstractHit:
     def hit_class(self) -> str:
         return self.__class__.__name__
 
-    def reify(self) -> Sequence[Triple]:
-        uid = self.universal_id
-        state = Triple(uid, "rdf:type", "rdf:statement")
-        pred = Triple(uid, "rdf:predicate", self.predicate)
-        obj = Triple(uid, "rdf:object", self.object_name)
-        exclude = {"origin_inchikey", "predicate", "extra_cols", "score_1", "score_2", "is_hit"}
-        others = [
-            Triple(uid, "mandos:" + _camelcase(field), getattr(self, field))
-            for field in self.fields()
-            if field not in exclude
-        ]
-        return [state, pred, obj, *others]
-
+    @property
     def to_triple(self) -> Triple:
         return Triple(sub=self.origin_inchikey, pred=self.predicate, obj=self.object_name)
 
+    @property
     def to_pair(self) -> Pair:
         return Pair(pred=self.predicate, obj=self.object_name)
 
@@ -166,4 +153,4 @@ class HitUtils:
         return hits
 
 
-__all__ = ["AbstractHit", "HitFrame", "Pair", "Triple", "HitUtils"]
+__all__ = ["AbstractHit", "HitFrame", "Pair", "Triple", "HIT_FIELD_TYPE", "HitUtils"]

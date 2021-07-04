@@ -9,11 +9,11 @@ from typing import Type
 import typer
 from typer.models import CommandInfo
 
-from mandos import logger, MandosLogging
-from mandos.model.settings import MANDOS_SETTINGS
-from mandos.entries.entries import Entries
-from mandos.entries.api_singletons import Apis
+from mandos import MandosLogging, logger
 from mandos.commands import MiscCommands
+from mandos.entries.api_singletons import Apis
+from mandos.entries.entries import Entries
+from mandos.model.settings import MANDOS_SETTINGS
 
 cli = typer.Typer()
 

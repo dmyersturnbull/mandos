@@ -1,13 +1,18 @@
 from __future__ import annotations
+
 import abc
 import enum
 import re
 from dataclasses import dataclass
 from functools import total_ordering
-from typing import Optional, Set, Sequence, Tuple as Tup, Type
+from typing import Optional, Sequence, Set
+from typing import Tuple as Tup
+from typing import Type
 
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType, TargetFactory
+from mandos.model.apis.chembl_support.chembl_targets import (ChemblTarget,
+                                                             TargetFactory,
+                                                             TargetType)
 
 
 @dataclass(frozen=True, order=True, repr=True)

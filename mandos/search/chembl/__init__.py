@@ -1,11 +1,11 @@
-from typing import TypeVar
 import abc
 from dataclasses import dataclass
+from typing import TypeVar
 
-from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.searches import Search
-from mandos.model.hits import AbstractHit
 from mandos.model import MiscUtils
+from mandos.model.apis.chembl_api import ChemblApi
+from mandos.model.hits import AbstractHit
+from mandos.model.searches import Search
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 

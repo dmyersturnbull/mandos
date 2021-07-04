@@ -5,10 +5,10 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass
-from typing import Optional, Set, Mapping
+from typing import Mapping, Optional, Set
 
-from urllib3.util.retry import MaxRetryError
 from pocketutils.core.dot_dict import NestedDotDict
+from urllib3.util.retry import MaxRetryError
 
 from mandos.model import CleverEnum
 from mandos.model.apis.chembl_api import ChemblApi

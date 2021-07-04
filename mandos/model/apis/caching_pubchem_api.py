@@ -3,16 +3,17 @@ PubChem querying API.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional, Union, FrozenSet
-
 import gzip
+from pathlib import Path
+from typing import FrozenSet, Optional, Union
+
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
-from mandos.model.apis.pubchem_api import PubchemCompoundLookupError, PubchemApi
+from mandos.model.apis.pubchem_api import (PubchemApi,
+                                           PubchemCompoundLookupError)
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 

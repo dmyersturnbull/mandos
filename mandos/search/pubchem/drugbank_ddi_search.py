@@ -1,11 +1,11 @@
 import re
 from dataclasses import dataclass
-from typing import Sequence, Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
 from loguru import logger
 
-from mandos.model.apis.pubchem_support.pubchem_models import DrugbankDdi
 from mandos.model import MiscUtils
+from mandos.model.apis.pubchem_support.pubchem_models import DrugbankDdi
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 

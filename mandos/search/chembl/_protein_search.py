@@ -1,18 +1,16 @@
 import abc
 import re
 from dataclasses import dataclass
-from typing import Sequence, TypeVar, Set, Union, Optional
+from typing import Optional, Sequence, Set, TypeVar, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
-from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
-    ChemblTargetGraph,
-    ChemblTargetGraphFactory,
-)
+    ChemblTargetGraph, ChemblTargetGraphFactory)
+from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl import ChemblHit, ChemblSearch

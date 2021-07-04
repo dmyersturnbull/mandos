@@ -3,12 +3,12 @@ Tool to filter annotations.
 """
 from __future__ import annotations
 
+import enum
 import re
 from dataclasses import dataclass
-import enum
 from datetime import datetime
 from pathlib import Path
-from typing import Union, Sequence, Mapping, Set, Optional
+from typing import Mapping, Optional, Sequence, Set, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 

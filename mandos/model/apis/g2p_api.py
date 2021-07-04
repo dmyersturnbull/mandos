@@ -7,11 +7,12 @@ from typing import Optional, Type
 import numpy as np
 import orjson
 import pandas as pd
-from typeddfs import TypedDfs, TypedDf
 from pocketutils.tools.common_tools import CommonTools
+from typeddfs import TypedDf, TypedDfs
 
 from mandos.model import Api, CompoundNotFoundError
-from mandos.model.apis.g2p_data import G2pData, G2pInteraction, TrueFalseUnknown
+from mandos.model.apis.g2p_data import (G2pData, G2pInteraction,
+                                        TrueFalseUnknown)
 
 LIGANDS_URL = "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.tsv"
 INTERACTIONS_URL = "https://www.guidetopharmacology.org/DATA/interactions.tsv"

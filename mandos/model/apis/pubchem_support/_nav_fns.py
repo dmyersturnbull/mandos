@@ -5,17 +5,8 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime
-from typing import (
-    Any,
-    Callable,
-    Set,
-    Union,
-    Optional,
-    Type,
-    TypeVar,
-    Iterable,
-    FrozenSet,
-)
+from typing import (Any, Callable, FrozenSet, Iterable, Optional, Set, Type,
+                    TypeVar, Union)
 
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools

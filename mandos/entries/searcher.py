@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence, Optional, Callable
+from typing import Callable, Optional, Sequence
 
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
@@ -14,13 +14,13 @@ from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 
 from mandos import logger
+from mandos.entries.api_singletons import Apis
 from mandos.entries.paths import EntryPaths
 from mandos.model import CompoundNotFoundError
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.searches import Search
 from mandos.search.chembl import ChemblSearch
 from mandos.search.pubchem import PubchemSearch
-from mandos.entries.api_singletons import Apis
 
 InputFrame = (TypedDfs.typed("InputFrame").require("inchikey")).build()
 

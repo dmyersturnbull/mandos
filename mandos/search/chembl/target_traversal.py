@@ -1,21 +1,20 @@
 from __future__ import annotations
+
 import abc
 import enum
-import sre_compile
 import re
+import sre_compile
 from pathlib import Path
-from typing import Dict, Sequence, Type, Set, Optional, Mapping
+from typing import Dict, Mapping, Optional, Sequence, Set
 from typing import Tuple as Tup
+from typing import Type
 
 from mandos.model import MandosResources, ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.chembl_support.chembl_targets import TargetType, ChemblTarget
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
-    ChemblTargetGraph,
-    TargetNode,
-    TargetEdgeReqs,
-    TargetRelType,
-)
+    ChemblTargetGraph, TargetEdgeReqs, TargetNode, TargetRelType)
+from mandos.model.apis.chembl_support.chembl_targets import (ChemblTarget,
+                                                             TargetType)
 
 
 class Acceptance(enum.Enum):

@@ -1,10 +1,11 @@
 import abc
 from dataclasses import dataclass
-from typing import Sequence, TypeVar, Set
+from typing import Sequence, Set, TypeVar
 
-from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.model.apis.pubchem_support.pubchem_models import DrugbankTargetType, DrugbankInteraction
 from mandos.model import MiscUtils
+from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_support.pubchem_models import (
+    DrugbankInteraction, DrugbankTargetType)
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 

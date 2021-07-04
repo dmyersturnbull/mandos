@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from mandos.model.apis.g2p_data import G2pData, G2pInteraction
-
-from mandos.search.g2p import G2pSearch, G2pHit
+from mandos.search.g2p import G2pHit, G2pSearch
 
 
 @dataclass(frozen=True, order=True, repr=True)

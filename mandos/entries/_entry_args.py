@@ -1,19 +1,19 @@
+import os
 from inspect import cleandoc
 from typing import Mapping
 
 import typer
 
-from mandos.model.apis.chembl_support import DataValidityComment
-from mandos.model.apis.chembl_support.chembl_targets import TargetType, ConfidenceLevel
-from mandos.search.chembl.target_traversal import TargetTraversalStrategies
+from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
+from mandos.model.apis.chembl_support import DataValidityComment
+from mandos.model.apis.chembl_support.chembl_targets import (ConfidenceLevel,
+                                                             TargetType)
+from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 
 
 def _stringify(keys: Mapping[str, str]):
     return ", ".join((k if v is None else f"{k} ({v.lower()})" for k, v in keys.items()))
-
-
-_nl = "\n"
 
 
 class EntryArgs:
@@ -97,7 +97,7 @@ class EntryArgs:
             (B) The path to a ``*.strat`` file; OR
             (C) The fully qualified name of a ``TargetTraversal``
 
-            The standard traversal strategies are: {"; ".join(TargetTraversalStrategies.standard_strategies())}
+            The standard traversal strategies are: {Ca.list(TargetTraversalStrategies.standard_strategies())}
 
             [default: @null] (No traversal; targets as-is)
             """
@@ -117,15 +117,11 @@ class EntryArgs:
 
             The ChEMBL-defined types are:
 
-              {'; '.join([s.name for s in TargetType.all_types()])}
+            {Ca.list(TargetType.all_types(), "name")}
 
             These special names are also accepted:
 
-              {
-                (_nl + _nl + "          - ").join(
-                    [f"{k} ({v})" for k, v in TargetType.special_type_names().items()]
-                )
-              }
+            {Ca.definition_bullets(TargetType.special_type_names())}
             """
         ),
     )
@@ -137,16 +133,14 @@ class EntryArgs:
         max=9,
         show_default=False,
         help=cleandoc(
-            """
+            rf"""
             Minimum target confidence score, inclusive.
             This is useful to modify in only some cases. More important options are min_pchembl and taxa.
 
-            Values are: {}
+            Values are: {Ca.list([f"{s.value} ({s.name})" for s in ConfidenceLevel])}
 
             [default: 3] ("Target assigned is molecular non-protein target")
-            """.format(
-                "; ".join([f"{s.value} ({s.name})" for s in ConfidenceLevel])
-            )
+            """
         ),
     )
 
@@ -209,15 +203,15 @@ class EntryArgs:
             Exclude activity annotations with data validity flags, comma-separated.
             It is rare to need to change this.
 
-            Values are: {"; ".join([s.name for s in DataValidityComment])}.
+            Values are: {Ca.list(DataValidityComment)}.
 
             Special sets are:
 
               - @all (all flags are banned)
 
-              - @negative ({", ".join([s.name for s in DataValidityComment.negative_comments()])})
+              - @negative {Ca.list(DataValidityComment.negative_comments())})
 
-              - @positive ({", ".join([s.name for s in DataValidityComment.positive_comments()])})
+              - @positive ({Ca.list(DataValidityComment.positive_comments())})
             """
         ),
     )

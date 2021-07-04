@@ -1,7 +1,8 @@
 import pytest
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.apis.chembl_api import ChemblApi, ChemblEntrypoint, ChemblFilterQuery
+from mandos.model.apis.chembl_api import (ChemblApi, ChemblEntrypoint,
+                                          ChemblFilterQuery)
 
 
 class TestChemblApi:

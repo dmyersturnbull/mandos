@@ -2,18 +2,20 @@
 Calculations of concordance between annotations.
 """
 import abc
+import math
 from collections import defaultdict
-from typing import Sequence, Set, Collection, Tuple, Dict
+from typing import Collection, Sequence
 
 import numpy as np
-from typeddfs import TypedDfs
 
-from mandos.analysis import AnalysisUtils, SimilarityDf
-from mandos.model.hits import HitFrame, AbstractHit, Pair
+from mandos.analysis import AnalysisUtils as Au
+from mandos.analysis import SimilarityDf
+from mandos.model.hits import AbstractHit
 
-
-def _elle(x: float) -> float:
-    return np.log10(1 + x)
+# note that most of these math functions are much faster than their numpy counterparts
+# if we're not broadcasting, it's almost always better to use them
+# some are more accurate, too
+# e.g. we're using fsum rather than sum
 
 
 class MatrixCalculator(metaclass=abc.ABCMeta):
@@ -23,9 +25,7 @@ class MatrixCalculator(metaclass=abc.ABCMeta):
 
 class JPrimeMatrixCalculator(MatrixCalculator):
     def calc(self, hits: Sequence[AbstractHit]) -> SimilarityDf:
-        inchikey_to_hits = defaultdict(list)
-        for h in hits:
-            inchikey_to_hits[h.origin_inchikey].append(h)
+        inchikey_to_hits = Au.hit_multidict(hits, "origin_inchikey")
         data = defaultdict(dict)
         for (c1, hits1), (c2, hits2) in zip(inchikey_to_hits.items(), inchikey_to_hits.items()):
             data[c1][c2] = self._j_prime(hits1, hits2)
@@ -35,31 +35,25 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         sources = {h.data_source for h in hits1}.intersection({h.data_source for h in hits2})
         if len(sources) == 0:
             return np.nan
-        return float(
-            np.mean(
-                [
-                    self._jx(
-                        [h for h in hits1 if h.data_source == source],
-                        [h for h in hits1 if h.data_source == source],
-                    )
-                    for source in sources
-                ]
+        values = [
+            self._jx(
+                [h for h in hits1 if h.data_source == source],
+                [h for h in hits1 if h.data_source == source],
             )
-        )
+            for source in sources
+        ]
+        return float(math.fsum(values) / len(values))
 
     def _jx(self, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]) -> float:
-        pair_to_weights = AnalysisUtils.weights_of_pairs(hits1, hits2)
-        return float(
-            np.mean(
-                [self._wedge(ca, cb) / self._vee(ca, cb) for ca, cb in pair_to_weights.values()]
-            )
-        )
+        pair_to_weights = Au.weights_of_pairs(hits1, hits2)
+        values = [self._wedge(ca, cb) / self._vee(ca, cb) for ca, cb in pair_to_weights.values()]
+        return float(math.fsum(values) / len(values))
 
     def _wedge(self, ca: float, cb: float) -> float:
-        return np.sqrt(_elle(ca) * _elle(cb))
+        return math.sqrt(Au.elle(ca) * Au.elle(cb))
 
     def _vee(self, ca: float, cb: float) -> float:
-        return _elle(ca) + _elle(cb) - np.sqrt(_elle(ca) * _elle(cb))
+        return Au.elle(ca) + Au.elle(cb) - math.sqrt(Au.elle(ca) * Au.elle(cb))
 
 
 __all__ = ["MatrixCalculator", "JPrimeMatrixCalculator"]

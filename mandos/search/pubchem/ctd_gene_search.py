@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import Sequence, Optional, Mapping, Any
+from typing import Any, Mapping, Optional, Sequence
 
 from mandos.model import MiscUtils
 from mandos.search.pubchem import PubchemHit, PubchemSearch

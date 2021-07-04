@@ -4,18 +4,8 @@ import pytest
 
 from mandos.model.apis.caching_pubchem_api import CachingPubchemApi
 from mandos.model.apis.pubchem_support.pubchem_models import (
-    Codes,
-    CoOccurrenceType,
-    AtcCode,
-    ChemicalGeneInteraction,
-    DrugbankDdi,
-    DrugGeneInteraction,
-    CoOccurrence,
-    Activity,
-    Bioactivity,
-    AcuteEffectEntry,
-)
-
+    Activity, AcuteEffectEntry, AtcCode, Bioactivity, ChemicalGeneInteraction,
+    Codes, CoOccurrence, CoOccurrenceType, DrugbankDdi, DrugGeneInteraction)
 from tests import get_test_resource
 
 

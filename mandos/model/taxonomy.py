@@ -4,7 +4,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import total_ordering
 from pathlib import Path
-from typing import List, Mapping, Optional, Sequence, Set, Union, FrozenSet, Iterable
+from typing import (FrozenSet, Iterable, List, Mapping, Optional, Sequence,
+                    Set, Union)
 
 import pandas as pd
 from typeddfs import TypedDfs

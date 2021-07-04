@@ -3,7 +3,7 @@ Calculations of concordance between annotations.
 """
 import abc
 import math
-from typing import Sequence, Set, Collection, Tuple, Dict, Generator
+from typing import Collection, Dict, Generator, Sequence, Set, Tuple
 
 import numpy as np
 import pandas as pd

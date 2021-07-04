@@ -1,12 +1,16 @@
 """
 Common argument processing and arguments for Typer.
 """
-
+import enum
+import os
 from inspect import cleandoc
 from pathlib import Path
-from typing import Optional, TypeVar, Sequence, Union
+from typing import (Any, Callable, Iterable, Mapping, Optional, Sequence,
+                    TypeVar, Union)
 
 import typer
+
+from mandos.model import CleverEnum
 from mandos.model.settings import MANDOS_SETTINGS
 
 T = TypeVar("T", covariant=True)
@@ -151,6 +155,33 @@ def _strip(s: str) -> str:
 
 
 class CommonArgs:
+    @staticmethod
+    def definition_bullets(dct: Mapping[Any, Any], colon: str = ": ", indent: int = 12) -> str:
+        joiner = os.linesep * 2 + " " * indent
+        jesus = [f" - {k}{colon}{v}" for k, v in dct.items()]
+        return joiner.join(jesus)
+
+    @staticmethod
+    def definition_list(dct: Mapping[Any, Any], colon: str = ": ", sep: str = "; ") -> str:
+        jesus = [f"{k}{colon}{v}" for k, v in dct.items()]
+        return sep.join(jesus)
+
+    @staticmethod
+    def list(
+        lst: Iterable[Any], attr: Union[None, str, Callable[[Any], Any]] = None, sep: str = "; "
+    ) -> str:
+        x = []
+        for v in lst:
+            if attr is None and isinstance(v, enum.Enum):
+                x += [v.name]
+            elif attr is None:
+                x += [str(v)]
+            elif isinstance(attr, str):
+                x += [str(getattr(v, attr))]
+            else:
+                x += [str(attr(v))]
+        return sep.join(x)
+
     @staticmethod
     def parse_taxon_id_or_name(taxon: Union[int, str]) -> Union[int, str]:
         if isinstance(taxon, str):

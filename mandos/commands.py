@@ -14,20 +14,24 @@ from mandos.analysis import SimilarityDf
 from mandos.analysis.concordance import TauConcordanceCalculator
 from mandos.analysis.distances import JPrimeMatrixCalculator
 from mandos.analysis.filtration import Filtration
-from mandos.analysis.reification import ReifiedExporter
-from mandos.model import MiscUtils, START_TIMESTAMP
+from mandos.analysis.regression import (EnrichmentAlg, EnrichmentCalculation,
+                                        ScoreDf)
+from mandos.analysis.reification import Reifier
+from mandos.entries.common_args import Arg
+from mandos.entries.common_args import CommonArgs as Ca
+from mandos.entries.common_args import Opt
+from mandos.entries.multi_searches import MultiSearch
+from mandos.entries.searcher import SearcherUtils
+from mandos.model import START_TIMESTAMP, MiscUtils
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.entries.multi_searches import MultiSearch
-from mandos.entries.searcher import SearcherUtils
-from mandos.entries.common_args import Arg, Opt, CommonArgs
 
 
 class MiscCommands:
     @staticmethod
     def search(
-        path: Path = CommonArgs.compounds,
+        path: Path = Ca.compounds,
         config: Path = Arg.in_file(
             r"""
             A TOML config file. See docs.
@@ -37,7 +41,7 @@ class MiscCommands:
         """
         Run multiple searches.
         """
-        MultiSearch(path, config).search()
+        MultiSearch(path, config.read_text(encoding="utf-8")).search()
 
     @staticmethod
     def serve(
@@ -52,7 +56,7 @@ class MiscCommands:
 
     @staticmethod
     def deposit(
-        path: Path = CommonArgs.file_input,
+        path: Path = Ca.file_input,
         db: str = Opt.val("The name of the MySQL database", default="mandos"),
         host: str = Opt.val(
             "Database hostname (ignored if ``--socket`` is passed", default="127.0.0.1"
@@ -71,17 +75,17 @@ class MiscCommands:
 
     @staticmethod
     def find(
-        path: Path = CommonArgs.compounds,
+        path: Path = Ca.compounds,
         to: Path = Opt.out_path(
             rf"""
             A table of compounds and their matching database IDs will be written here.
 
-            {CommonArgs.output_formats}
+            {Ca.output_formats}
 
             [default: <path>-ids-<start-time>.{MANDOS_SETTINGS.default_table_suffix}]
             """
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
         pubchem: bool = typer.Option(True, help="Download data from PubChem"),
         chembl: bool = typer.Option(True, help="Download data from ChEMBL"),
         hmdb: bool = typer.Option(True, help="Download data from HMDB"),
@@ -103,7 +107,7 @@ class MiscCommands:
 
     @staticmethod
     def build_taxonomy(
-        taxa: str = CommonArgs.taxa,
+        taxa: str = Ca.taxa,
         forbid: str = Opt.val(
             r"""Exclude descendents of these taxa IDs or names (comma-separated).""", default=""
         ),
@@ -112,12 +116,12 @@ class MiscCommands:
             help=rf"""
             Where to export a table of the taxonomy.
 
-            {CommonArgs.output_formats}
+            {Ca.output_formats}
 
             [default: ./<taxa>-<datetime>.{MANDOS_SETTINGS.default_table_suffix}]
             """,
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
     ):
         """
         Exports a taxonomic tree to a table.
@@ -125,8 +129,8 @@ class MiscCommands:
         Writes a taxonomy of given taxa and their descendants to a table.
         """
         concat = taxa + "-" + forbid
-        taxa = CommonArgs.parse_taxa(taxa)
-        forbid = CommonArgs.parse_taxa(forbid)
+        taxa = Ca.parse_taxa(taxa)
+        forbid = Ca.parse_taxa(forbid)
         default = concat + "-" + START_TIMESTAMP + MANDOS_SETTINGS.default_table_suffix
         to = MiscUtils.adjust_filename(to, default, replace)
         my_tax = TaxonomyFactories.get_smart_taxonomy(taxa, forbid)
@@ -150,10 +154,10 @@ class MiscCommands:
 
     @staticmethod
     def concat(
-        path: Path = CommonArgs.dir_input,
-        exclude: Optional[str] = CommonArgs.exclude,
-        to: Optional[Path] = CommonArgs.to_single,
-        replace: bool = CommonArgs.replace,
+        path: Path = Ca.dir_input,
+        exclude: Optional[str] = Ca.exclude,
+        to: Optional[Path] = Ca.to_single,
+        replace: bool = Ca.replace,
     ) -> None:
         r"""
         Concatenates Mandos annotation files into one.
@@ -170,19 +174,19 @@ class MiscCommands:
 
     @staticmethod
     def filter_taxa(
-        path: Path = CommonArgs.file_input,
+        path: Path = Ca.file_input,
         to: Path = Opt.out_path(
             f"""
             An output path (file or directory).
 
-            {CommonArgs.output_formats}
+            {Ca.output_formats}
 
             [default: <path>/<filters>.feather]
             """
         ),
-        allow: str = CommonArgs.taxa,
-        forbid: str = CommonArgs.taxa,
-        replace: bool = CommonArgs.replace,
+        allow: str = Ca.taxa,
+        forbid: str = Ca.taxa,
+        replace: bool = Ca.replace,
     ):
         """
         Filter by taxa.
@@ -197,8 +201,8 @@ class MiscCommands:
         See also: :filter, which is more general.
         """
         concat = allow + "-" + forbid
-        allow = CommonArgs.parse_taxa(allow)
-        forbid = CommonArgs.parse_taxa(forbid)
+        allow = Ca.parse_taxa(allow)
+        forbid = Ca.parse_taxa(forbid)
         if to is None:
             to = path.parent / (concat + MANDOS_SETTINGS.default_table_suffix)
         default = str(path) + "-filter-taxa-" + concat + MANDOS_SETTINGS.default_table_suffix
@@ -215,7 +219,7 @@ class MiscCommands:
 
     @staticmethod
     def filter(
-        path: Path = CommonArgs.to_single,
+        path: Path = Ca.to_single,
         by: Optional[Path] = Arg.in_file(
             """
             The path to a TOML (.toml) file containing filters.
@@ -227,8 +231,8 @@ class MiscCommands:
             See the docs for more info.
             """
         ),
-        to: Optional[Path] = CommonArgs.to_single,
-        replace: bool = CommonArgs.replace,
+        to: Optional[Path] = Ca.to_single,
+        replace: bool = Ca.replace,
     ) -> None:
         """
         Filters by simple expressions.
@@ -242,7 +246,7 @@ class MiscCommands:
 
     @staticmethod
     def state(
-        path: Path = CommonArgs.file_input,
+        path: Path = Ca.file_input,
         to: Optional[Path] = Opt.out_path(
             """
             The path to the output file.
@@ -255,7 +259,7 @@ class MiscCommands:
             [default: <path>-statements.nt]
         """
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
     ) -> None:
         """
         Outputs simple N-triples statements.
@@ -269,11 +273,11 @@ class MiscCommands:
         hits = HitFrame.read_file(path).to_hits()
         with to.open() as f:
             for hit in hits:
-                f.write(hit.to_triple().n_triples)
+                f.write(hit.to_triple.n_triples)
 
     @staticmethod
     def reify(
-        path: Path = CommonArgs.file_input,
+        path: Path = Ca.file_input,
         to: Optional[Path] = Opt.out_path(
             r"""
             The path to the output file.
@@ -287,7 +291,7 @@ class MiscCommands:
             [default: <path>-reified.nt]
         """
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
     ) -> None:
         """
         Outputs reified semantic triples.
@@ -296,22 +300,22 @@ class MiscCommands:
         to = MiscUtils.adjust_filename(to, default, replace)
         hits = HitFrame.read_file(path).to_hits()
         with to.open() as f:
-            for triple in ReifiedExporter().reify(hits):
+            for triple in Reifier().reify(hits):
                 f.write(triple.n_triples)
 
     @staticmethod
     def copy(
-        path: Path = CommonArgs.file_input,
+        path: Path = Ca.file_input,
         to: Optional[Path] = Opt.out_path(
             rf"""
             The path to the output file.
 
-            {CommonArgs.output_formats}
+            {Ca.output_formats}
 
             [default: <path.parent>/export{MANDOS_SETTINGS.default_table_suffix}]
         """
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
     ) -> None:
         """
         Copies and/or converts annotation files.
@@ -324,7 +328,7 @@ class MiscCommands:
 
     @staticmethod
     def score(
-        path: Path = CommonArgs.file_input,
+        path: Path = Ca.file_input,
         scores: Path = Arg.in_file(
             rf"""
             Path to a table containing scores.
@@ -344,14 +348,14 @@ class MiscCommands:
 
                 inchikey    compound_id    is_hit    score_alpha
 
-            {CommonArgs.input_formats}
+            {Ca.input_formats}
             """
         ),
         to: Optional[Path] = Opt.out_file(
             rf"""
             Path to write regression info to.
 
-            {CommonArgs.output_formats}
+            {Ca.output_formats}
 
             Columns will correspond to the columns you provided.
             For example, ``r_score_alpha`` for the regression coefficient
@@ -360,10 +364,17 @@ class MiscCommands:
             [default: <path>-<scores.filename>{MANDOS_SETTINGS.default_table_suffix}]
             """
         ),
-        counts: bool = Opt.flag(
-            rf"""Use only the *number* of object/predicate pairs, rather than their weights.""",
+        algorithm: Optional[str] = Opt.val(
+            rf"""
+            Algorithm to use.
+
+            Will be applied to all scores / columns.
+            Allowed values:
+
+            {Ca.definition_list({a.name: a.description for a in EnrichmentAlg})}
+            """
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
     ) -> None:
         """
         Compares annotations to user-supplied values.
@@ -377,10 +388,14 @@ class MiscCommands:
         """
         default = str(path) + "-" + scores.name + MANDOS_SETTINGS.default_table_suffix
         to = MiscUtils.adjust_filename(to, default, replace)
+        hits = HitFrame.read_file(path)
+        scores = ScoreDf.read_file(scores)
+        df = EnrichmentCalculation.calc(hits, scores, algorithm)
+        df.write_file(to)
 
     @staticmethod
     def matrix(
-        path: Path = CommonArgs.file_input,
+        path: Path = Ca.file_input,
         algorithm: str = Opt.val(
             r"""
             The algorithm for calculating similarity between annotation sets.
@@ -392,13 +407,13 @@ class MiscCommands:
             rf"""
             The path to a similarity matrix file.
 
-            {CommonArgs.output_formats}
+            {Ca.output_formats}
             .txt is assumed to be whitespace-delimited.
 
             [default: <input-path.parent>/<algorithm>-similarity.{MANDOS_SETTINGS.default_table_suffix}]
             """
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
     ) -> None:
         r"""
         Calculates a similarity matrix from annotations.
@@ -414,8 +429,8 @@ class MiscCommands:
 
     @staticmethod
     def concordance(
-        phi: Path = CommonArgs.input_matrix,
-        psi: Path = CommonArgs.input_matrix,
+        phi: Path = Ca.input_matrix,
+        psi: Path = Ca.input_matrix,
         algorithm: str = Opt.val(
             r"""
             The algorithm for calculating concordance.
@@ -425,18 +440,18 @@ class MiscCommands:
             See the docs for more info.
             """
         ),
-        seed: int = CommonArgs.seed,
-        samples: int = CommonArgs.n_samples,
+        seed: int = Ca.seed,
+        samples: int = Ca.n_samples,
         to: Optional[Path] = Opt.out_file(
             rf"""
             The path to a dataframe file for output.
 
-            {CommonArgs.output_formats}
+            {Ca.output_formats}
 
             [default: <input-path.parent>/<algorithm>-concordance.{MANDOS_SETTINGS.default_table_suffix}]
             """
         ),
-        replace: bool = CommonArgs.replace,
+        replace: bool = Ca.replace,
     ) -> None:
         r"""
         Calculate correlation between matrices.

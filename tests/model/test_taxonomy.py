@@ -1,8 +1,8 @@
 import pytest
 
 from mandos.model import MandosResources
-from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.model.taxonomy import Taxon, Taxonomy, _Taxon
+from mandos.model.taxonomy_caches import TaxonomyFactories
 
 
 class TestFind:

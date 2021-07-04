@@ -6,17 +6,17 @@ from __future__ import annotations
 
 import typing
 from pathlib import Path
-from typing import Optional, Union, Type
+from typing import Optional, Type, Union
 
 import typer
-from mandos.model.settings import MANDOS_SETTINGS
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import MandosLogging
 from mandos.entries import EntryMeta
-from mandos.model import InjectionError, ReflectionUtils
-from mandos.entries.entries import Entries, Entry
 from mandos.entries.api_singletons import Apis
+from mandos.entries.entries import Entries, Entry
+from mandos.model import InjectionError, ReflectionUtils
+from mandos.model.settings import MANDOS_SETTINGS
 
 cli = typer.Typer()
 Apis.set_default()
@@ -37,14 +37,8 @@ class MultiSearch:
     # TODO: This code is nightmarishly complex.
     # ------------------------
 
-    def __init__(self, path: Path, config: Optional[Path]):
-        if config is None:
-            config = path.with_suffix(".toml")
+    def __init__(self, path: Path, config: str):
         self.path = path
-        if not self.path.exists():
-            raise FileNotFoundError(f"File {path} not found")
-        if not config.exists():
-            raise FileNotFoundError(f"File {config} not found")
         toml = NestedDotDict.read_toml(config)
         self.toml_searches = toml.get_as("search", list, [])
         # 'meta' allows us to set defaults

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import abc
 import dataclasses
 import typing
@@ -7,8 +8,8 @@ from typing import Generic, Sequence, TypeVar
 import pandas as pd
 
 from mandos import logger
+from mandos.model import CompoundNotFoundError, MiscUtils, ReflectionUtils
 from mandos.model.hits import AbstractHit, HitFrame, HitUtils
-from mandos.model import CompoundNotFoundError, ReflectionUtils, MiscUtils
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 

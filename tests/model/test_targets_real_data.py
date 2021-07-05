@@ -4,9 +4,12 @@ import pytest
 from chembl_webresource_client.new_client import new_client as Chembl
 
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
-    ChemblTargetGraphFactory, TargetEdgeReqs, TargetNode, TargetRelType)
-from mandos.model.apis.chembl_support.chembl_targets import (TargetFactory,
-                                                             TargetType)
+    ChemblTargetGraphFactory,
+    TargetEdgeReqs,
+    TargetNode,
+    TargetRelType,
+)
+from mandos.model.apis.chembl_support.chembl_targets import TargetFactory, TargetType
 
 factory = TargetFactory(Chembl)
 graph_factory = ChemblTargetGraphFactory.create(Chembl, factory)

@@ -59,7 +59,7 @@ The command-line tool is called with:
 
 Where ``type`` is the name of an annotation type (source), and ``compound-list.txt``
 is just a line-by-line text file of compound InChI Keys.
-It can also be a CSV file with additional columns.
+It can also be a CSV file (or .tsv, .feather, etc.) with additional columns.
 
 For example:
 
@@ -97,8 +97,8 @@ More important parameters (such as taxon) are marked as such in the help.
 
 All data fetched from ChEMBL and PubChem are cached under ``~/.mandos``.
 This means that if you modify the parameters for a query and re-run, the results should be returned quickly.
-For example, if you run ``mandos binding compounds.txt --taxa human``, then
-running ``mandos binding compounds.txt --taxa @all`` later will be fast.
+For example, if you run ``mandos chembl:binding compounds.txt --taxa human``, then
+running ``mandos chembl:binding compounds.txt --taxa @all`` later will be fast.
 
 Below is the full list of annotation types that are available at the command-line.
 More can be found in the Python API; these are generally too specialized to be commonly used.

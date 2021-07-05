@@ -2,9 +2,11 @@ import pytest
 
 from mandos.model.apis.chembl_api import ChemblApi, ChemblEntrypoint
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
-    ChemblTargetGraph, ChemblTargetGraphFactory, TargetRelType)
-from mandos.model.apis.chembl_support.chembl_targets import (TargetFactory,
-                                                             TargetType)
+    ChemblTargetGraph,
+    ChemblTargetGraphFactory,
+    TargetRelType,
+)
+from mandos.model.apis.chembl_support.chembl_targets import TargetFactory, TargetType
 
 
 class TestTargets:

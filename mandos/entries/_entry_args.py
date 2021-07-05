@@ -7,8 +7,7 @@ import typer
 from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
 from mandos.model.apis.chembl_support import DataValidityComment
-from mandos.model.apis.chembl_support.chembl_targets import (ConfidenceLevel,
-                                                             TargetType)
+from mandos.model.apis.chembl_support.chembl_targets import ConfidenceLevel, TargetType
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 
 
@@ -137,7 +136,7 @@ class EntryArgs:
             Minimum target confidence score, inclusive.
             This is useful to modify in only some cases. More important options are min_pchembl and taxa.
 
-            Values are: {Ca.list([f"{s.value} ({s.name})" for s in ConfidenceLevel])}
+            Values are: {Ca.list([f"{s.weight} ({s.name})" for s in ConfidenceLevel])}
 
             [default: 3] ("Target assigned is molecular non-protein target")
             """

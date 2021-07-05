@@ -11,7 +11,7 @@ from typeddfs import TypedDfs
 
 from mandos.analysis import AnalysisUtils as Au
 from mandos.model import CleverEnum
-from mandos.model.hits import AbstractHit, HitFrame, Pair
+from mandos.model.hits import AbstractHit, HitFrame, HitUtils, Pair
 
 S = TypeVar("S", bound=Union[int, float, bool])
 
@@ -53,64 +53,92 @@ ScoreDf.all_scores = _all_scores
 
 
 class EnrichmentCalculator(Generic[S], metaclass=abc.ABCMeta):
-    def __init__(self, scores: Mapping[str, S]):
-        self.scores = scores
+    def __init__(self, alg_name: str):
+        self.alg_name = alg_name
 
-    def calc(self, hits: Sequence[AbstractHit]) -> Mapping[Pair, float]:
+    def calc_many(self, data: HitFrame, score_df: ScoreDf):
+        hits = HitUtils.df_to_hits(data)
+        samples_per_pair = {k: len(v) for k, v in Au.hit_multidict(hits, "pair").items()}
+        results = {}
+        for col, scores in score_df.all_scores():
+            calculated = self.calc(hits, scores)
+            results[col] = calculated
+        return EnrichmentDf(
+            [
+                pd.Series(self._results_row(pair, n_samples, results))
+                for pair, n_samples in samples_per_pair.items()
+            ]
+        )
+
+    def _results_row(
+        self, pair: Pair, n_samples: int, results
+    ) -> Mapping[str, Union[str, int, float]]:
+        return {
+            **dict(
+                predicate=pair.pred,
+                object=pair.obj,
+                samples=n_samples,
+            ),
+            **{self._col_name(col): vs[pair] for col, vs in results.items()},
+        }
+
+    def _col_name(self, col: str) -> str:
+        return self.alg_name + "(" + col + ")"
+
+    def calc(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> Mapping[Pair, float]:
         pair_to_hits = Au.hit_multidict(hits, "to_pair")
         results = {}
         for pair, the_hits in pair_to_hits.items():
-            results[pair] = self.for_pair(hits)
+            results[pair] = self.for_pair(hits, scores)
         return results
 
-    def for_pair(self, hits: Sequence[AbstractHit]) -> float:
+    def for_pair(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
         raise NotImplementedError()
 
 
 class AlphaCalculator(EnrichmentCalculator[S]):
-    def for_pair(self, hits: Sequence[AbstractHit]) -> float:
+    def for_pair(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
         source_to_hits = Au.hit_multidict(hits, "data_source")
         terms = []
         for source, source_hits in source_to_hits.items():
-            terms.append(self._calc_term(source_hits))
+            terms.append(self._calc_term(source_hits, scores))
         return math.fsum(terms) / len(terms)
 
-    def _calc_term(self, hits: Sequence[AbstractHit]) -> float:
+    def _calc_term(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
         values = [
-            Au.elle(hit.value) * (2 * float(self.scores[hit.origin_inchikey] - 1)) ** 2
-            for hit in hits
+            Au.elle(hit.weight) * (2 * float(scores[hit.origin_inchikey] - 1)) ** 2 for hit in hits
         ]
         return math.fsum(values) / len(values)
 
 
 class FoldUnweightedCalc(EnrichmentCalculator[bool]):
-    def for_pair(self, hits: Sequence[AbstractHit]) -> float:
-        numerator = len([hit for hit in hits if self.scores[hit.origin_inchikey]])
-        denominator = len([hit for hit in hits if not self.scores[hit.origin_inchikey]])
+    def for_pair(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
+        numerator = len([hit for hit in hits if scores[hit.origin_inchikey]])
+        denominator = len([hit for hit in hits if not scores[hit.origin_inchikey]])
         if denominator == 0:
             return float("inf")
         return numerator / denominator
 
 
 class FoldWeightedCalc(EnrichmentCalculator[bool]):
-    def for_pair(self, hits: Sequence[AbstractHit]) -> float:
-        yes = [hit for hit in hits if self.scores[hit.origin_inchikey]]
-        no = [hit for hit in hits if not self.scores[hit.origin_inchikey]]
-        numerator = math.fsum((hit.value for hit in yes))
-        denominator = math.fsum((hit.value for hit in no))
+    def for_pair(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
+        yes = [hit for hit in hits if scores[hit.origin_inchikey]]
+        no = [hit for hit in hits if not scores[hit.origin_inchikey]]
+        numerator = math.fsum((hit.weight for hit in yes))
+        denominator = math.fsum((hit.weight for hit in no))
         if denominator == 0:
             return float("inf")
         return numerator / denominator
 
 
 class SumWeightedCalc(EnrichmentCalculator[S]):
-    def for_pair(self, hits: Sequence[AbstractHit]) -> float:
-        return math.fsum([self.scores[hit.origin_inchikey] * hit.value for hit in hits]) / len(hits)
+    def for_pair(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
+        return math.fsum([scores[hit.origin_inchikey] * hit.weight for hit in hits]) / len(hits)
 
 
 class SumUnweightedCalc(EnrichmentCalculator[S]):
-    def for_pair(self, hits: Sequence[AbstractHit]) -> float:
-        return math.fsum([self.scores[hit.origin_inchikey] for hit in hits]) / len(hits)
+    def for_pair(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
+        return math.fsum([scores[hit.origin_inchikey] for hit in hits]) / len(hits)
 
 
 class EnrichmentAlg(CleverEnum):
@@ -155,32 +183,10 @@ class EnrichmentAlg(CleverEnum):
 
 
 class EnrichmentCalculation:
-    def calc(
-        self, data: HitFrame, score_df: ScoreDf, algorithm: Union[str, EnrichmentAlg]
-    ) -> EnrichmentDf:
-        hits = ...
+    @classmethod
+    def create(cls, algorithm: Union[str, EnrichmentAlg]) -> EnrichmentDf:
         alg_clazz = EnrichmentDf.of(algorithm).clazz
-        alg_name = str(algorithm)
-        samples_per_pair = {k: len(v) for k, v in Au.hit_multidict(hits, "pair").items()}
-        results = {}
-        for col, scores in score_df.all_scores():
-            calculated = alg_clazz(scores).calc(hits)
-            results[col] = calculated
-        return EnrichmentDf(
-            [
-                pd.Series(
-                    {
-                        **dict(
-                            predicate=pair.pred,
-                            object=pair.obj,
-                            samples=n_samples,
-                        ),
-                        **{f"{alg_name}({c})": vs[pair] for c, vs in results.items()},
-                    }
-                )
-                for pair, n_samples in samples_per_pair.items()
-            ]
-        )
+        return alg_clazz()
 
 
 __all__ = [

@@ -36,7 +36,7 @@ class AnalysisUtils:
 
     @classmethod
     def _score(cls, hits: Collection[AbstractHit], pair: Pair) -> int:
-        return sum([h.value for h in hits if h.to_pair == pair])
+        return sum([h.weight for h in hits if h.to_pair == pair])
 
 
 __all__ = ["AnalysisUtils", "SimilarityDf"]

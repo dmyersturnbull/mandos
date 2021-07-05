@@ -5,8 +5,7 @@ import enum
 import os
 from inspect import cleandoc
 from pathlib import Path
-from typing import (Any, Callable, Iterable, Mapping, Optional, Sequence,
-                    TypeVar, Union)
+from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, TypeVar, Union
 
 import typer
 
@@ -234,7 +233,7 @@ class CommonArgs:
         """
     )
 
-    dir_input = Arg.in_dir(
+    input_dir = Arg.in_dir(
         rf"""
         The path to a directory containing files output from mandos search.
 
@@ -250,9 +249,29 @@ class CommonArgs:
 
         {output_formats}
 
-        [default: <input-path>/{...}.{MANDOS_SETTINGS.default_table_suffix}.gz]
+        [default: <input-path>/{...}.{MANDOS_SETTINGS.default_table_suffix}]
         """,
         "--to",
+    )
+
+    out_dir = Opt.val(
+        rf"""
+        Choose the output directory.
+
+        If ``--to`` is set to a relative path, this value is prepended to ``--to``.
+
+        Examples:
+
+        - ``--dir output --to abc.snappy`` yields ``output/abc.snappy`` (to sets filename+format)
+        - ``--dir output --to .snappy`` yields ``output/<key>.snappy`` (to sets format)
+        - ``--dir output --to my_dir`` yields ``output/my_dir`` (to sets dir)
+        - ``--dir output --to /my/absolute/path`` will error
+        - ``--dir output --to /my/absolute/path/abc.snappy`` will error
+
+        {output_formats}
+
+        [default: inferred from --to]
+        """,
     )
 
     input_matrix: Path = Arg.in_file(
@@ -358,7 +377,7 @@ cli = typer.Typer()
 
 @cli.command()
 def run(
-    path: Path = CommonArgs.dir_input,
+    path: Path = CommonArgs.input_dir,
     x=CommonArgs.log_path,
 ):
     pass

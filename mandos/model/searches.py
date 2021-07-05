@@ -5,8 +5,6 @@ import dataclasses
 import typing
 from typing import Generic, Sequence, TypeVar
 
-import pandas as pd
-
 from mandos import logger
 from mandos.model import CompoundNotFoundError, MiscUtils, ReflectionUtils
 from mandos.model.hits import AbstractHit, HitFrame, HitUtils

@@ -6,8 +6,7 @@ from __future__ import annotations
 
 import abc
 from pathlib import Path
-from typing import (Generic, Mapping, Optional, Sequence, Set, Type, TypeVar,
-                    Union)
+from typing import Generic, Mapping, Optional, Sequence, Set, Type, TypeVar, Union
 
 import typer
 from typer.models import OptionInfo
@@ -23,7 +22,10 @@ from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_targets import TargetType
 from mandos.model.apis.pubchem_support.pubchem_models import (
-    ClinicalTrialsGovUtils, CoOccurrenceType, DrugbankTargetType)
+    ClinicalTrialsGovUtils,
+    CoOccurrenceType,
+    DrugbankTargetType,
+)
 from mandos.model.searches import Search
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy
@@ -34,20 +36,23 @@ from mandos.search.chembl.go_search import GoSearch, GoType
 from mandos.search.chembl.indication_search import IndicationSearch
 from mandos.search.chembl.mechanism_search import MechanismSearch
 from mandos.search.g2p.g2p_interaction_search import G2pInteractionSearch
-from mandos.search.pubchem.acute_effects_search import (AcuteEffectSearch,
-                                                        Ld50Search)
+from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
-from mandos.search.pubchem.computed_property_search import \
-    ComputedPropertySearch
+from mandos.search.pubchem.computed_property_search import ComputedPropertySearch
 from mandos.search.pubchem.cooccurrence_search import (
-    ChemicalCoOccurrenceSearch, CoOccurrenceSearch, DiseaseCoOccurrenceSearch,
-    GeneCoOccurrenceSearch)
+    ChemicalCoOccurrenceSearch,
+    CoOccurrenceSearch,
+    DiseaseCoOccurrenceSearch,
+    GeneCoOccurrenceSearch,
+)
 from mandos.search.pubchem.ctd_gene_search import CtdGeneSearch
 from mandos.search.pubchem.dgidb_search import DgiSearch
 from mandos.search.pubchem.disease_search import DiseaseSearch
 from mandos.search.pubchem.drugbank_ddi_search import DrugbankDdiSearch
 from mandos.search.pubchem.drugbank_interaction_search import (
-    DrugbankGeneralFunctionSearch, DrugbankTargetSearch)
+    DrugbankGeneralFunctionSearch,
+    DrugbankTargetSearch,
+)
 
 S = TypeVar("S", bound=Search, covariant=True)
 U = TypeVar("U", covariant=True, bound=CoOccurrenceSearch)
@@ -91,6 +96,11 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         if key is None or not isinstance(key, str):
             raise AssertionError(f"Key for {cls.__name__} is {key}")
         return key
+
+    @classmethod
+    def describe(cls) -> str:
+        lines = [line.strip() for line in cls.run.__doc__.splitlines() if line.strip() != ""]
+        return lines[0]
 
     @classmethod
     def run(cls, path: Path, **params) -> None:

@@ -35,25 +35,23 @@ def _init_commands():
         # print(f"Registered {entry.cmd()} to {entry}")
         setattr(SearchCommands, entry.cmd(), entry.run)
 
-    cli.registered_commands.extend(
-        [
-            CommandInfo(":search", callback=MiscCommands.search),
-            CommandInfo(":export:tax-tree", callback=MiscCommands.build_taxonomy),
-            CommandInfo(":tax:dl", callback=MiscCommands.dl_tax, hidden=True),
-            CommandInfo(":cache", callback=MiscCommands.find),
-            CommandInfo(":concat", callback=MiscCommands.concat),
-            CommandInfo(":filter", callback=MiscCommands.filter),
-            CommandInfo(":filter:taxa", callback=MiscCommands.filter_taxa),
-            CommandInfo(":export:copy", callback=MiscCommands.copy),
-            CommandInfo(":export:state", callback=MiscCommands.state),
-            CommandInfo(":export:reify", callback=MiscCommands.reify),
-            CommandInfo(":export:db", callback=MiscCommands.deposit),
-            CommandInfo(":serve", callback=MiscCommands.serve),
-            CommandInfo(":calc:scores", callback=MiscCommands.score),
-            CommandInfo(":calc:matrix", callback=MiscCommands.matrix),
-            CommandInfo(":calc:matrix-concordance", callback=MiscCommands.concordance),
-        ]
-    )
+    cli.registered_commands += [
+        CommandInfo(":search", callback=MiscCommands.search),
+        CommandInfo(":export:tax-tree", callback=MiscCommands.build_taxonomy),
+        CommandInfo(":tax:dl", callback=MiscCommands.dl_tax, hidden=True),
+        CommandInfo(":cache", callback=MiscCommands.find),
+        CommandInfo(":concat", callback=MiscCommands.concat),
+        CommandInfo(":filter", callback=MiscCommands.filter),
+        CommandInfo(":filter:taxa", callback=MiscCommands.filter_taxa),
+        CommandInfo(":export:copy", callback=MiscCommands.copy),
+        CommandInfo(":export:state", callback=MiscCommands.state),
+        CommandInfo(":export:reify", callback=MiscCommands.reify),
+        CommandInfo(":export:db", callback=MiscCommands.deposit),
+        CommandInfo(":serve", callback=MiscCommands.serve),
+        CommandInfo(":calc:scores", callback=MiscCommands.score),
+        CommandInfo(":calc:matrix", callback=MiscCommands.matrix),
+        CommandInfo(":calc:matrix-concordance", callback=MiscCommands.concordance),
+    ]
 
 
 _init_commands()

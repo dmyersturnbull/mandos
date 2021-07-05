@@ -60,15 +60,16 @@ The following info is perhaps enough to get started, but a lot is done behind-th
 **Input:** compounds.txt is a line-by-line list of
 [InChI Keys](https://en.wikipedia.org/wiki/International_Chemical_Identifier#InChIKey)
 Pass type-specific command-line options like `--taxa vertebrata`,
-or run multiple searches with `mandos meta:all compounds.txt --config searches.toml`.
+or run multiple searches with `mandos :search compounds.txt searches.toml`.
 (See: [example config file](https://github.com/dmyersturnbull/mandos/blob/main/mandos/resources/ags_example.toml))
 `mandos <type> --help` will show and briefly explain the options.
 
-**Output:** One CSV file per annotation type – 10 columns shared between all files, plus type-specific columns.
+**Output:**  10 columns shared between all files, plus type-specific columns.
 The consistent columns are: _record_id_, _inchikey_, _compound_id_, _compound_name_,
-_predicate_, _object_id_, _object_name_, _search_key_, _data_source_, and _universal_id_.
+_predicate_, _object_id_, _object_name_, _weight_, _search_key_, _data_source_, and _universal_id_.
 Additional columns include EC50, original name, species, clinical phase, etc.
-You could concatenate the files for something like the following.
+
+Some example output:
 (_Columns were dropped and renamed for display._)
 
 ```
@@ -99,9 +100,26 @@ PC218     alprazolam  has DEA schedule               4             Schedule IV
 .         .             .                              .             .
 ```
 
+### Misc commands
+
+Besides specific searches like chembl:mechanism, disease.ctd:mesh, etc.:
+
+  - :search
+  - :export:tax-tree
+  - :cache
+  - :concat
+  - :filter
+  - :filter:taxa
+  - :export:copy
+  - :export:state
+  - :export:reify
+  - :calc:scores
+  - :calc:matrix
+  - :calc:matrix-concordance
+
 ### 🍁 Contributing
 
 Mandos is licensed under the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 [New issues](https://github.com/dmyersturnbull/mandos/issues) and pull requests are welcome.
-Please refer to the [contributing guide](https://github.com/dmyersturnbull/mandos/blob/master/CONTRIBUTING.md).  
+Please refer to the [contributing guide](https://github.com/dmyersturnbull/mandos/blob/master/CONTRIBUTING.md).
 Generated with [Tyrannosaurus](https://github.com/dmyersturnbull/tyrannosaurus).

@@ -58,16 +58,12 @@ class AbstractHit:
     statement: str
     object_id: str
     object_name: str
-    value: float
+    weight: float
     search_key: str
     search_class: str
     data_source: str
     run_date: datetime
     cache_date: Optional[datetime]
-    # is_hit: Optional[bool] = None
-    # score: Optional[float] = None
-    # x_score_1: Optional[float] = None
-    # x_score_2: Optional[float] = None
 
     @property
     def hit_class(self) -> str:

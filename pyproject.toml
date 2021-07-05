@@ -71,6 +71,7 @@ typeddfs                       = ">=0.7, <1.0"
 typer                          = ">=0.3, <1.0"
 tzdata                         = ">=2021.1"
 matplotlib                     = {version="^3.4", optional=true}
+seaborn                        = {version="^0.11", optional=true}
 
 
 [tool.poetry.dev-dependencies]

@@ -7,8 +7,7 @@ import typer
 from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
 from mandos.model.apis.chembl_support import DataValidityComment
-from mandos.model.apis.chembl_support.chembl_targets import (ConfidenceLevel,
-                                                             TargetType)
+from mandos.model.apis.chembl_support.chembl_targets import ConfidenceLevel, TargetType
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 
 

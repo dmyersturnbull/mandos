@@ -17,18 +17,36 @@ from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
 from mandos import logger
+
 # noinspection PyProtectedMember
 from mandos.model import MultipleMatchesError
+
 # noinspection PyProtectedMember
 from mandos.model.apis.pubchem_support._nav import JsonNavigator
 from mandos.model.apis.pubchem_support._nav_fns import Filter, Flatmap, Mapx
+
 # noinspection PyProtectedMember
 from mandos.model.apis.pubchem_support._nav_model import FilterFn
 from mandos.model.apis.pubchem_support.pubchem_models import (
-    Activity, AcuteEffectEntry, AssociatedDisorder, AtcCode, Bioactivity,
-    ChemicalGeneInteraction, ClinicalTrial, Codes, ComputedProperty,
-    CoOccurrence, CoOccurrenceType, DrugbankDdi, DrugbankInteraction,
-    DrugbankTargetType, DrugGeneInteraction, GhsCode, Publication, PubmedEntry)
+    Activity,
+    AcuteEffectEntry,
+    AssociatedDisorder,
+    AtcCode,
+    Bioactivity,
+    ChemicalGeneInteraction,
+    ClinicalTrial,
+    Codes,
+    ComputedProperty,
+    CoOccurrence,
+    CoOccurrenceType,
+    DrugbankDdi,
+    DrugbankInteraction,
+    DrugbankTargetType,
+    DrugGeneInteraction,
+    GhsCode,
+    Publication,
+    PubmedEntry,
+)
 
 
 class Misc:

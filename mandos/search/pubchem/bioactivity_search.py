@@ -4,8 +4,7 @@ from typing import Optional, Sequence
 from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
-from mandos.model.apis.pubchem_support.pubchem_models import (Activity,
-                                                              Bioactivity)
+from mandos.model.apis.pubchem_support.pubchem_models import Activity, Bioactivity
 from mandos.search.pubchem import PubchemHit, PubchemSearch
 
 

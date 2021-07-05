@@ -64,10 +64,6 @@ class AbstractHit:
     data_source: str
     run_date: datetime
     cache_date: Optional[datetime]
-    # is_hit: Optional[bool] = None
-    # score: Optional[float] = None
-    # x_score_1: Optional[float] = None
-    # x_score_2: Optional[float] = None
 
     @property
     def hit_class(self) -> str:

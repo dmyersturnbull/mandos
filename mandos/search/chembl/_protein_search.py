@@ -9,7 +9,9 @@ from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
-    ChemblTargetGraph, ChemblTargetGraphFactory)
+    ChemblTargetGraph,
+    ChemblTargetGraphFactory,
+)
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.taxonomy import Taxonomy

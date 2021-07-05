@@ -1,8 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import (Any, Callable, FrozenSet, Iterable, List, Optional,
-                    Sequence, Set, Type, TypeVar, Union)
+from typing import (
+    Any,
+    Callable,
+    FrozenSet,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.base_tools import BaseTools

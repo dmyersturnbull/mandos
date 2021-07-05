@@ -2,14 +2,16 @@
 Calculations of concordance between annotations.
 """
 import abc
+import enum
 import math
 from collections import defaultdict
-from typing import Collection, Sequence
+from typing import Collection, Sequence, Type, Union
 
 import numpy as np
 
 from mandos.analysis import AnalysisUtils as Au
 from mandos.analysis import SimilarityDf
+from mandos.model import CleverEnum
 from mandos.model.hits import AbstractHit
 
 # note that most of these math functions are much faster than their numpy counterparts
@@ -54,6 +56,22 @@ class JPrimeMatrixCalculator(MatrixCalculator):
 
     def _vee(self, ca: float, cb: float) -> float:
         return Au.elle(ca) + Au.elle(cb) - math.sqrt(Au.elle(ca) * Au.elle(cb))
+
+
+class MatrixAlg(CleverEnum):
+    j = enum.auto()
+
+    @property
+    def clazz(self) -> Type[MatrixCalculator]:
+        return {MatrixAlg.j: JPrimeMatrixCalculator}[self]
+
+
+class MatrixCalculation:
+    @classmethod
+    def create(cls, algorithm: Union[str, MatrixAlg]) -> MatrixCalculator:
+        alg_name = algorithm if isinstance(algorithm, str) else algorithm.name
+        alg = MatrixAlg.of(algorithm)
+        return alg.clazz(alg_name)
 
 
 __all__ = ["MatrixCalculator", "JPrimeMatrixCalculator"]

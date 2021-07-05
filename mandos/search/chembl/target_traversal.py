@@ -12,9 +12,12 @@ from typing import Type
 from mandos.model import MandosResources, ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
-    ChemblTargetGraph, TargetEdgeReqs, TargetNode, TargetRelType)
-from mandos.model.apis.chembl_support.chembl_targets import (ChemblTarget,
-                                                             TargetType)
+    ChemblTargetGraph,
+    TargetEdgeReqs,
+    TargetNode,
+    TargetRelType,
+)
+from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType
 
 
 class Acceptance(enum.Enum):

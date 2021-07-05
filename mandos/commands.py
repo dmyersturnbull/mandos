@@ -11,11 +11,10 @@ from typing import Optional
 import typer
 
 from mandos.analysis import SimilarityDf
-from mandos.analysis.concordance import TauConcordanceCalculator
-from mandos.analysis.distances import JPrimeMatrixCalculator
+from mandos.analysis.concordance import ConcordanceCalculation, TauConcordanceCalculator
+from mandos.analysis.distances import JPrimeMatrixCalculator, MatrixCalculation
 from mandos.analysis.filtration import Filtration
-from mandos.analysis.regression import (EnrichmentAlg, EnrichmentCalculation,
-                                        ScoreDf)
+from mandos.analysis.regression import EnrichmentAlg, EnrichmentCalculation, ScoreDf
 from mandos.analysis.reification import Reifier
 from mandos.entries.common_args import Arg
 from mandos.entries.common_args import CommonArgs as Ca
@@ -37,11 +36,12 @@ class MiscCommands:
             A TOML config file. See docs.
             """
         ),
+        out_dir: Path = Ca.out_dir,
     ) -> None:
         """
         Run multiple searches.
         """
-        MultiSearch(path, config.read_text(encoding="utf-8")).search()
+        MultiSearch.build(path, out_dir, config).run()
 
     @staticmethod
     def serve(
@@ -154,8 +154,7 @@ class MiscCommands:
 
     @staticmethod
     def concat(
-        path: Path = Ca.dir_input,
-        exclude: Optional[str] = Ca.exclude,
+        path: Path = Ca.input_dir,
         to: Optional[Path] = Ca.to_single,
         replace: bool = Ca.replace,
     ) -> None:
@@ -167,10 +166,8 @@ class MiscCommands:
         """
         default = path / ("concat" + MANDOS_SETTINGS.default_table_suffix)
         to = MiscUtils.adjust_filename(to, default, replace)
-        exclude = re.compile(exclude)
         for found in path.iterdir():
-            if exclude.fullmatch(found.name) is None:
-                pass
+            pass
 
     @staticmethod
     def filter_taxa(
@@ -372,7 +369,8 @@ class MiscCommands:
             Allowed values:
 
             {Ca.definition_list({a.name: a.description for a in EnrichmentAlg})}
-            """
+            """,
+            default="alpha",
         ),
         replace: bool = Ca.replace,
     ) -> None:
@@ -390,7 +388,8 @@ class MiscCommands:
         to = MiscUtils.adjust_filename(to, default, replace)
         hits = HitFrame.read_file(path)
         scores = ScoreDf.read_file(scores)
-        df = EnrichmentCalculation.calc(hits, scores, algorithm)
+        calculator = EnrichmentCalculation.create(algorithm)
+        df = calculator.calc_many(hits, scores)
         df.write_file(to)
 
     @staticmethod
@@ -401,7 +400,8 @@ class MiscCommands:
             The algorithm for calculating similarity between annotation sets.
 
             Currently, only "j" (J') is supported. Refer to the docs for the equation.
-            """
+            """,
+            default="j",
         ),
         to: Optional[Path] = Opt.out_file(
             rf"""
@@ -424,13 +424,14 @@ class MiscCommands:
         default = path.parent / (algorithm + MANDOS_SETTINGS.default_table_suffix)
         to = MiscUtils.adjust_filename(to, default, replace)
         hits = HitFrame.read_file(path).to_hits()
-        matrix = JPrimeMatrixCalculator().calc(hits)
+        calculator = MatrixCalculation.create(algorithm)
+        matrix = calculator.calc(hits)
         matrix.write_file(to)
 
     @staticmethod
     def concordance(
-        phi: Path = Ca.input_matrix,
-        psi: Path = Ca.input_matrix,
+        phi_matrix: Path = Ca.input_matrix,
+        psi_matrix: Path = Ca.input_matrix,
         algorithm: str = Opt.val(
             r"""
             The algorithm for calculating concordance.
@@ -438,8 +439,11 @@ class MiscCommands:
             Currently, only "tau" is supported.
             This calculation is a modified Kendall’s  τ-a, where disconcordant ignores ties.
             See the docs for more info.
-            """
+            """,
+            default="tau",
         ),
+        phi: str = Opt.val("A name for phi", default="phi"),
+        psi: str = Opt.val("A name for psi", default="psi"),
         seed: int = Ca.seed,
         samples: int = Ca.n_samples,
         to: Optional[Path] = Opt.out_file(
@@ -468,12 +472,15 @@ class MiscCommands:
         such as a hit or lead-like score.
         """
         if to is None:
-            to = phi.parent / (psi.stem + "-" + algorithm + MANDOS_SETTINGS.default_table_suffix)
+            to = phi_matrix.parent / (
+                psi_matrix.stem + "-" + algorithm + MANDOS_SETTINGS.default_table_suffix
+            )
         if to.exists() and not replace:
             raise FileExistsError(f"File {to} already exists")
-        phi = SimilarityDf.read_file(phi)
-        psi = SimilarityDf.read_file(psi)
-        concordance = TauConcordanceCalculator(samples, seed).calc(phi, psi)
+        phi_matrix = SimilarityDf.read_file(phi_matrix)
+        psi_matrix = SimilarityDf.read_file(psi_matrix)
+        calculator = ConcordanceCalculation.create(algorithm, phi, psi, samples, seed)
+        concordance = calculator.calc(phi_matrix, psi_matrix)
         concordance.write_file(to)
 
 

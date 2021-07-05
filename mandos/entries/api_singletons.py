@@ -21,8 +21,7 @@ class Apis:
     @classmethod
     def set_default(cls, pubchem: bool = True, chembl: bool = True, g2p: bool = True) -> None:
         if chembl:
-            from chembl_webresource_client.new_client import \
-                new_client as _Chembl
+            from chembl_webresource_client.new_client import new_client as _Chembl
 
             cls.Chembl = ChemblApi.wrap(_Chembl)
         if pubchem:

@@ -705,7 +705,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "pyarrow"
-version = "3.0.0"
+version = "4.0.1"
 description = "Python library for Apache Arrow"
 category = "main"
 optional = false
@@ -892,6 +892,31 @@ description = "C version of reader, parser and emitter for ruamel.yaml derived f
 category = "dev"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "scipy"
+version = "1.6.1"
+description = "SciPy: Scientific Library for Python"
+category = "main"
+optional = true
+python-versions = ">=3.7"
+
+[package.dependencies]
+numpy = ">=1.16.5"
+
+[[package]]
+name = "seaborn"
+version = "0.11.1"
+description = "seaborn: statistical data visualization"
+category = "main"
+optional = true
+python-versions = ">=3.6"
+
+[package.dependencies]
+matplotlib = ">=2.2"
+numpy = ">=1.15"
+pandas = ">=0.23"
+scipy = ">=1.0"
 
 [[package]]
 name = "six"
@@ -1237,7 +1262,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9, <4"
-content-hash = "7a8977c9d8e1f93ab6ca74b546e9e95c4ae75b5d2eef08ac38562e8ff723cb98"
+content-hash = "e2b77009a353d0d140cabd01a93e805d5e9d39e5b63c6f88f001e63d22473286"
 
 [metadata.files]
 alabaster = [
@@ -1591,6 +1616,8 @@ numpy = [
     {file = "numpy-1.21.0.zip", hash = "sha256:e80fe25cba41c124d04c662f33f6364909b985f2eb5998aaa5ae4b9587242cce"},
 ]
 orjson = [
+    {file = "orjson-3.5.3-cp310-cp310-manylinux_2_24_aarch64.whl", hash = "sha256:055e47e93a4096352e025f1830c3ab094b4101a628f81b702178cbfd76b6744e"},
+    {file = "orjson-3.5.3-cp310-cp310-manylinux_2_24_x86_64.whl", hash = "sha256:9c9a6a544713204b832ffcebd61a2a12764ed56531b52926c7b7ce4a40198fe3"},
     {file = "orjson-3.5.3-cp36-cp36m-macosx_10_7_x86_64.whl", hash = "sha256:f22e2b3a1686a0f90aca920a522033b326cb2f945c8ed8fd8effa9f302672627"},
     {file = "orjson-3.5.3-cp36-cp36m-macosx_10_9_universal2.whl", hash = "sha256:eb0cfe56687ac915e83dcfa1aa100e68883b42fe8eecae7275dc05da8cf96faa"},
     {file = "orjson-3.5.3-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f697b8e3dceb787c173184cd4ec8331c27e0af7cc75d43759abcb5d2464d1ade"},
@@ -1690,6 +1717,7 @@ pillow = [
     {file = "Pillow-8.2.0-pp37-pypy37_pp73-manylinux2010_i686.whl", hash = "sha256:aac00e4bc94d1b7813fe882c28990c1bc2f9d0e1aa765a5f2b516e8a6a16a9e4"},
     {file = "Pillow-8.2.0-pp37-pypy37_pp73-manylinux2010_x86_64.whl", hash = "sha256:22fd0f42ad15dfdde6c581347eaa4adb9a6fc4b865f90b23378aa7914895e120"},
     {file = "Pillow-8.2.0-pp37-pypy37_pp73-win32.whl", hash = "sha256:e98eca29a05913e82177b3ba3d198b1728e164869c613d76d0de4bde6768a50e"},
+    {file = "Pillow-8.2.0-pp37-pypy37_pp73-win_amd64.whl", hash = "sha256:8b56553c0345ad6dcb2e9b433ae47d67f95fc23fe28a0bde15a120f25257e291"},
     {file = "Pillow-8.2.0.tar.gz", hash = "sha256:a787ab10d7bb5494e5f76536ac460741788f1fbce851068d73a87ca7c35fc3e1"},
 ]
 pluggy = [
@@ -1721,27 +1749,31 @@ py = [
     {file = "py-1.10.0.tar.gz", hash = "sha256:21b81bda15b66ef5e1a777a21c4dcd9c20ad3efd0b3f817e7a809035269e1bd3"},
 ]
 pyarrow = [
-    {file = "pyarrow-3.0.0-cp36-cp36m-macosx_10_13_x86_64.whl", hash = "sha256:03e2435da817bc2b5d0fad6f2e53305eb36c24004ddfcb2b30e4217a1a80cf22"},
-    {file = "pyarrow-3.0.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:2be3a9eab4bfd00024dc3c83fa03de1c1d04a0f47ebaf3dc483cd100546eacbf"},
-    {file = "pyarrow-3.0.0-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:a76031ef19d11db2fef79a97cc69997c97bea35aa07efbe042a177c7e3b1a390"},
-    {file = "pyarrow-3.0.0-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:a07e286e81ceb20f8f0c45f69760d2ebc434fe83794d5f9b44f89fc2dc6dc24d"},
-    {file = "pyarrow-3.0.0-cp36-cp36m-win_amd64.whl", hash = "sha256:cfea99a01d844c3db5e25374a6cdcf3b5ba1698bfe95d41272c295a4581e884c"},
-    {file = "pyarrow-3.0.0-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:d5666a7fa2668f3ff95df028c2072d59e8b17e73d682068e8505dafa2688f3cc"},
-    {file = "pyarrow-3.0.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:3ea6574d1ae2d9bff7e6e1715f64c31bdc01b42387a5c78311a8ce9c09cfe135"},
-    {file = "pyarrow-3.0.0-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:2d5c95eb04a3d2e786e097b53534893eade6c8b3faf10f53a06143384b4446b1"},
-    {file = "pyarrow-3.0.0-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:31e6fc0868963aba4e6b8a3e218c9a5ff347bca870d622da0b3d58269d0c5398"},
-    {file = "pyarrow-3.0.0-cp37-cp37m-win_amd64.whl", hash = "sha256:960a9b0fd599601ddac42f16d5acf049637ec08957359c6741d6eb2bf0dbae97"},
-    {file = "pyarrow-3.0.0-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:2c3353d38d137f1158595b3b18dcef711f3d8fdb57cf7ae2d861d07235064bc1"},
-    {file = "pyarrow-3.0.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:72206cde1857d5420601feae75f53921cffab4326b42262a858c7b8be67982b7"},
-    {file = "pyarrow-3.0.0-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:dec007a0f7adba86bd170252140ede01646b45c3a470d5862ce00d8e40cd29bd"},
-    {file = "pyarrow-3.0.0-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:bf6684fe9e38f8ddb696e38901461eab783ec1d565974ebd5862270320b3e27f"},
-    {file = "pyarrow-3.0.0-cp38-cp38-win_amd64.whl", hash = "sha256:3b46487c45faaea8d1a5aa65002e2832ae2e1c9e68ecb461cda4fa59891cf490"},
-    {file = "pyarrow-3.0.0-cp39-cp39-macosx_10_13_x86_64.whl", hash = "sha256:978bbe8ec9090d1133a25f00f32ed92600f9d315fbfa29a17952bee01f0d7fe5"},
-    {file = "pyarrow-3.0.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:b7a8903f2b8a80498725ef5d4a35cd7dd5a98b74e080d42692545e61a6cbfbe4"},
-    {file = "pyarrow-3.0.0-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:b1cf92df9f336f31706249e543dc0ffce3c67a78204ce540f1173c6c07dfafec"},
-    {file = "pyarrow-3.0.0-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:b08c119cc2b9fcd1567797fedb245a2f4352a3084a22b7298272afe7cf7a4730"},
-    {file = "pyarrow-3.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:5faa2dc73444bdcf042f121383965a47362be1f946303d46e8fd80f8d26cd90c"},
-    {file = "pyarrow-3.0.0.tar.gz", hash = "sha256:4bf8cc43e1db1e0517466209ee8e8f459d9b5e1b4074863317f2a965cf59889e"},
+    {file = "pyarrow-4.0.1-cp36-cp36m-macosx_10_13_x86_64.whl", hash = "sha256:5387db80c6a7b5598884bf4df3fc546b3373771ad614548b782e840b71704877"},
+    {file = "pyarrow-4.0.1-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:76b75a9cfc572e890a1e000fd532bdd2084ec3f1ee94ee51802a477913a21072"},
+    {file = "pyarrow-4.0.1-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:423cd6a14810f4e40cb76e13d4240040fc1594d69fe1c4f2c70be00ad512ade5"},
+    {file = "pyarrow-4.0.1-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:e1351576877764fb4d5690e4721ce902e987c85f4ab081c70a34e1d24646586e"},
+    {file = "pyarrow-4.0.1-cp36-cp36m-manylinux2014_x86_64.whl", hash = "sha256:0fde9c7a3d5d37f3fe5d18c4ed015e8f585b68b26d72a10d7012cad61afe43ff"},
+    {file = "pyarrow-4.0.1-cp36-cp36m-win_amd64.whl", hash = "sha256:afd4f7c0a225a326d2c0039cdc8631b5e8be30f78f6b7a3e5ce741cf5dd81c72"},
+    {file = "pyarrow-4.0.1-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:b05bdd513f045d43228247ef4d9269c88139788e2d566f4cb3e855e282ad0330"},
+    {file = "pyarrow-4.0.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:150db335143edd00d3ec669c7c8167d401c4aa0a290749351c80bbf146892b2e"},
+    {file = "pyarrow-4.0.1-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:dcd20ee0240a88772eeb5691102c276f5cdec79527fb3a0679af7f93f93cb4bd"},
+    {file = "pyarrow-4.0.1-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:24040a20208e9b16ba7b284624ebfe67e40f5c40b5dc8d874da322ac0053f9d3"},
+    {file = "pyarrow-4.0.1-cp37-cp37m-manylinux2014_x86_64.whl", hash = "sha256:e44dfd7e61c9eb6dda59bc49ad69e77945f6d049185a517c130417e3ca0494d8"},
+    {file = "pyarrow-4.0.1-cp37-cp37m-win_amd64.whl", hash = "sha256:ee3d87615876550fee9a523307dd4b00f0f44cf47a94a32a07793da307df31a0"},
+    {file = "pyarrow-4.0.1-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:fa7b165cfa97158c1e6d15c68428317b4f4ae786d1dc2dbab43f1328c1eb43aa"},
+    {file = "pyarrow-4.0.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:33c457728a1ce825b80aa8c8ed573709f1efe72003d45fa6fdbb444de9cc0b74"},
+    {file = "pyarrow-4.0.1-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:72cf3477538bd8504f14d6299a387cc335444f7a188f548096dfea9533551f02"},
+    {file = "pyarrow-4.0.1-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:a81adbfbe2f6528d4593b5a8962b2751838517401d14e9d4cab6787478802693"},
+    {file = "pyarrow-4.0.1-cp38-cp38-manylinux2014_x86_64.whl", hash = "sha256:c2733c9bcd00074ce5497dd0a7b8a10c91d3395ddce322d7021c7fdc4ea6f610"},
+    {file = "pyarrow-4.0.1-cp38-cp38-win_amd64.whl", hash = "sha256:d0f080b2d9720bec42624cb0df66f60ae66b84a2ccd1fe2c291322df915ac9db"},
+    {file = "pyarrow-4.0.1-cp39-cp39-macosx_10_13_x86_64.whl", hash = "sha256:6b7bd8f5aa327cc32a1b9b02a76502851575f5edb110f93c59a45c70211a5618"},
+    {file = "pyarrow-4.0.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:fe976695318560a97c6d31bba828eeca28c44c6f6401005e54ba476a28ac0a10"},
+    {file = "pyarrow-4.0.1-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:5f2660f59dfcfd34adac7c08dc7f615920de703f191066ed6277628975f06878"},
+    {file = "pyarrow-4.0.1-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:5a76ec44af838862b23fb5cfc48765bc7978f7b58a181c96ad92856280de548b"},
+    {file = "pyarrow-4.0.1-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:04be0f7cb9090bd029b5b53bed628548fef569e5d0b5c6cd7f6d0106dbbc782d"},
+    {file = "pyarrow-4.0.1-cp39-cp39-win_amd64.whl", hash = "sha256:a968375c66e505f72b421f5864a37f51aad5da61b6396fa283f956e9f2b2b923"},
+    {file = "pyarrow-4.0.1.tar.gz", hash = "sha256:11517f0b4f4acbab0c37c674b4d1aad3c3dfea0f6b1bb322e921555258101ab3"},
 ]
 pycodestyle = [
     {file = "pycodestyle-2.7.0-py2.py3-none-any.whl", hash = "sha256:514f76d918fcc0b55c6680472f0a37970994e07bbb80725808c17089be302068"},
@@ -1887,6 +1919,31 @@ requests-cache = [
     {file = "ruamel.yaml.clib-0.2.4-cp39-cp39-win32.whl", hash = "sha256:f012b89c56f936e31f12a1484f08964c4681ae75488bc79c8909f37c517500f6"},
     {file = "ruamel.yaml.clib-0.2.4-cp39-cp39-win_amd64.whl", hash = "sha256:a6d8749819403338093c61ee897b97d0f4aa73297e97feb1705d143c002b5bed"},
     {file = "ruamel.yaml.clib-0.2.4.tar.gz", hash = "sha256:f997f13fd94e37e8b7d7dbe759088bb428adc6570da06b64a913d932d891ac8d"},
+]
+scipy = [
+    {file = "scipy-1.6.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:a15a1f3fc0abff33e792d6049161b7795909b40b97c6cc2934ed54384017ab76"},
+    {file = "scipy-1.6.1-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:e79570979ccdc3d165456dd62041d9556fb9733b86b4b6d818af7a0afc15f092"},
+    {file = "scipy-1.6.1-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:a423533c55fec61456dedee7b6ee7dce0bb6bfa395424ea374d25afa262be261"},
+    {file = "scipy-1.6.1-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:33d6b7df40d197bdd3049d64e8e680227151673465e5d85723b3b8f6b15a6ced"},
+    {file = "scipy-1.6.1-cp37-cp37m-win32.whl", hash = "sha256:6725e3fbb47da428794f243864f2297462e9ee448297c93ed1dcbc44335feb78"},
+    {file = "scipy-1.6.1-cp37-cp37m-win_amd64.whl", hash = "sha256:5fa9c6530b1661f1370bcd332a1e62ca7881785cc0f80c0d559b636567fab63c"},
+    {file = "scipy-1.6.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:bd50daf727f7c195e26f27467c85ce653d41df4358a25b32434a50d8870fc519"},
+    {file = "scipy-1.6.1-cp38-cp38-manylinux1_i686.whl", hash = "sha256:f46dd15335e8a320b0fb4685f58b7471702234cba8bb3442b69a3e1dc329c345"},
+    {file = "scipy-1.6.1-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:0e5b0ccf63155d90da576edd2768b66fb276446c371b73841e3503be1d63fb5d"},
+    {file = "scipy-1.6.1-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:2481efbb3740977e3c831edfd0bd9867be26387cacf24eb5e366a6a374d3d00d"},
+    {file = "scipy-1.6.1-cp38-cp38-win32.whl", hash = "sha256:68cb4c424112cd4be886b4d979c5497fba190714085f46b8ae67a5e4416c32b4"},
+    {file = "scipy-1.6.1-cp38-cp38-win_amd64.whl", hash = "sha256:5f331eeed0297232d2e6eea51b54e8278ed8bb10b099f69c44e2558c090d06bf"},
+    {file = "scipy-1.6.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:0c8a51d33556bf70367452d4d601d1742c0e806cd0194785914daf19775f0e67"},
+    {file = "scipy-1.6.1-cp39-cp39-manylinux1_i686.whl", hash = "sha256:83bf7c16245c15bc58ee76c5418e46ea1811edcc2e2b03041b804e46084ab627"},
+    {file = "scipy-1.6.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:794e768cc5f779736593046c9714e0f3a5940bc6dcc1dba885ad64cbfb28e9f0"},
+    {file = "scipy-1.6.1-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:5da5471aed911fe7e52b86bf9ea32fb55ae93e2f0fac66c32e58897cfb02fa07"},
+    {file = "scipy-1.6.1-cp39-cp39-win32.whl", hash = "sha256:8e403a337749ed40af60e537cc4d4c03febddcc56cd26e774c9b1b600a70d3e4"},
+    {file = "scipy-1.6.1-cp39-cp39-win_amd64.whl", hash = "sha256:a5193a098ae9f29af283dcf0041f762601faf2e595c0db1da929875b7570353f"},
+    {file = "scipy-1.6.1.tar.gz", hash = "sha256:c4fceb864890b6168e79b0e714c585dbe2fd4222768ee90bc1aa0f8218691b11"},
+]
+seaborn = [
+    {file = "seaborn-0.11.1-py3-none-any.whl", hash = "sha256:4e1cce9489449a1c6ff3c567f2113cdb41122f727e27a984950d004a88ef3c5c"},
+    {file = "seaborn-0.11.1.tar.gz", hash = "sha256:44e78eaed937c5a87fc7a892c329a7cc091060b67ebd1d0d306b446a74ba01ad"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},

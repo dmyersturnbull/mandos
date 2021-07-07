@@ -3,13 +3,36 @@ Calculations.
 """
 import math
 from collections import defaultdict
-from typing import Collection, Dict, Sequence, Set, Tuple
+from typing import Collection, Dict, Sequence, Set, Tuple, Union, Optional
 
 from typeddfs import TypedDfs
 
 from mandos.model.hits import AbstractHit, HitFrame, Pair
 
-SimilarityDf = TypedDfs.typed("DistanceDf").symmetric().build()
+SimilarityDfShortForm = TypedDfs.typed("SimilarityDfShortForm").symmetric().build()
+
+SimilarityDfLongForm = (
+    TypedDfs.typed("SimilarityDfLongForm")
+    .require("i", "j", dtype=str)
+    .require("value", dtype=float)
+    .reserve("phi", "psi", dtype=str)
+).build()
+
+
+SimilarityDf = Union[SimilarityDfLongForm, SimilarityDfShortForm]
+
+
+def _to_long_form(
+    self: SimilarityDfShortForm, phi: Optional[str] = None, psi: Optional[str] = None
+) -> SimilarityDfLongForm:
+    if (phi is None) == (psi is None):
+        raise ValueError(f"Set either phi OR psi (phi={phi}, psi={psi}")
+    stacked = self.stack(level=[self.column_names()]).reset_index()
+    stacked.columns = ["i", "j", "value", *["phi" if phi else "psi"]]
+    return SimilarityDfLongForm(stacked)
+
+
+SimilarityDfShortForm.to_long_form = _to_long_form
 
 
 class AnalysisUtils:
@@ -39,4 +62,4 @@ class AnalysisUtils:
         return sum([h.weight for h in hits if h.to_pair == pair])
 
 
-__all__ = ["AnalysisUtils", "SimilarityDf"]
+__all__ = ["AnalysisUtils", "SimilarityDfShortForm", "SimilarityDfLongForm", "SimilarityDf"]

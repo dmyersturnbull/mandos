@@ -3,11 +3,20 @@ Plots.
 """
 from collections import Mapping
 from dataclasses import dataclass
+from typing import Any
 
-import seaborn as sns
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
+try:
+    import seaborn as sns
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+    import umap
+except ImportError:
+    sns = None
+    Axes = None
+    Figure = None
+    umap = None
 
+from mandos.analysis import SimilarityDfLongForm
 from mandos.analysis.concordance import ConcordanceDf
 
 
@@ -21,6 +30,23 @@ class HeatmapPlotter:
         return ax
 
 
+@dataclass(frozen=True, repr=True)
+class UmapPlotter:
+    params: Mapping[str, Any]
+
+    def plot(self, ax: Axes) -> Axes:
+        pass
+
+
+@dataclass(frozen=True, repr=True)
+class CorrPlotter:
+    """"""
+
+    def plot(self, phis: SimilarityDfLongForm, psis: SimilarityDfLongForm):
+        pass
+
+
+@dataclass(frozen=True, repr=True)
 class ViolinPlotter:
     def plot(self, concordance: ConcordanceDf) -> Axes:
         palette = sns.color_palette(["#0000c0", "#888888"])

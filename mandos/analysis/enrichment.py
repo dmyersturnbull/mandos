@@ -24,32 +24,34 @@ EnrichmentDf = (
 # extra cols are, e.g., alpha(score_1), alpha(is_hit)
 
 
-ScoreDf = (
-    TypedDfs.typed("ScoreDf")
-    .require("inchikey", dtype=str, index=True)
-    .reserve("score")
-    .reserve("is_hit", dtype=bool)
-).build()
-# extra cols are, e.g., score_1, score_hello, is_lethal, is_good
+ScoreDf = (TypedDfs.typed("ScoreDf").require("inchikey", dtype=str).reserve("score")).build()
+# extra cols are, e.g., score_1, score_hello
 
 
-def _score_cols(self: ScoreDf) -> Sequence[str]:
+IsHitDf = TypedDfs.typed("IsHitDf").require("inchikey", dtype=str)
+# extra calls are is_hit, etc.
+
+
+def _vars(self: ScoreDf) -> Sequence[str]:
     return [
         col
         for col in self.columns
-        if col == "score" or col.startswith("score_") or col.startswith("is_")
+        if (isinstance(self, ScoreDf) and (col == "score" or col.startswith("score_")))
+        or (isinstance(self, IsHitDf) and col.startswith("is_"))
     ]
 
 
-def _all_scores(self: ScoreDf) -> Mapping[str, Mapping[str, S]]:
+def _var_map(self: ScoreDf) -> Mapping[str, Mapping[str, S]]:
     results = {}
     for c in self.score_cols:
         results[c] = self[c].to_dict()
     return results
 
 
-ScoreDf.score_cols = _score_cols
-ScoreDf.all_scores = _all_scores
+ScoreDf.vars = _vars
+ScoreDf.var_map = _var_map
+IsHitDf.vars = _vars
+IsHitDf.var_map = _var_map
 
 
 class EnrichmentCalculator(Generic[S], metaclass=abc.ABCMeta):
@@ -60,7 +62,7 @@ class EnrichmentCalculator(Generic[S], metaclass=abc.ABCMeta):
         hits = HitUtils.df_to_hits(data)
         samples_per_pair = {k: len(v) for k, v in Au.hit_multidict(hits, "pair").items()}
         results = {}
-        for col, scores in score_df.all_scores():
+        for col, scores in score_df.var_map():
             calculated = self.calc(hits, scores)
             results[col] = calculated
         return EnrichmentDf(

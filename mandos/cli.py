@@ -48,9 +48,15 @@ def _init_commands():
         CommandInfo(":export:reify", callback=MiscCommands.reify),
         CommandInfo(":export:db", callback=MiscCommands.deposit),
         CommandInfo(":serve", callback=MiscCommands.serve),
-        CommandInfo(":calc:scores", callback=MiscCommands.score),
-        CommandInfo(":calc:matrix", callback=MiscCommands.matrix),
-        CommandInfo(":calc:matrix-concordance", callback=MiscCommands.concordance),
+        CommandInfo(":calc:correlation", callback=MiscCommands.alpha),
+        CommandInfo(":calc:enrichment", callback=MiscCommands.beta),
+        CommandInfo(":calc:psi.matrix", callback=MiscCommands.psi),
+        CommandInfo(":calc:phi-vs-psi.tau", callback=MiscCommands.tau),
+        CommandInfo(":plot:psi.umap", callback=MiscCommands.tau),
+        CommandInfo(":plot:phi-vs-psi.scatter", callback=MiscCommands.tau),
+        CommandInfo(":plot:tau.violin", callback=MiscCommands.tau),
+        CommandInfo(":plot:correlation.bar", callback=MiscCommands.tau),
+        CommandInfo(":plot:enrichment.bar", callback=MiscCommands.tau),
     ]
 
 

@@ -14,7 +14,7 @@ from mandos.analysis import SimilarityDf
 from mandos.analysis.concordance import ConcordanceCalculation, TauConcordanceCalculator
 from mandos.analysis.distances import JPrimeMatrixCalculator, MatrixCalculation
 from mandos.analysis.filtration import Filtration
-from mandos.analysis.regression import EnrichmentAlg, EnrichmentCalculation, ScoreDf
+from mandos.analysis.enrichment import EnrichmentAlg, EnrichmentCalculation, ScoreDf
 from mandos.analysis.reification import Reifier
 from mandos.entries.common_args import Arg
 from mandos.entries.common_args import CommonArgs as Ca
@@ -324,43 +324,10 @@ class MiscCommands:
         to = MiscUtils.adjust_filename(to, default, replace)
 
     @staticmethod
-    def score(
+    def alpha(
         path: Path = Ca.file_input,
-        scores: Path = Arg.in_file(
-            rf"""
-            Path to a table containing scores.
-
-            Must contain a column called ``inchikey`` or ``compound_id``
-            matching the InChI Keys or compound IDs you provided for the search.
-
-            Any number of scores may be included via columns.
-            Each column must match the pattern ``^(?:score)|(?:score[-_ +:].*)$``.
-            These values must be floating-point.
-
-            For enrichment, you may also include columns signifying "hit vs. not".
-            These columns must match the pattern ``^is[_- +:]$``.
-            Values must be boolean (true/false, t/f, yes/no, y/n, 1/0).
-
-            Example columns:
-
-                inchikey    compound_id    is_hit    score_alpha
-
-            {Ca.input_formats}
-            """
-        ),
-        to: Optional[Path] = Opt.out_file(
-            rf"""
-            Path to write regression info to.
-
-            {Ca.output_formats}
-
-            Columns will correspond to the columns you provided.
-            For example, ``r_score_alpha`` for the regression coefficient
-            of the score ``alpha``, and ``fold_is_hit`` for the fraction (hits / non-hits) for ``is_hit``.
-
-            [default: <path>-<scores.filename>{MANDOS_SETTINGS.default_table_suffix}]
-            """
-        ),
+        scores: Path = Ca.alpha_input,
+        to: Optional[Path] = Ca.alpha_to,
         algorithm: Optional[str] = Opt.val(
             rf"""
             Algorithm to use.
@@ -377,11 +344,8 @@ class MiscCommands:
         """
         Compares annotations to user-supplied values.
 
-        Calculates correlation between provided scores and object/predicate pairs,
-        and/or enrichment of pairs for boolean scores.
+        Calculates correlation between provided scores and object/predicate pairs.
 
-        The values used are *weighted object/predicate pairs**,
-        unless ``--counts`` is passed.
         See the docs for more info.
         """
         default = str(path) + "-" + scores.name + MANDOS_SETTINGS.default_table_suffix
@@ -393,7 +357,62 @@ class MiscCommands:
         df.write_file(to)
 
     @staticmethod
-    def matrix(
+    def beta(
+        path: Path = Ca.file_input,
+        scores: Path = Ca.beta_input,
+        how: bool = Opt.val(
+            r"""
+            Determines whether the resulting rows mark single predicate/object pairs,
+            or sets of pairs.
+
+            **If "choose"**, decides whether to use intersection or union based on the search type.
+            For example, ``chembl:mechanism`` use the intersection,
+            while most others will use the union.
+
+            **If "intersection"**, each compound will contribute to a single row
+            for its associated set of pairs.
+            For example, a compound annotated for ``increase dopamine`` and ``decrease serotonin``
+            increment the count for a single row:
+            object ``["dopamine", "serotonin"]`` and predicate ``["increase", "decrease"]``.
+            (Double quotes will be escaped.)
+
+            **If "union"**, each compound will contribute to one row per associated pair.
+            In the above example, the compound will increment the counts
+            of two rows: object=``dopamine`` / predicate=``increase``
+            and ``object=serotonin`` and predicate=``decrease``.
+
+            In general, this flag is useful for variables in which:
+
+            - A *set of pairs* best is needed to describe a compound, AND
+
+            - There are likely to be relatively few unique predicate/object pairs.
+
+            For example, binding to a hand-selected list of 20 targets with high confidence
+            may allow for multipharmacology. However, co-mentions of genes will likely result
+            in a very large number of unique rows.
+        """
+        ),
+        to: Optional[Path] = Ca.beta_to,
+        replace: bool = Ca.replace,
+    ) -> None:
+        """
+        Compares annotations for hits and non-hits.
+
+        This is a very simple function.
+        For each object/predicate pair, counts the annotations for hits and annotations for non-hits.
+
+        See the docs for more info.
+        """
+        default = str(path) + "-" + scores.name + MANDOS_SETTINGS.default_table_suffix
+        to = MiscUtils.adjust_filename(to, default, replace)
+        hits = HitFrame.read_file(path)
+        scores = ScoreDf.read_file(scores)
+        # calculator = EnrichmentCalculation.create(algorithm)
+        # df = calculator.calc_many(hits, scores)
+        # df.write_file(to)
+
+    @staticmethod
+    def psi(
         path: Path = Ca.file_input,
         algorithm: str = Opt.val(
             r"""
@@ -408,7 +427,6 @@ class MiscCommands:
             The path to a similarity matrix file.
 
             {Ca.output_formats}
-            .txt is assumed to be whitespace-delimited.
 
             [default: <input-path.parent>/<algorithm>-similarity.{MANDOS_SETTINGS.default_table_suffix}]
             """
@@ -425,11 +443,11 @@ class MiscCommands:
         to = MiscUtils.adjust_filename(to, default, replace)
         hits = HitFrame.read_file(path).to_hits()
         calculator = MatrixCalculation.create(algorithm)
-        matrix = calculator.calc(hits)
+        matrix = calculator.calc_all(hits)
         matrix.write_file(to)
 
     @staticmethod
-    def concordance(
+    def tau(
         phi_matrix: Path = Ca.input_matrix,
         psi_matrix: Path = Ca.input_matrix,
         algorithm: str = Opt.val(
@@ -482,6 +500,72 @@ class MiscCommands:
         calculator = ConcordanceCalculation.create(algorithm, phi, psi, samples, seed)
         concordance = calculator.calc(phi_matrix, psi_matrix)
         concordance.write_file(to)
+
+    @staticmethod
+    def plot_umap(
+        psi_matrix: Path = Ca.input_matrix,
+        colors: Optional[Path] = Ca.colors,
+        markers: Optional[Path] = Ca.markers,
+        color_col: Optional[str] = Ca.color_col,
+        marker_col: Optional[str] = Ca.marker_col,
+        cols: int = Opt.val("""The number of columns to use (before going down a row)"""),
+        to: Optional[Path] = Ca.plot_to,
+    ) -> None:
+        r"""
+        Plot UMAP of psi matrices.
+
+        The input will probably be calculated from ``:calc:matrix``.
+
+        Will plot each variable (psi) over a grid.
+        """
+
+    @staticmethod
+    def plot_pairing_scatter(
+        path: Path = Ca.input_matrix,
+        to: Optional[Path] = Ca.plot_to,
+    ) -> None:
+        r"""
+        Plots scatter plots of phi against psi.
+
+        Plots scatter plots of (phi, psi) values, sorted by phi values.
+
+        For each unique phi matrix and psi matrix, flattens the matrices and plots
+        the flattened (n choose 2 - n) pairs of each jointly, phi mapped to the x-axis
+        and psi mapped to the y-axis.
+
+        Will plot each (phi, psi) pair over a grid, one plot per cell:
+        One row per phi and one column per psi.
+        """
+
+    @staticmethod
+    def plot_pairing_violin(
+        path: Path = Ca.input_matrix,
+        split: bool = Opt.flag(
+            r"""
+            Split each violin into phi_1 on the left and phi_2 on the right.
+
+            Useful to compare two phi variables. Requires exactly 2.
+            """
+        ),
+        to: Optional[Path] = Ca.plot_to,
+    ) -> None:
+        r"""
+        Plots violin plots from data generated by ``:calc:matrix-tau``.
+
+        Will plot each (phi, psi) pair over a grid, one row per phi and one column per psi
+        (unless ``--split`` is set).
+        """
+
+    @staticmethod
+    def plot_score_correlation(
+        path: Path = Ca.input_matrix,
+        to: Optional[Path] = Ca.plot_to,
+    ) -> None:
+        r"""
+        Plots violin plots from data generated by ``:calc:matrix-tau``.
+
+        Will plot (phi, psi) pairs over a grid, one row per phi and one column per psi.
+        """
 
 
 __all__ = ["MiscCommands"]

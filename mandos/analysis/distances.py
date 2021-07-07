@@ -8,9 +8,10 @@ from collections import defaultdict
 from typing import Collection, Sequence, Type, Union
 
 import numpy as np
+import pandas as pd
 
 from mandos.analysis import AnalysisUtils as Au
-from mandos.analysis import SimilarityDf
+from mandos.analysis import SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.model import CleverEnum
 from mandos.model.hits import AbstractHit
 
@@ -21,17 +22,26 @@ from mandos.model.hits import AbstractHit
 
 
 class MatrixCalculator(metaclass=abc.ABCMeta):
-    def calc(self, hits: Sequence[AbstractHit]) -> SimilarityDf:
+    def calc_all(self, hits: Sequence[AbstractHit]) -> SimilarityDfLongForm:
         raise NotImplemented()
 
 
 class JPrimeMatrixCalculator(MatrixCalculator):
-    def calc(self, hits: Sequence[AbstractHit]) -> SimilarityDf:
+    def calc_all(self, hits: Sequence[AbstractHit]) -> SimilarityDfLongForm:
+        key_to_hit = Au.hit_multidict(hits, "search_key")
+        dfs = []
+        for key, key_hits in key_to_hit.items():
+            df = self.calc_one(key_hits)
+            df = df.to_long_form(psi=key)
+            dfs += [df]
+        return SimilarityDfLongForm(pd.concat(dfs))
+
+    def calc_one(self, hits: Sequence[AbstractHit]) -> SimilarityDfShortForm:
         inchikey_to_hits = Au.hit_multidict(hits, "origin_inchikey")
         data = defaultdict(dict)
         for (c1, hits1), (c2, hits2) in zip(inchikey_to_hits.items(), inchikey_to_hits.items()):
             data[c1][c2] = self._j_prime(hits1, hits2)
-        return SimilarityDf.from_dict(data)
+        return SimilarityDfShortForm.from_dict(data)
 
     def _j_prime(self, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]) -> float:
         sources = {h.data_source for h in hits1}.intersection({h.data_source for h in hits2})

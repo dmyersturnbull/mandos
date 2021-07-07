@@ -218,7 +218,126 @@ class CommonArgs:
         (Some other formats, such as .json or .h5, may be permitted but are discouraged.)
     """
 
-    file_input = Arg.in_file("The path to a file output by `:concat` or `:search`.", "input")
+    file_input = Arg.in_file("The path to a file output by `:concat` or `:search`.")
+
+    alpha_input: Path = Arg.in_file(
+        rf"""
+            Path to a table containing scores.
+
+            Must contain a column called ``inchikey`` or ``compound_id``
+            matching the InChI Keys or compound IDs you provided for the search.
+
+            Any number of scores may be included via columns.
+            Each column must either be ``score`` or start with ``score_``.
+            These values must be real-valued.
+
+            Example columns:
+
+                inchikey    compound_id    score_alpha
+
+            {input_formats}
+            """
+    )
+
+    beta_input: Path = Arg.in_file(
+        rf"""
+            Path to a table containing is-hit, ... columns.
+
+            Must contain a column called ``inchikey`` or ``compound_id``
+            matching the InChI Keys or compound IDs you provided for the search.
+
+            Any number of scores may be included via columns.
+            These columns must start with ``is_``.
+            Values must be boolean, nullable (true/false or 1/0).
+            Null values will be included in ``background`` only.
+
+            Example columns:
+
+                inchikey    compound_id    is_hit    is_lead
+
+            {input_formats}
+            """
+    )
+
+    plot_to: Optional[Path] = Opt.out_file(
+        rf"""
+            Path to write a figure to.
+
+            Can end with .pdf or .png. (PDF is **strongly** recommended.)
+
+            [default: <path>-<plot-type>.pdf]
+            """
+    )
+
+    colors: Optional[Path] = Opt.in_file(
+        rf"""
+            Path to a table file mapping compounds to colors.
+
+            May use the input format for ``:calc:enrichment`` or ``:calc:correlation``.
+            Colors will then be chosen automatically.
+            Set ``color-col`` if there are multiple score/is_ columns.
+
+            You may alternatively use a column called 'color'.
+            These must contain valid matplotlib values (e.g. ``:``).
+
+            Note that --colors and --markers can use the same file.
+            """
+    )
+
+    markers: Optional[Path] = Opt.in_file(
+        rf"""
+            Path to a table file mapping compounds to colors.
+
+            May use the input format for ``:calc:enrichment`` or ``:calc:correlation``.
+            Markers will then be chosen automatically.
+            Set ``marker-col`` if there are multiple score/is_ columns.
+
+            You may alternatively use a column called 'marker'.
+            These must contain valid matplotlib values (e.g. ``#ff0000`` or ``red``).
+
+            Note that --colors and --markers can use the same file.
+            """
+    )
+
+    color_col: Optional[Path] = Opt.val(
+        rf"""
+        The column to use for ``--colors``.
+        """
+    )
+
+    marker_col: Optional[Path] = Opt.val(
+        rf"""
+        The column to use for ``--markers``.
+        """
+    )
+
+    alpha_to: Optional[Path] = Opt.out_file(
+        rf"""
+            Path to write enrichment info to.
+
+            {output_formats}
+
+            Columns will correspond to the columns you provided.
+
+            [default: <path>-correlation-<scores.filename>{MANDOS_SETTINGS.default_table_suffix}]
+            """
+    )
+
+    beta_to: Optional[Path] = Opt.out_file(
+        rf"""
+            Path to write enrichment info to.
+
+            {output_formats}
+
+            Columns will correspond to the columns you provided.
+            This will include a column called 'total' for the total number,
+            plus two columns per input column.
+            If you provided ``is_hit`` and ``is_lead``,
+            will contain ``is_hit``, ``not_hit``, ``is_lead``, and ``not_lead``.
+
+            [default: <path>-enrichment-<scores.filename>{MANDOS_SETTINGS.default_table_suffix}]
+            """
+    )
 
     compounds = Arg.in_file(
         """
@@ -279,11 +398,20 @@ class CommonArgs:
         The path to a similarity matrix file to write to.
 
         {input_formats}
-        .txt/.txt.gz/etc. is assumed to be whitespace-delimited.
-        TCompounds can be referenced by InChI Key or compound ID (matching what you provided for the search).
-        The set of compounds here must exactly match the set of compounds in the input files.
-        For Excel and text formats, the first row and the first column (header and index) indicate the compounds.
 
+        The matrix is "long-form".
+        Columns are "i" (inchikey #1), "j" (inchikey #2),
+        and either "phi" or "psi" (containing the floating-point (i,j) similarity values).
+        """
+    )
+
+    input_correlation: Path = Arg.in_file(
+        rf"""
+        The path to a file from ``:calc:correlation``.
+
+        {input_formats}
+
+        Columns are "inchikey", "phi", "psi", and the original columns you
         Values must be floating-point.
         """
     )

@@ -4,55 +4,65 @@ Calculations of concordance between annotations.
 import abc
 import enum
 import math
-from typing import Collection, Dict, Generator, Sequence, Set, Tuple, Union
+from typing import Collection, Dict, Generator, Sequence, Set, Tuple, Union, Type
 
 import numpy as np
 import pandas as pd
 from typeddfs import TypedDfs
 
-from mandos.analysis import AnalysisUtils, SimilarityDf
+from mandos.analysis import AnalysisUtils
+from mandos.analysis import SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.model import CleverEnum
 
 ConcordanceDf = (
     TypedDfs.typed("ConcordanceDf")
     .require("phi", "psi", dtype=str)
     .require("sample", dtype=int)
-    .require("score", dtype=float)
+    .require("tau", dtype=float)
 ).build()
 
 
 class ConcordanceCalculator(metaclass=abc.ABCMeta):
-    def __init__(self, n_samples: int, seed: int, phi_name: str, psi_name: str):
+    def __init__(self, n_samples: int, seed: int):
         self.n_samples = n_samples
         self.seed = seed
         self.rand = np.random.RandomState(seed)
-        self.phi_name = phi_name
-        self.psi_name = psi_name
 
-    def calc(self, phi: SimilarityDf, psi: SimilarityDf) -> ConcordanceDf:
-        if phi.columns.tolist() != psi.columns.tolist():
-            raise ValueError(
-                f"Mismatched compounds: {phi.columns.tolist()} != {psi.columns.tolist()}"
-            )
+    def calc_all(self, phis: SimilarityDfLongForm, psis: SimilarityDfLongForm) -> ConcordanceDf:
+        for phi in phis["phi"].unique():
+            for psi in psis["psi"].unique():
+                self.calc(None, None, phi, psi)  # TODO
+
+    def calc(
+        self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm, phi_name: str, psi_name: str
+    ) -> ConcordanceDf:
+        phi_cols, psi_cols = phi.columns.tolist(), psi.columns.tolist()
+        if phi_cols != psi_cols:
+            raise ValueError(f"Mismatched compounds: {phi_cols} != {psi_cols}")
         df = pd.DataFrame(data=self.generate(phi, psi), columns=["score"])
         df = df.reset_index()
-        df["phi"] = self.phi_name
-        df["psi"] = self.psi_name
-        df.columns = ["sample", "score", "phi", "psi"]
-        return ConcordanceDf(df)
+        df["phi"] = phi_name
+        df["psi"] = psi_name
+        df.columns = ["sample", "tau", "phi", "psi"]
+        return ConcordanceDf.convert(df)
 
-    def generate(self, phi: SimilarityDf, psi: SimilarityDf) -> Generator[float, None, None]:
-        for b in range(self.n_samples):
-            phi_b = self.rand.choice(phi, replace=True)
-            psi_b = self.rand.choice(psi, replace=True)
-            yield self._calc(phi_b, psi_b)
+    def generate(
+        self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm
+    ) -> Generator[float, None, None]:
+        if self.n_samples == 1:
+            yield self._calc(phi, psi)
+        else:
+            for b in range(self.n_samples):
+                phi_b = self.rand.choice(phi, replace=True)
+                psi_b = self.rand.choice(psi, replace=True)
+                yield self._calc(phi_b, psi_b)
 
-    def _calc(self, phi: SimilarityDf, psi: SimilarityDf) -> float:
+    def _calc(self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm) -> float:
         raise NotImplemented()
 
 
 class TauConcordanceCalculator(ConcordanceCalculator):
-    def _calc(self, phi: SimilarityDf, psi: SimilarityDf) -> float:
+    def _calc(self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm) -> float:
         n = len(phi)
         numerator = self._n_z(phi, psi, 1) - self._n_z(phi, psi, -1)
         denominator = math.factorial(n) / (2 * math.factorial(n - 2))
@@ -70,6 +80,10 @@ class TauConcordanceCalculator(ConcordanceCalculator):
 class ConcordanceAlg(CleverEnum):
     tau = enum.auto()
 
+    @property
+    def clazz(self) -> Type[ConcordanceCalculator]:
+        return {ConcordanceAlg.tau: TauConcordanceCalculator}[self]
+
 
 class ConcordanceCalculation:
     @classmethod
@@ -81,10 +95,8 @@ class ConcordanceCalculation:
         n_samples: int,
         seed: int,
     ) -> ConcordanceCalculator:
-        algorithm = ConcordanceAlg.of(algorithm)
-        return TauConcordanceCalculator(
-            n_samples=n_samples, seed=seed, phi_name=phi_name, psi_name=psi_name
-        )
+        algorithm = ConcordanceAlg.of(algorithm).clazz
+        return algorithm(n_samples=n_samples, seed=seed, phi_name=phi_name, psi_name=psi_name)
 
 
 __all__ = [

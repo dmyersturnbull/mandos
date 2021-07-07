@@ -71,15 +71,15 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
                 statement=self._statement(),
                 object_id=dd.neighbor_id,
                 object_name=dd.neighbor_name,
-                value=dd.score,
-                score=dd.score,
+                value=dd.alpha,
+                score=dd.alpha,
                 intersect_count=dd.article_count,
                 query_count=dd.query_article_count,
                 neighbor_count=dd.neighbor_article_count,
             )
             for dd in all_of_them
             if (
-                dd.score >= self.min_score
+                dd.alpha >= self.min_score
                 and dd.neighbor_article_count >= self.min_articles
                 and dd.query_article_count >= self.min_articles
             )

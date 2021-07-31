@@ -7,7 +7,8 @@ from typing import Generic, Sequence, TypeVar
 
 from mandos import logger
 from mandos.model import CompoundNotFoundError, MiscUtils, ReflectionUtils
-from mandos.model.hits import AbstractHit, HitFrame, HitUtils
+from mandos.model.hits import AbstractHit, HitFrame
+from mandos.model.hit_utils import HitUtils
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -157,11 +158,11 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         c_id: str,
         c_name: str,
         predicate: str,
-        statement: str,
         object_id: str,
         object_name: str,
         **kwargs,
     ) -> H:
+        # ignore statement -- we've removed it for now
         entry = dict(
             record_id=None,
             search_key=self.key,
@@ -175,7 +176,6 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             matched_inchikey=c_matched,
             compound_name=c_name,
             predicate=predicate,
-            statement=statement,
             object_id=object_id,
             object_name=object_name,
         )

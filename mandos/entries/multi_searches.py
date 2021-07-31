@@ -96,9 +96,11 @@ class MultiSearch:
         for cmd in commands:
             cmd.run()
         logger.notice("Done with all searches!")
+        # write the final file
         df = HitFrame(pd.concat([HitFrame.read_file(cmd.output_path) for cmd in commands]))
         df.write_file(self.final_path)
         logger.notice(f"Concatenated file to {self.final_path}")
+        # write a metadata file describing all of the searches
         explain = self.to_table()
         explain.write_file(self.explain_path)
 

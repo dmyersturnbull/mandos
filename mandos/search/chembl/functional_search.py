@@ -1,23 +1,11 @@
-from dataclasses import dataclass
-from typing import Optional, Sequence, Set
+from typing import Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import MiscUtils
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.search.chembl._activity_search import _ActivityHit, _ActivitySearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class FunctionalHit(_ActivityHit):
-    """
-    An "activity" hit of type "F" for a compound.
-    """
-
-    tissue: Optional[str]
-    cell_type: Optional[str]
-    subcellular_region: Optional[str]
+from mandos.search.chembl._activity_search import _ActivitySearch
+from mandos.model.concrete_hits import FunctionalHit
 
 
 class FunctionalSearch(_ActivitySearch[FunctionalHit]):
@@ -49,7 +37,6 @@ class FunctionalSearch(_ActivitySearch[FunctionalHit]):
             c_id=compound.chid,
             c_name=compound.name,
             predicate="activity:functional",
-            statement="has functional activity for",
             object_id=best_target.chembl,
             object_name=best_target.name,
             record_id=from_super.req_as("activity_id", str),
@@ -64,4 +51,4 @@ class FunctionalSearch(_ActivitySearch[FunctionalHit]):
         return [hit]
 
 
-__all__ = ["FunctionalHit", "FunctionalSearch"]
+__all__ = ["FunctionalSearch"]

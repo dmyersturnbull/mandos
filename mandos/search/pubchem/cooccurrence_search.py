@@ -1,36 +1,16 @@
 import abc
-from dataclasses import dataclass
 from typing import Sequence, TypeVar
 
-from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.pubchem_support.pubchem_models import CoOccurrenceType
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class CoOccurrenceHit(PubchemHit, metaclass=abc.ABCMeta):
-    score: int
-    intersect_count: int
-    query_count: int
-    neighbor_count: int
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class DiseaseCoOccurrenceHit(CoOccurrenceHit):
-    """ """
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class GeneCoOccurrenceHit(CoOccurrenceHit):
-    """ """
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class ChemicalCoOccurrenceHit(CoOccurrenceHit):
-    """ """
-
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import (
+    CoOccurrenceHit,
+    DiseaseCoOccurrenceHit,
+    GeneCoOccurrenceHit,
+    ChemicalCoOccurrenceHit,
+)
 
 H = TypeVar("H", bound=CoOccurrenceHit, covariant=True)
 
@@ -68,7 +48,6 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
                 c_matched=data.names_and_identifiers.inchikey,
                 c_name=data.name,
                 predicate=self._predicate(),
-                statement=self._statement(),
                 object_id=dd.neighbor_id,
                 object_name=dd.neighbor_name,
                 value=dd.alpha,
@@ -94,9 +73,6 @@ class GeneCoOccurrenceSearch(CoOccurrenceSearch[GeneCoOccurrenceHit]):
     def _predicate(self) -> str:
         return "co-occurrence:gene"
 
-    def _statement(self) -> str:
-        return "co-occurs with gene"
-
     def _query(self, data: PubchemData):
         return data.literature.gene_cooccurrences
 
@@ -108,9 +84,6 @@ class ChemicalCoOccurrenceSearch(CoOccurrenceSearch[ChemicalCoOccurrenceHit]):
 
     def _predicate(self) -> str:
         return "co-occurrence:chemical"
-
-    def _statement(self) -> str:
-        return "co-occurs with chemical"
 
     def _query(self, data: PubchemData):
         return data.literature.chemical_cooccurrences
@@ -124,19 +97,13 @@ class DiseaseCoOccurrenceSearch(CoOccurrenceSearch[DiseaseCoOccurrenceHit]):
     def _predicate(self) -> str:
         return "co-occurrence:disease"
 
-    def _statement(self) -> str:
-        return "co-occurs with disease"
-
     def _query(self, data: PubchemData):
         return data.literature.disease_cooccurrences
 
 
 __all__ = [
-    "GeneCoOccurrenceHit",
     "GeneCoOccurrenceSearch",
     "ChemicalCoOccurrenceSearch",
-    "ChemicalCoOccurrenceHit",
     "DiseaseCoOccurrenceSearch",
-    "DiseaseCoOccurrenceHit",
     "CoOccurrenceSearch",
 ]

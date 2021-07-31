@@ -63,7 +63,7 @@ class TestFind:
         assert b < c < a, f"{a} vs {b} vs {c}"
 
     def test_real(self):
-        path = MandosResources.path("7742.tab.gz")
+        path = MandosResources.path("7742.snappy")
         tax = Taxonomy.from_path(path)
         assert len(tax) == 100670
         tax = tax.subtree(117571)
@@ -71,7 +71,7 @@ class TestFind:
         assert len(tax) == 97993
 
     def test_real_by_name(self):
-        path = MandosResources.path("7742.tab.gz")
+        path = MandosResources.path("7742.snappy")
         tax = Taxonomy.from_path(path)
         eu = tax.subtrees_by_name("Sarcopterygii")
         assert len(eu) == 53827

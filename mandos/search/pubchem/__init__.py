@@ -1,21 +1,11 @@
 import abc
-from dataclasses import dataclass
-from typing import Any, Mapping, Type, TypeVar
+from typing import TypeVar
 
-from pocketutils.core.dot_dict import NestedDotDict
-
-from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.hits import AbstractHit
 from mandos.model.searches import Search
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class PubchemHit(AbstractHit, metaclass=abc.ABCMeta):
-    """ """
 
 
 class PubchemSearch(Search[H], metaclass=abc.ABCMeta):
@@ -32,4 +22,4 @@ class PubchemSearch(Search[H], metaclass=abc.ABCMeta):
         self.api = api
 
 
-__all__ = ["PubchemHit", "PubchemSearch"]
+__all__ = ["PubchemSearch"]

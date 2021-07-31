@@ -1,21 +1,8 @@
-from dataclasses import dataclass
 from typing import Sequence
 
 from mandos.model.apis.g2p_data import G2pData, G2pInteraction
-from mandos.search.g2p import G2pHit, G2pSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class G2pInteractionHit(G2pHit):
-    """ """
-
-    action: str
-    selective: str
-    primary: str
-    endogenous: str
-    species: str
-    affinity: float
-    measurement: str
+from mandos.model.concrete_hits import G2pInteractionHit
+from mandos.search.g2p import G2pSearch
 
 
 class G2pInteractionSearch(G2pSearch[G2pInteractionHit]):
@@ -39,7 +26,6 @@ class G2pInteractionSearch(G2pSearch[G2pInteractionHit]):
             c_id=str(ligand.g2pid),
             c_name=ligand.name,
             predicate=f"interaction:{inter.action}",
-            statement=f"{inter.action} at",
             object_id=inter.target_id,
             object_name=inter.target,
             action=inter.action,
@@ -52,4 +38,4 @@ class G2pInteractionSearch(G2pSearch[G2pInteractionHit]):
         )
 
 
-__all__ = ["G2pInteractionHit", "G2pInteractionSearch"]
+__all__ = ["G2pInteractionSearch"]

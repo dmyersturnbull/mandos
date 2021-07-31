@@ -2,7 +2,10 @@ from dataclasses import dataclass
 
 import pytest
 
-from mandos.model.hits import AbstractHit, HitFrame, Pair, Triple
+from mandos.model.hits import AbstractHit, HitFrame
+from mandos.model.hit_utils import HitUtils
+
+from .. import get_test_resource
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -12,11 +15,11 @@ class _SimpleHit(AbstractHit):
 
 class TestHits:
     def test(self):
-        hit = AbstractHit()
-
-        mp = Mappings.from_resource("@targets_neuro.regexes")
-        assert mp.get("Dopamine D3 receptor") == ["Dopamine 2/3/4 receptor", "D_{2/3/4}"]
-        assert mp.get("Cytochrome P450 2A6") == ["Cytochrome P450 2", "CYP2"]
+        df = HitFrame.read_file(get_test_resource("chembl_atc.csv"))
+        hits = HitUtils.df_to_hits(df)
+        assert len(hits) == 10
+        df2 = HitUtils.hits_to_df(hits)
+        assert len(df2) == 10
 
 
 if __name__ == "__main__":

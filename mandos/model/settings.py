@@ -6,6 +6,7 @@ from pathlib import Path
 
 from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.query_utils import QueryExecutor
 from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
 
@@ -54,8 +55,12 @@ class Settings:
     pubchem_query_delay_min: float
     pubchem_query_delay_max: float
     pubchem_use_parent: bool
-    taxonomy_filename_format: str
+    taxonomy_filename_suffix: str
     default_table_suffix: str
+    selenium_driver: str
+
+    def __post_init__(self):
+        pass
 
     @property
     def chembl_cache_path(self) -> Path:
@@ -117,10 +122,11 @@ class Settings:
             pubchem_query_delay_max=data.get_as("mandos.query.pubchem.delay_sec", float, 0.25),
             pubchem_n_retries=data.get_as("mandos.query.pubchem.n_retries", int, 1),
             pubchem_use_parent=data.get_as("mandos.query.pubchem.use_parent", bool, True),
-            taxonomy_filename_format=data.get_as(
-                "mandos.cache.taxonomy_filename_format", str, "{}.feather"
+            taxonomy_filename_suffix=data.get_as(
+                "mandos.cache.taxonomy_filename_suffix", str, ".snappy"
             ),
             default_table_suffix=data.get_as("mandos.default_table_suffix", str, ".feather"),
+            selenium_driver=data.get_as("mandos.selenium_driver", str, "Chrome").title(),
         )
 
     def configure(self):
@@ -153,4 +159,16 @@ MANDOS_SETTINGS.configure()
 logger.debug(f"Setting ChEMBL cache to {MANDOS_SETTINGS.chembl_cache_path}")
 
 
-__all__ = ["MANDOS_SETTINGS"]
+class QueryExecutors:
+    chembl = QueryExecutor(
+        MANDOS_SETTINGS.chembl_query_delay_min, MANDOS_SETTINGS.chembl_query_delay_max
+    )
+    pubchem = QueryExecutor(
+        MANDOS_SETTINGS.pubchem_query_delay_min, MANDOS_SETTINGS.pubchem_query_delay_max
+    )
+
+
+QUERY_EXECUTORS = QueryExecutors
+
+
+__all__ = ["MANDOS_SETTINGS", "QUERY_EXECUTORS"]

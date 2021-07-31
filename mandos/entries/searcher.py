@@ -18,16 +18,40 @@ from mandos.entries.api_singletons import Apis
 from mandos.entries.paths import EntryPaths
 from mandos.model import CompoundNotFoundError
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
+from mandos.model.hits import HitFrame
 from mandos.model.searches import Search
 from mandos.search.chembl import ChemblSearch
 from mandos.search.pubchem import PubchemSearch
 
-InputFrame = (TypedDfs.typed("InputFrame").require("inchikey")).build()
+
+def _get_structure(df) -> Optional[Sequence[str]]:
+    if "inchi" in df.columns:
+        return df["inchi"].values
+    if "smiles" in df.columns:
+        return df["smiles"].values
+    return None
+
+
+def _fix_cols(df):
+    return df.rename(columns={s: s.lower() for s in df.columns})
+
+
+InputFrame = (
+    TypedDfs.typed("InputFrame")
+    .require("inchikey")
+    .reserve("inchi", "smiles", "compound_id", dtype=str)
+    .post(_fix_cols)
+    .strict(index=True, cols=False)
+).build()
+InputFrame.get_structures = _get_structure
+
 
 IdMatchFrame = (
     TypedDfs.typed("IdMatchFrame")
     .require("inchikey", dtype=str)
+    .reserve("inchi", "smiles", "compound_id", dtype=str)
     .reserve("chembl_id", "pubchem_id", "hmdb_id", dtype=str)
+    .strict(index=True, cols=False)
     .strict()
 ).build()
 
@@ -36,28 +60,26 @@ IdMatchFrame = (
 class ChemFinder:
     what: str
     how: Callable[[str], str]
-    complain: bool = False
 
     @classmethod
-    def chembl(cls, complain: bool = False) -> ChemFinder:
+    def chembl(cls) -> ChemFinder:
         def how(inchikey: str) -> str:
             return ChemblUtils(Apis.Chembl).get_compound(inchikey).chid
 
-        return ChemFinder("ChEMBL", how, complain=complain)
+        return ChemFinder("ChEMBL", how)
 
     @classmethod
-    def pubchem(cls, complain: bool = False) -> ChemFinder:
+    def pubchem(cls) -> ChemFinder:
         def how(inchikey: str) -> str:
             return ChemblUtils(Apis.Chembl).get_compound(inchikey).chid
 
-        return ChemFinder("PubChem", how, complain=complain)
+        return ChemFinder("PubChem", how)
 
     def find(self, inchikey: str) -> Optional[str]:
         try:
             return self.how(inchikey)
         except CompoundNotFoundError:
-            if self.complain:
-                logger.info(f"NOT FOUND: {self.what.rjust(8)}  ] {inchikey}")
+            logger.info(f"NOT FOUND: {self.what.rjust(8)}  ] {inchikey}")
             logger.debug(f"Did not find {self.what} {inchikey}", exc_info=True)
         return None
 
@@ -70,13 +92,12 @@ class SearcherUtils:
         pubchem: bool = True,
         chembl: bool = True,
         hmdb: bool = True,
-        complain: bool = False,
     ) -> IdMatchFrame:
         df = IdMatchFrame([pd.Series(dict(inchikey=c)) for c in inchikeys])
         if chembl:
-            df["chembl_id"] = df["inchikey"].map(ChemFinder.chembl(complain=complain).find)
+            df["chembl_id"] = df["inchikey"].map(ChemFinder.chembl().find)
         if pubchem:
-            df["pubchem_id"] = df["inchikey"].map(ChemFinder.pubchem(complain=complain).find)
+            df["pubchem_id"] = df["inchikey"].map(ChemFinder.pubchem().find)
         return df
 
     @classmethod
@@ -124,10 +145,16 @@ class Searcher:
         SearcherUtils.dl(inchikeys, pubchem=has_pubchem, chembl=has_chembl)
         for what in self.what:
             output_path = self.output_paths[what.key]
-            metadata_path = output_path.with_suffix(".metadata.json")
+            metadata_path = output_path.with_suffix(".json.metadata")
             df = what.find_to_df(inchikeys)
-            # TODO keep any other columns in input_df
-            df.to_csv(output_path)
+            # keep all of the original extra columns from the input
+            # e.g. if the user had 'inchi' or 'smiles' or 'pretty_name'
+            for extra_col in [c for c in self.input_df.columns if c != "inchikey"]:
+                extra_mp = self.input_df.set_index("inchikey")[extra_col].to_dict()
+                df[extra_col] = df["lookup"].map(extra_mp.get)
+            # write the (intermediate) file
+            df.write_file(output_path)
+            # write metadata
             params = {k: str(v) for k, v in what.get_params().items() if k not in {"key", "api"}}
             metadata = NestedDotDict(dict(key=what.key, search=what.search_class, params=params))
             metadata.write_json(metadata_path)
@@ -135,4 +162,4 @@ class Searcher:
         return self
 
 
-__all__ = ["Searcher", "IdMatchFrame", "SearcherUtils"]
+__all__ = ["Searcher", "IdMatchFrame", "SearcherUtils", "InputFrame"]

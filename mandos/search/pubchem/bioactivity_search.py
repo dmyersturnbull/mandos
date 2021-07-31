@@ -1,25 +1,10 @@
-from dataclasses import dataclass
-from typing import Optional, Sequence
+from typing import Sequence
 
-from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.pubchem_support.pubchem_models import Activity, Bioactivity
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class BioactivityHit(PubchemHit):
-    """ """
-
-    target_abbrev: Optional[str]
-    activity: str
-    assay_type: str
-    micromolar: float
-    relation: str
-    species: Optional[str]
-    compound_name_in_assay: str
-    referrer: str
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import BioactivityHit
 
 
 class BioactivitySearch(PubchemSearch[BioactivityHit]):
@@ -50,10 +35,6 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         target_name, target_abbrev, species = dd.target_name_abbrev_species
         data_source = f"{self.data_source}: {dd.assay_ref} ({dd.assay_type})"
         predicate = f"bioactivity:{dd.activity.name.lower()}"
-        if dd.activity in {Activity.inconclusive, Activity.unspecified}:
-            statement = "has " + dd.activity.name + " activity for"
-        else:
-            statement = "is " + dd.activity.name + " against"
         return self._create_hit(
             inchikey=inchikey,
             c_id=str(data.cid),
@@ -61,7 +42,6 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
             c_matched=data.names_and_identifiers.inchikey,
             c_name=data.name,
             predicate=predicate,
-            statement=statement,
             object_id=dd.gene_id,
             object_name=target_name,
             data_source=data_source,
@@ -76,4 +56,4 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         )
 
 
-__all__ = ["BioactivityHit", "BioactivitySearch"]
+__all__ = ["BioactivitySearch"]

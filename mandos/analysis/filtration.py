@@ -12,7 +12,8 @@ from typing import Mapping, Optional, Sequence, Set, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.hits import AbstractHit, HitFrame, HitUtils
+from mandos.model.hits import AbstractHit, HitFrame
+from mandos.model.hit_utils import HitUtils
 
 _Type = Union[str, int, float, datetime]
 

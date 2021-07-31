@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from mandos.analysis import AnalysisUtils as Au
-from mandos.analysis import SimilarityDfLongForm, SimilarityDfShortForm
+from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.model import CleverEnum
 from mandos.model.hits import AbstractHit
 
@@ -84,4 +84,4 @@ class MatrixCalculation:
         return alg.clazz(alg_name)
 
 
-__all__ = ["MatrixCalculator", "JPrimeMatrixCalculator"]
+__all__ = ["MatrixCalculator", "JPrimeMatrixCalculator", "MatrixCalculation", "MatrixAlg"]

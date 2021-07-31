@@ -12,6 +12,7 @@ from typing import Any, Mapping, Optional, Sequence, Type, TypeVar, Union
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
+from typeddfs import TypedDf
 
 from mandos import logger
 from mandos.model.settings import MANDOS_SETTINGS
@@ -61,6 +62,21 @@ class ReflectionUtils:
         if not issubclass(param, bound):
             raise AssertionError(f"{param} is not a {bound}")
         return param
+
+    @classmethod
+    def subclass_dict(cls, clazz: Type[T], concrete: bool = False) -> Mapping[str, Type[T]]:
+        return {c.__name__: c for c in cls.subclasses(clazz, concrete=concrete)}
+
+    @classmethod
+    def subclasses(cls, clazz, concrete: bool = False):
+        for subclass in clazz.__subclasses__():
+            yield from cls.subclasses(subclass, concrete=concrete)
+            if (
+                not concrete
+                or not inspect.isabstract(subclass)
+                and not subclass.__name__.startswith("_")
+            ):
+                yield subclass
 
     @classmethod
     def default_arg_values(cls, func) -> Mapping[str, Optional[Any]]:
@@ -172,9 +188,6 @@ class CleverEnum(enum.Enum):
 
 
 class MandosResources:
-
-    VERTEBRATA_PATH = None
-
     @classmethod
     def contains(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> bool:
         """Returns whether a resource file (or dir) exists."""
@@ -210,7 +223,18 @@ class MiscUtils:
     """
 
     @classmethod
-    def adjust_filename(cls, to: Optional[Path], default: str, replace: bool) -> Path:
+    def empty_df(cls, clazz: Type[T], reserved: bool = False) -> T:
+        if issubclass(clazz, TypedDf):
+            if reserved:
+                req = clazz.known_names()
+            else:
+                req = [*clazz.required_index_names(), *clazz.required_columns]
+            return clazz({r: [] for r in req})
+        else:
+            return clazz({})
+
+    @classmethod
+    def adjust_filename(cls, to: Optional[Path], default: Union[str, Path], replace: bool) -> Path:
         if to is None:
             return Path(default)
         elif str(to).startswith("."):
@@ -243,9 +267,6 @@ class MiscUtils:
 
 START_TIME = MiscUtils.utc()
 START_TIMESTAMP = START_TIME.isoformat(timespec="milliseconds")
-
-
-MandosResources.VERTEBRATA_PATH = MandosResources.a_path("7742")
 
 
 __all__ = [

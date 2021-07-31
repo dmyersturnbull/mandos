@@ -1,17 +1,9 @@
 import re
-from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence
 
 from mandos.model import MiscUtils
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class CtdGeneHit(PubchemHit):
-    """ """
-
-    taxon_id: Optional[int]
-    taxon_name: Optional[str]
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import CtdGeneHit
 
 
 class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
@@ -35,7 +27,6 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
                             c_matched=data.names_and_identifiers.inchikey,
                             c_name=data.name,
                             predicate=predicate,
-                            statement=predicate,
                             object_id=dd.gene_name,
                             object_name=dd.gene_name,
                             taxon_id=dd.tax_id,
@@ -112,4 +103,4 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
         return result
 
 
-__all__ = ["CtdGeneHit", "CtdGeneSearch"]
+__all__ = ["CtdGeneSearch"]

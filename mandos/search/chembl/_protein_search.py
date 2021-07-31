@@ -1,11 +1,11 @@
 import abc
 import re
-from dataclasses import dataclass
 from typing import Optional, Sequence, Set, TypeVar, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
+from mandos.model.concrete_hits import ProteinHit
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
@@ -15,18 +15,8 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.taxonomy import Taxonomy
-from mandos.search.chembl import ChemblHit, ChemblSearch
+from mandos.search.chembl import ChemblSearch
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class ProteinHit(ChemblHit, metaclass=abc.ABCMeta):
-    """
-    A protein target entry for a compound.
-    """
-
-    exact_target_id: str
-
 
 H = TypeVar("H", bound=ProteinHit, covariant=True)
 
@@ -158,4 +148,4 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         return "(" + "|".join([f"(?:{re.escape(v)})" for v in values]) + ")"
 
 
-__all__ = ["ProteinHit", "ProteinSearch"]
+__all__ = ["ProteinSearch"]

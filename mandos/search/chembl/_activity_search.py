@@ -1,22 +1,14 @@
 import abc
-from dataclasses import dataclass
 from typing import Optional, Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.chembl_support import AssayType, ChemblCompound
+from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.taxonomy import Taxonomy
-from mandos.search.chembl._protein_search import H, ProteinHit, ProteinSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class _ActivityHit(ProteinHit):
-    taxon_id: int
-    taxon_name: str
-    src_id: str
+from mandos.search.chembl._protein_search import H, ProteinSearch
 
 
 class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
@@ -129,4 +121,4 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         )
 
 
-__all__ = ["_ActivitySearch", "_ActivityHit"]
+__all__ = ["_ActivitySearch"]

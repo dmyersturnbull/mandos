@@ -1,7 +1,8 @@
 import pytest
 
 from mandos.cli import Commands
-from mandos.search.chembl.go_search import GoSearch, GoType
+from mandos.search.chembl.go_search import GoSearch
+from mandos.model.concrete_hits import GoType
 
 from .. import get_test_resource
 

@@ -16,7 +16,7 @@ except ImportError:
     Figure = None
     umap = None
 
-from mandos.analysis import SimilarityDfLongForm
+from mandos.analysis.io_defns import SimilarityDfLongForm
 from mandos.analysis.concordance import ConcordanceDf
 
 

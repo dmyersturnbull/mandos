@@ -6,7 +6,7 @@ Targets from other sources do not use the UniProt taxonomy and are handled diffe
 For example, the DrugBank protein targets must be filtered using a list of species names.
 
 Targets are restricted to a UniProt taxon, and all taxa underneath it.
-The default choice is Eutelostomi, which is appropriate for many *human*-oriented analyses.
+The default choice is Euteleostomi (117571), which is appropriate for many *human*-oriented analyses.
 You can choose another taxon by passing ``--taxa <ids>``.
 For example, ``--taxa 10090,10116`` will restrict to mouse and rat.
 For subsets of vertebrata, you can alternatively pass the name of the taxon.

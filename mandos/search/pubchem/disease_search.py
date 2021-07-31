@@ -1,13 +1,7 @@
-from dataclasses import dataclass
 from typing import Sequence
 
-from mandos.model import MiscUtils
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class DiseaseHit(PubchemHit):
-    evidence_type: str
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import DiseaseHit
 
 
 class DiseaseSearch(PubchemSearch[DiseaseHit]):
@@ -27,7 +21,6 @@ class DiseaseSearch(PubchemSearch[DiseaseHit]):
                 c_matched=data.names_and_identifiers.inchikey,
                 c_name=data.name,
                 predicate=f"disease:{dd.evidence_type}",
-                statement=f"has {dd.evidence_type} evidence for",
                 object_id=dd.disease_id,
                 object_name=dd.disease_name,
             )
@@ -35,4 +28,4 @@ class DiseaseSearch(PubchemSearch[DiseaseHit]):
         ]
 
 
-__all__ = ["DiseaseHit", "DiseaseSearch"]
+__all__ = ["DiseaseSearch"]

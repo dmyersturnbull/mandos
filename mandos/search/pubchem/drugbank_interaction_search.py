@@ -1,37 +1,14 @@
-import abc
-from dataclasses import dataclass
 from typing import Sequence, Set, TypeVar
 
-from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankInteraction, DrugbankTargetType
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class _DrugbankInteractionHit(PubchemHit):
-    """ """
-
-    gene_symbol: str
-    protein_id: str
-    target_type: str
-    target_name: str
-    general_function: str
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class DrugbankTargetHit(_DrugbankInteractionHit):
-    """ """
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class DrugbankGeneralFunctionHit(_DrugbankInteractionHit):
-    """ """
-
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import _DrugbankInteractionHit
 
 T = TypeVar("T", bound=_DrugbankInteractionHit, covariant=True)
 
 
+# noinspection PyAbstractClass
 class _DrugbankInteractionSearch(PubchemSearch[T]):
     def __init__(self, key: str, api: PubchemApi, target_types: Set[DrugbankTargetType]):
         super().__init__(key, api)
@@ -53,7 +30,6 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
                 c_matched=data.names_and_identifiers.inchikey,
                 c_name=data.name,
                 predicate=self._get_predicate(dd),
-                statement=self._get_statement(dd),
                 object_id=self._get_obj(dd),
                 object_name=self._get_obj(dd),
                 gene_symbol=dd.gene_symbol,
@@ -70,11 +46,6 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
     def _get_predicate(cls, dd: DrugbankInteraction) -> str:
         action = "generic" if dd.action is None else dd.action
         return dd.target_type.name + ":" + action
-
-    @classmethod
-    def _get_statement(cls, dd: DrugbankInteraction) -> str:
-        action = "" if dd.action is None else (" :: " + dd.action) + " on"
-        return dd.target_type.name + action
 
 
 class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
@@ -102,8 +73,6 @@ class DrugbankGeneralFunctionSearch(_DrugbankInteractionSearch[_DrugbankInteract
 
 
 __all__ = [
-    "DrugbankTargetHit",
-    "DrugbankGeneralFunctionHit",
     "DrugbankTargetSearch",
     "DrugbankGeneralFunctionSearch",
 ]

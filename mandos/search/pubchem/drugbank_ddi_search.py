@@ -1,22 +1,11 @@
 import re
-from dataclasses import dataclass
 from typing import Optional, Sequence, Tuple
 
 from loguru import logger
 
-from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankDdi
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class DrugbankDdiHit(PubchemHit):
-    """ """
-
-    type: str
-    effect_target: Optional[str]
-    change: Optional[str]
-    description: str
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import DrugbankDdiHit
 
 
 class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
@@ -32,7 +21,7 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
         for dd in data.biomolecular_interactions_and_pathways.drugbank_ddis:
             kind = self._guess_type(dd.description)
             up_or_down = self._guess_up_down(dd.description)
-            spec, predicate, statement = self._guess_predicate(dd, kind, up_or_down)
+            spec, predicate = self._guess_predicate(dd, kind, up_or_down)
             hits.append(
                 self._create_hit(
                     inchikey=inchikey,
@@ -41,7 +30,6 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
                     c_matched=data.names_and_identifiers.inchikey,
                     c_name=data.name,
                     predicate=predicate,
-                    statement=statement,
                     object_id=dd.drug_drugbank_id,
                     object_name=dd.drug_drugbank_id,
                     type=kind,
@@ -54,28 +42,24 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
 
     def _guess_predicate(
         self, dd: DrugbankDdi, kind: str, up_or_down: str
-    ) -> Optional[Tuple[str, str, str]]:
-        spec, predicate, statement = None, None, None
+    ) -> Optional[Tuple[str, str]]:
+        spec, predicate = None, None
         if kind == "risk":
             spec = self._guess_adverse(dd.description)
             predicate = f"interaction:{kind}:risk:{up_or_down}:{spec}"
-            statement = f"{kind} :: {up_or_down}s risk of {spec} with"
         elif kind == "activity":
             spec = self._guess_activity(dd.description)
             predicate = f"interaction:{kind}:activity:{up_or_down}:{spec}"
-            statement = f"{kind} :: {up_or_down}s {spec} activity with"
         elif kind == "PK":
             spec = self._guess_pk(dd.description)
             predicate = f"interaction:{kind}:pk:{up_or_down}:{spec}"
-            statement = f"{kind} :: {up_or_down}s {spec} with"
         elif kind == "efficacy":
             spec = self._guess_efficacy(dd.description)
             predicate = f"interaction:{kind}:efficacy:{up_or_down}:{spec}"
-            statement = f"{kind} :: {up_or_down}s efficacy of {spec} with"
         if spec is None:
             logger.info(f"Did not extract info from '{dd.description}'")
             return None
-        return spec, predicate, statement
+        return spec, predicate
 
     def _guess_up_down(self, desc: str) -> str:
         if "increase" in desc:
@@ -150,4 +134,4 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
         return "unknown"
 
 
-__all__ = ["DrugbankDdiHit", "DrugbankDdiSearch"]
+__all__ = ["DrugbankDdiSearch"]

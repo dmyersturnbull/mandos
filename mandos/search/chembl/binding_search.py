@@ -1,23 +1,11 @@
-from dataclasses import dataclass
-from typing import Optional, Sequence, Set, Tuple
+from typing import Sequence, Set, Tuple
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import MiscUtils
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.search.chembl._activity_search import _ActivityHit, _ActivitySearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class BindingHit(_ActivityHit):
-    """
-    An "activity" hit for a compound.
-    """
-
-    pchembl: float
-    std_type: str
-    standard_relation: str
+from mandos.search.chembl._activity_search import _ActivitySearch
+from mandos.model.concrete_hits import BindingHit
 
 
 class BindingSearch(_ActivitySearch[BindingHit]):
@@ -45,14 +33,13 @@ class BindingSearch(_ActivitySearch[BindingHit]):
         from_super = self._extract(lookup, compound, data)
         rel = from_super.req_as("standard_relation", str)
         pchembl = from_super.req_as("pchembl_value", float)
-        predicate, statement = self._predicate(pchembl, rel)
+        predicate = self._predicate(pchembl, rel)
         hit = self._create_hit(
             c_origin=lookup,
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
             predicate=predicate,
-            statement=statement,
             object_id=best_target.chembl,
             object_name=best_target.name,
             record_id=from_super.req_as("activity_id", str),
@@ -66,20 +53,20 @@ class BindingSearch(_ActivitySearch[BindingHit]):
         )
         return [hit]
 
-    def _predicate(self, pchembl: float, rel: str) -> Tuple[str, str]:
+    def _predicate(self, pchembl: float, rel: str) -> str:
         if (
             self.binds_cutoff is not None
             and pchembl >= self.binds_cutoff
             and rel in {"=", "~", "<", "<="}
         ):
-            return "binding:yes", "binds"
+            return "binding:yes"
         if (
             self.does_not_bind_cutoff is not None
             and pchembl <= self.does_not_bind_cutoff
             and rel in {"=", "~", ">", ">="}
         ):
-            return "binding:no", "does not bind"
-        return f"binding:{rel}", f"binding {rel}"
+            return "binding:no"
+        return f"binding:{rel}"
 
 
-__all__ = ["BindingHit", "BindingSearch"]
+__all__ = ["BindingSearch"]

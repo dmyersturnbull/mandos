@@ -1,29 +1,8 @@
-from dataclasses import dataclass
 from typing import Sequence
 
-from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class AcuteEffectHit(PubchemHit):
-    """ """
-
-    organism: str
-    human: bool
-    test_type: str
-    route: str
-    effect: str
-    mg_per_kg: float
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class Ld50Hit(PubchemHit):
-    """ """
-
-    organism: str
-    human: bool
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import AcuteEffectHit, Ld50Hit
 
 
 class AcuteEffectSearch(PubchemSearch[AcuteEffectHit]):
@@ -51,7 +30,6 @@ class AcuteEffectSearch(PubchemSearch[AcuteEffectHit]):
                         c_matched=data.names_and_identifiers.inchikey,
                         c_name=data.name,
                         predicate="effect",
-                        statement="causes effect",
                         object_id=effect_name,
                         object_name=effect_name,
                         effect=effect.lower(),
@@ -91,4 +69,4 @@ class Ld50Search(PubchemSearch[Ld50Hit]):
         return results
 
 
-__all__ = ["AcuteEffectHit", "AcuteEffectSearch", "Ld50Hit", "Ld50Search"]
+__all__ = ["AcuteEffectSearch", "Ld50Search"]

@@ -5,9 +5,11 @@ import enum
 import os
 from inspect import cleandoc
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, TypeVar, Union
+from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, TypeVar, Union, List
 
+import colorama
 import typer
+import tabulate
 
 from mandos.model import CleverEnum
 from mandos.model.settings import MANDOS_SETTINGS
@@ -23,7 +25,10 @@ class _Args:
             **kwargs,
             allow_dash=True,
         )
-        return typer.Argument(default, **kwargs) if req else typer.Option(default, *names, **kwargs)
+        if req:
+            return typer.Argument(default, **kwargs)
+        else:
+            return typer.Option(default, *names, **kwargs)
 
     @staticmethod
     def _path(
@@ -31,7 +36,7 @@ class _Args:
     ):
         # if it's None, we're going to have a special default set afterward, so we'll explain it in the doc
         if out and default is None:
-            kwargs = dict(show_default=True, **kwargs)
+            kwargs = dict(show_default=False, **kwargs)
         kwargs = {
             **dict(
                 exists=not out,
@@ -202,169 +207,265 @@ class CommonArgs:
         return [CommonArgs.parse_taxon_id_or_name(t) for t in taxa]
 
     output_formats = r"""
-        The filename extension must be one of: .feather; .snappy/.parquet;
-        .csv, .tsv, .tab, .json (with optional .gz/.bz2/.zip/.xz);
+        The filename suffix must be one of: .feather; .snappy/.parquet; or
+        .csv, .tsv, .tab (with optional .gz/.bz2/.zip/.xz).
         Feather (.feather) and Parquet (.snappy) are recommended.
-        If only a filename suffix is provided, only sets the format and filename suffix.
-        If no extension is provided, interprets that path as a directory and uses the default format (Feather).
-
+        If only a filename suffix is provided, only sets the format and suffix.
+        If no suffix is provided, interprets the path as a directory and uses Feather.
         Will fail if the file exists, unless `--replace` is passed.
     """
 
     input_formats = r"""
-        The filename extension must be one of: .feather; .snappy/.parquet;
+        The filename suffix must be one of: .feather; .snappy/.parquet;
         .csv, .tsv, .tab (with optional .gz/.bz2/.zip/.xz);
-        Feather (.feather) and Parquet (.snappy) are recommended formats.
-        (Some other formats, such as .json or .h5, may be permitted but are discouraged.)
+        Feather (.feather) and Parquet (.snappy) are recommended.
+        (.json and .h5 may be accepted but are discouraged.)
     """
 
-    file_input = Arg.in_file("The path to a file output by `:concat` or `:search`.")
+    file_input = Arg.in_file(
+        r"""
+        The path to a file output by ``:concat`` or ``:search``.
+        """
+    )
 
-    alpha_input: Path = Arg.in_file(
+    alpha_input: Path = Opt.in_file(
         rf"""
             Path to a table containing scores.
 
-            Must contain a column called ``inchikey`` or ``compound_id``
-            matching the InChI Keys or compound IDs you provided for the search.
+            Required columns are 'inchikey', 'score_name', and 'score_value'.
 
-            Any number of scores may be included via columns.
-            Each column must either be ``score`` or start with ``score_``.
-            These values must be real-valued.
-
-            Example columns:
-
-                inchikey    compound_id    score_alpha
+            The InChI Keys must match those provided for the search.
+            Each score must start with either 'score_' or 'is_'.
 
             {input_formats}
             """
     )
 
-    beta_input: Path = Arg.in_file(
-        rf"""
-            Path to a table containing is-hit, ... columns.
+    ecfp_radius: int = Opt.val(r"""Radius of the ECFP fingerprint.""", "--radius", default=4)
 
-            Must contain a column called ``inchikey`` or ``compound_id``
-            matching the InChI Keys or compound IDs you provided for the search.
+    ecfp_n_bits: int = Opt.val(
+        r"""Number of ECFP bits.""",
+        "--bits",
+        default=2048,
+    )
 
-            Any number of scores may be included via columns.
-            These columns must start with ``is_``.
-            Values must be boolean, nullable (true/false or 1/0).
-            Null values will be included in ``background`` only.
+    on: bool = Opt.val(
+        r"""
+            Determines whether the resulting rows mark single predicate/object pairs,
+            or sets of pairs.
 
-            Example columns:
+            **If "choose"**, decides whether to use intersection or union based on the search type.
+            For example, ``chembl:mechanism`` use the intersection,
+            while most others will use the union.
 
-                inchikey    compound_id    is_hit    is_lead
+            **If "intersection"**, each compound will contribute to a single row
+            for its associated set of pairs.
+            For example, a compound annotated for ``increase dopamine`` and ``decrease serotonin``
+            increment the count for a single row:
+            object ``["dopamine", "serotonin"]`` and predicate ``["increase", "decrease"]``.
+            (Double quotes will be escaped.)
 
-            {input_formats}
-            """
+            **If "union"**, each compound will contribute to one row per associated pair.
+            In the above example, the compound will increment the counts
+            of two rows: object=``dopamine`` / predicate=``increase``
+            and ``object=serotonin`` and predicate=``decrease``.
+
+            In general, this flag is useful for variables in which
+            a *set of pairs* best is needed to describe a compound,
+            and there are likely to be relatively few unique predicate/object pairs.
+        """
+    )
+
+    ci = (
+        Opt.val(
+            f"""
+        The upper side of the confidence interval, as a percentage.
+        """,
+            default=95.0,
+        ),
     )
 
     plot_to: Optional[Path] = Opt.out_file(
         rf"""
-            Path to write a figure to.
+            Path to an output directory for figures.
 
-            Can end with .pdf or .png. (PDF is **strongly** recommended.)
+            All plots will be vectorized and written as PDF.
 
-            [default: <path>-<plot-type>.pdf]
+            [default: <input-dir>]
             """
     )
 
-    colors: Optional[Path] = Opt.in_file(
+    project_to: Optional[Path] = Opt.out_file(
         rf"""
-            Path to a table file mapping compounds to colors.
+            Path to the output table.
 
-            May use the input format for ``:calc:enrichment`` or ``:calc:correlation``.
-            Colors will then be chosen automatically.
-            Set ``color-col`` if there are multiple score/is_ columns.
+            The columns will include 'x' and 'y'.
 
-            You may alternatively use a column called 'color'.
-            These must contain valid matplotlib values (e.g. ``:``).
-
-            Note that --colors and --markers can use the same file.
-            """
+            [default: <path>-<algorithm>...]
+        """
     )
 
-    markers: Optional[Path] = Opt.in_file(
+    project_input: Optional[Path] = Opt.out_file(
         rf"""
-            Path to a table file mapping compounds to colors.
+            Path to data from ``:calc:umap`` or a similar command.
+        """
+    )
 
-            May use the input format for ``:calc:enrichment`` or ``:calc:correlation``.
-            Markers will then be chosen automatically.
-            Set ``marker-col`` if there are multiple score/is_ columns.
+    plot_kind: str = Opt.val(
+        r"""
+        The type of plot: bar, box, violin, or swarm.
 
-            You may alternatively use a column called 'marker'.
-            These must contain valid matplotlib values (e.g. ``#ff0000`` or ``red``).
+        - 'fold': Two-layered bar plot of 'true' (opaque) against all (translucent).
+          E.g.: 'is_hit' in deep blue against total=is_hit+not_hit in a 50%-opacity blue.
+          True is defined as != 0 for numbers and != '' for strings.
 
-            Note that --colors and --markers can use the same file.
-            """
+        - 'bar': Bar plot with error bars for CI
+
+        - 'box': Box plot (always uses standard deviation)
+
+        - 'violin': Violin plot. Bandwidth determined by Scott's algorithm.
+          No quartiles or std shown, and data are truncated at the range of the observations.
+
+        - 'swarm' Vertical scatter plot
+        """,
+        "--type",
+        default="choose",
+    )
+
+    style_for_compounds: Optional[Path] = Opt.in_file(
+        r"""
+        Path to a table mapping compounds to colors and markers.
+
+        If this is set, ``--colors`` and ``--markers`` will refer to columns in this file.
+        Otherwise, they will refer to columns in the input.
+        Should contain a column called "inchikey", along with 0 or more additional columns.
+        See ``--colors`` and ``--markers`` for info on the formatting.
+        """
+    )
+
+    style_for_pairs: Optional[Path] = Opt.in_file(
+        r"""
+        Path to a table mapping predicate/object pairs to colors and markers.
+
+        NOTE: This is currently not supported when using predicate/object pair intersection.
+
+        If this is set, ``--colors`` and ``--markers`` will refer to columns in this file.
+        Otherwise, they will refer to columns in the input.
+        Should contain columns "key", "predicate", and "object", along with 0 or more additional columns.
+        The "key" refers to the search key specified in ``:search``.
+        Any null (empty-string) value will be taken to mean any/all.
+        (The main use is to easily collapse over all predicates.)
+        See ``--colors`` and ``--markers`` for info on the formatting.
+        """
+    )
+
+    style_for_psi: Optional[Path] = Opt.in_file(
+        r"""
+        Path to a table mapping each psi variable name to a color and marker.
+
+        If this is set, ``--colors`` and ``--markers`` will refer to columns in this file.
+        Otherwise, they will refer to columns in the input.
+        Should contain a "psi" column, along with 0 or more additional columns.
+        See ``--colors`` and ``--markers`` for info on the formatting.
+        """
     )
 
     color_col: Optional[Path] = Opt.val(
         rf"""
-        The column to use for ``--colors``.
-        """
+        The column to use for colors.
+
+        If not specified, Mandos will use one color, unless the plot requires more.
+        If required, a semi-arbitrary column will be chosen.
+
+        If the values are _ ... mandos uses _.
+
+        - matplotlib-recognized (e.g. #ff0022, 'red', or '(255,0,0)') ... them literally.
+
+        - General strings ... a categorical palette.
+
+        - Booleans (or 0/1) ... a bright color and a dark color.
+
+        - Numbers of the same sign (or 0) ...  a sequential palette.
+
+        - Both positive and negative numbers ... a divergent palette.
+        """,
+        "--colors",
     )
 
     marker_col: Optional[Path] = Opt.val(
         rf"""
-        The column to use for ``--markers``.
-        """
+        The column to use for markers.
+
+        If not specified, Mandos will use one marker shape, unless the plot requires more.
+        If required, a semi-arbitrary column will be chosen.
+
+        If the values are matplotlib-recognized (e.g. ``:`` or ``o``), mandos uses those.
+        Otherwise, markers are chosen from the available set and mapped to the distinct values.
+        """,
+        "--markers",
     )
 
     alpha_to: Optional[Path] = Opt.out_file(
         rf"""
-            Path to write enrichment info to.
+            Path to write enrichment info.
 
             {output_formats}
 
+            One row will be included per predicate/object pair (or list of them), per bootstrap sample.
+            Rows with a null bootstrap sample are not sub-sampled.
             Columns will correspond to the columns you provided.
 
             [default: <path>-correlation-<scores.filename>{MANDOS_SETTINGS.default_table_suffix}]
             """
     )
 
-    beta_to: Optional[Path] = Opt.out_file(
+    id_table_to: Path = Opt.out_path(
         rf"""
-            Path to write enrichment info to.
+            A table of compounds and their database IDs will be written here.
 
             {output_formats}
 
-            Columns will correspond to the columns you provided.
-            This will include a column called 'total' for the total number,
-            plus two columns per input column.
-            If you provided ``is_hit`` and ``is_lead``,
-            will contain ``is_hit``, ``not_hit``, ``is_lead``, and ``not_lead``.
-
-            [default: <path>-enrichment-<scores.filename>{MANDOS_SETTINGS.default_table_suffix}]
+            [default: <path>-ids-<start-time>.{MANDOS_SETTINGS.default_table_suffix}]
             """
     )
 
     compounds = Arg.in_file(
+        rf"""
+        The path to the file listing compounds.
+
+        Must contain a column called 'inchikey'. If provided, a 'compound_id' column
+        will be copied in the results to facilitate lookups.
+
+        Some searches and commands require a full structure via either "inchi" or "smiles"
+        as a column. These will only be used as needed.
+
+        {input_formats}
         """
-        The path to the input file.
-        One of:
+    )
 
-          (A) *.txt, *.lines, or *.list (optionally with .gz/.zip/.xz/.bz2)), with one InChI Key per line;
+    sanitize = Opt.flag(
+        r"""
+        First use rdkit to sanitize molecules.
 
-          (B) A *.csv, *.tsv, *.tab file (or .gz/.zip/.xz/.bz2 variant) with a column called 'inchikey'; OR
-
-          (C) An Arrow *.feather file or Parquet *.snappy file with a column called 'inchikey'
+        Uses the standard rdkit sanitization with a subsequent de-duplication step.
+        Requires rdkit to be installed and either a "smiles" or "inchi" column.
+        The output will have the columns "inchi", "smiles", "inchikey",
+        "original_inchi", "original_smiles", and "original_inchikey";
+        along with "name" and "compound_id", if provided.
         """
     )
 
     input_dir = Arg.in_dir(
         rf"""
-        The path to a directory containing files output from mandos search.
+        Directory containing results from a mandos search.
 
         {input_formats}
-        Note that *all* matching files will be included.
-        Provide ``--exclude`` if needed.
         """
     )
 
     to_single = Opt.out_file(
         rf"""
-        The path to the output file.
+        Output file containing annotations.
 
         {output_formats}
 
@@ -373,58 +474,92 @@ class CommonArgs:
         "--to",
     )
 
+    misc_out_dir = Opt.val(
+        rf"""
+        Output directory.
+
+        Must be empty unless ``--replace`` is set
+
+        [default: same as input directory]
+        """,
+    )
+
     out_dir = Opt.val(
         rf"""
         Choose the output directory.
 
-        If ``--to`` is set to a relative path, this value is prepended to ``--to``.
+        You can set alongside ``--to``.
+        If ``--to`` is set to a relative path, this value is prepended.
 
-        Examples:
-
-        - ``--dir output --to abc.snappy`` yields ``output/abc.snappy`` (to sets filename+format)
-        - ``--dir output --to .snappy`` yields ``output/<key>.snappy`` (to sets format)
-        - ``--dir output --to my_dir`` yields ``output/my_dir`` (to sets dir)
-        - ``--dir output --to /my/absolute/path`` will error
-        - ``--dir output --to /my/absolute/path/abc.snappy`` will error
-
-        {output_formats}
-
-        [default: inferred from --to]
+        [default: none]
         """,
+        "--dir",
     )
 
     input_matrix: Path = Arg.in_file(
         rf"""
-        The path to a similarity matrix file to write to.
+        The path to a file with compound/compound similarity matrices.
 
         {input_formats}
 
-        The matrix is "long-form".
-        Columns are "i" (inchikey #1), "j" (inchikey #2),
-        and either "phi" or "psi" (containing the floating-point (i,j) similarity values).
+        The matrix is "long-form" so that multiple matrices can be included.
+        Columns are "inchikey_1", "inchikey_2", "key", and "type".
+        The key is the specific similarity matrix; it is usually the search_key
+        for psi matrices (computed from annotations from :search), and
+        a user-provided value for phi matrices (typically of phenotypic similarity).
+        The "type" column should contain either "phi" or "psi" accordingly.
         """
+    )
+
+    output_matrix: Path = Arg.out_file(
+        rf"""
+        The path to a file with compound/compound similarity matrices.
+
+        The matrix is "long-form" so that multiple matrices can be included.
+
+        You can provide just a filename suffix to change the format and suffix
+        but otherwise use the default path.
+
+        [default: inferred from input path(s)]
+        """,
+    )
+
+    input_matrix_short_form = Arg.in_file(
+        rf"""
+        The path to a file with a compound/compound similarity matrix.
+
+        {input_formats}
+
+        The matrix is "short-form": the first row and first column list the InChI Keys.
+        The table must be symmetric (the rows and columns listed in the same order).
+        """
+    )
+
+    var_type: str = Opt.val(
+        r"""
+        Either "phi" or "psi".
+        """,
+        default="phi",
+        hidden=True,
     )
 
     input_correlation: Path = Arg.in_file(
         rf"""
-        The path to a file from ``:calc:correlation``.
+        The path to a file from ``:calc:score``.
 
         {input_formats}
-
-        Columns are "inchikey", "phi", "psi", and the original columns you
-        Values must be floating-point.
         """
     )
-    replace: bool = typer.Option(
-        False, help="Replace output file(s) if they exist. See also: --skip"
-    )
+
+    replace: bool = Opt.flag(r"Replace output file(s) if they exist. See also: --skip.")
 
     taxa = Opt.val(
         r"""
-        The IDs or names of UniProt taxa, comma-separated.
-        Taxon names and common names can be used for vertebrate species (where available).
+        The IDs of UniProt taxa, comma-separated.
 
-        This can have a significant effect on searches. See the docs for more info.
+        Taxon names and common names can be used for vertebrate species.
+
+        This can have a significant effect on searches. See the docs.
 
         [default: 7742] (Euteleostomi)
         """,
@@ -433,64 +568,142 @@ class CommonArgs:
         show_default=False,
     )
 
-    seed = Opt.val(r"A random seed (integer).", "--seed", default=0)
+    seed = Opt.val(r"Random seed (integer).", default=0)
 
-    n_samples = Opt.val(
-        "Number of bootstrap samples (positive integer).",
-        "--samples",
+    boot = Opt.val(
+        r"""
+        Also generate results for <b> bootstrapped samples.
+
+        Number of bootstrap samples (positive integer).
+
+        If set, will still include the non-bootstrapped results (sample=0 in the output).
+        """,
         min=1,
-        default=2000,
+        max=1000000,
+        default=0,
     )
 
-    exclude = Opt.val("A glob pattern matching input filenames to ignore.")
+    exclude = Opt.val(
+        r"""
+        Regex for input filenames to ignore.
+
+        The regular expressions variant is from Python's 're' library.
+        """
+    )
 
     verbose: bool = Opt.flag(
-        r"Configure logger to output INFO (use ``--quiet`` for less info)",
+        r"""
+        Show more logging output.
+
+        Configures the logger to output INFO (use ``--quiet`` for less info).
+        """,
         "-v",
         "--verbose",
     )
 
     quiet: bool = Opt.flag(
-        r"Configure logger to output only ERROR (use ``--verbose`` for more info)",
+        r"""
+        Show less logging output.
+
+        Configures logger to output only ERROR (use ``--verbose`` for more info)
+        """,
         "-q",
         "--quiet",
     )
 
     in_cache: bool = Opt.flag(
-        r"Do not download any data and fail if needed data is not cached.",
+        r"""
+        Do not download any data, and fail if needed data is not cached.
+        """,
         hidden=True,
     )
 
     as_of: Optional[str] = Opt.val(
         f"""
         Restrict to data that was cached as of some date and time.
-        This option can be useful for reproducibility.
 
+        This option can be useful for reproducibility.
         Note that this should imply that underlying data sources (such as of deposition or publication)
         are restricted by this datetime, but that is not checked.
 
         Examples:
 
             - --as-of 2021-10-11T14:12:13Z
+
             - --as-of 2021-10-11T14:12:13+14:00
-            - --as-of 2021-10-11T14:12:13.496Z
+
             - --as-of "2021-10-11 14:12:13,496,915+14:00"
+
             - --as-of "2021-10-11 14:12:13-8:00 [America/Los_Angeles]"
 
-        This is a subset of ISO 8601, represented as ``YYYY-mm-dd('T'|' '):hh:MM:ss(i)Z``.
-        Precision must be nanosecond or less, and ``,`` and ``.`` are equivalent as a thousands separator.
-        You can provide an IANA zone name in square brackets for context, but the offset is still required.
+        The supported syntax is ``YYYY-mm-dd'T':hh:MM:ss(iii[.iii][.iii)Z``.
+        You can use a space instead of 'T' and ',' as a thousands separator.
+        A UTC offset is required, even with an IANA zone in brackets.
         """
     )
 
     log_path = Opt.out_path(
         r"""
-        Also log to a file.
-        The suffix can be .log, .log.gz, .log.zip, or .json, .json.gz, or .json.gz.
-        You can prefix the path with :LEVEL: to control the level. For example, ``:INFO:out.log``
+        Log to a file as well as stderr.
+
+        The suffix can be .log, .log.gz, .log.zip, .json, .json.gz, or .json.gz.
+        Prefix the path with :LEVEL: to control the level for this file (e.g. ``:INFO:out.log``).
         """,
-        "--log",
-        show_default=True,
+    )
+
+    documentation_format = Opt.val(
+        rf"""
+        Output format for display/table-style formats.
+        Do not provide if you want to export machine-readable data
+        (use --to instead).
+
+        Choose one of: {', '.join(tabulate.tabulate_formats)}.
+        See https://pypi.org/project/tabulate/ for descriptions.
+        """,
+        default="",
+    )
+
+    documentation_level = Opt.val(
+        r"""
+            Increment verbosity per added x.
+
+            -x : show a 1-line description
+
+            -xx : Show a 1-line description, plus parameter names
+
+            -xxx : Show the full description, plus parameter names, types, and 1-line descriptions
+
+            -xxxx : Show the full description, plus parameter names types, and full descriptions
+            """,
+        count=True,
+        min=0,
+        max=4,
+        default=0,
+    )
+
+    documentation_out = Opt.out_file(
+        fr"""
+        Output table or formatted text file.
+
+        Machine-readable serialization formats are
+        .tsv/.tab, .csv, .json, .fwf, .flexwf, or .xml (optionally with .gz/.bz2/.zip/.xz);
+        .feather; .snappy/.parquet; .xls; and .xlsx.
+        Can be "stdout" to output to the command-line.
+        See --style for formatting of text.
+
+        If only a suffix is provided, only sets the format and suffix.
+        If no suffix is provided, interprets the path as a directory and uses the default format.
+        Will fail if the file exists, unless `--replace` is passed.
+
+        [default: .txt with --style; .tsv otherwise]
+        """
+    )
+
+    extended_help = Opt.flag(
+        r"""
+        Show extended usage information and exit.
+        """,
+        "--full-help",
     )
 
     no_setup: bool = Opt.flag(
@@ -503,16 +716,14 @@ class CommonArgs:
 cli = typer.Typer()
 
 
-@cli.command()
-def run(
-    path: Path = CommonArgs.input_dir,
-    x=CommonArgs.log_path,
-):
-    pass
+def fail(msg: str) -> None:
+    typer.echo(typer.style(msg, fg="red"), err=True)
+    raise typer.Exit(code=1)
 
 
-if __name__ == "__main__":
-    typer.run(run)
+def succeed(msg: str) -> None:
+    typer.echo(typer.style(msg, fg="blue"), err=True)
+    raise typer.Exit(code=0)
 
 
-__all__ = ["CommonArgs", "Arg", "Opt"]
+__all__ = ["CommonArgs", "Arg", "Opt", "fail", "succeed"]

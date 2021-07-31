@@ -29,7 +29,7 @@ def _get(self: pd.DataFrame, s: str) -> Sequence[str]:
     return s
 
 
-MappingFrame.__doc__ = """
+MappingFrame.__doc__ = r"""
 A list of regex patterns and replacements.
 The first column is the pattern, and the next n columns are the targets.
 Has an important function, ``MappingFrame.get``, describe below.
@@ -90,7 +90,7 @@ class Mappings:
         and ignores empty lines and lines beginning with ``#``.
         It's just nice for easily editing in a text editor.
         """
-        df = MappingFrame.read_file(path, index_col=False)
+        df = MappingFrame.read_file(path)
         compiler = _Compiler()
         df[df.columns[0]] = df[df.columns[0]].map(compiler.compile)
         return df

@@ -18,6 +18,7 @@ from pocketutils.core.query_utils import QueryExecutor
 from mandos import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
+from mandos.model.settings import QUERY_EXECUTORS
 
 
 class QueryingPubchemApi(PubchemApi):
@@ -27,13 +28,12 @@ class QueryingPubchemApi(PubchemApi):
         extra_tables: bool = False,
         classifiers: bool = False,
         extra_classifiers: bool = False,
-        query: Optional[QueryExecutor] = None,
+        query: QueryExecutor = QUERY_EXECUTORS.pubchem,
     ):
         self._use_chem_data = chem_data
         self._use_extra_tables = extra_tables
         self._use_classifiers = classifiers
         self._use_extra_classifiers = extra_classifiers
-        self._query = QueryExecutor(0.22, 0.25) if query is None else query
 
     _pug = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
     _pug_view = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view"

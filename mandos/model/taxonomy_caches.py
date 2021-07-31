@@ -8,11 +8,12 @@ import abc
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Optional, Sequence, Union
+from typing import Iterable, Optional, Sequence, Union, Mapping
 
 import pandas as pd
 import requests
 from pocketutils.core.hashers import Hasher
+from typeddfs import TypedDfs
 
 from mandos import logger
 from mandos.model import MandosResources
@@ -37,11 +38,6 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
     Puts both the raw data and fixed data in the cache under ``~/.mandos/taxonomy/``.
     """
 
-    def load_by_name(self, taxon: str) -> Taxonomy:
-        vertebrata = Taxonomy.from_path(MandosResources.VERTEBRATA_PATH)
-        only = vertebrata.req_only_by_name(taxon)
-        return vertebrata.subtree(only.id)
-
     def load(self, taxon: Union[int, str]) -> Taxonomy:
         """
         Tries, in order:
@@ -56,7 +52,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         return tree
 
     def _load(self, taxon: Union[int, str]) -> Taxonomy:
-        exact = self.load_vertebrate(taxon)
+        exact = self.load_exact(taxon)
         if exact is not None:
             logger.info(f"Taxon {taxon} found in cached file")
             return exact
@@ -71,7 +67,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         return Taxonomy.from_path(path) if path.exists() else None
 
     def load_vertebrate(self, taxon: Union[int, str]) -> Optional[Taxonomy]:
-        vertebrata = Taxonomy.from_path(MandosResources.VERTEBRATA_PATH)
+        vertebrata = self.load_dl(7742)
         vertebrate = vertebrata.subtrees_by_ids_or_names([taxon])
         return vertebrate if vertebrate.n_taxa() > 0 else None
 
@@ -84,12 +80,29 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             when = datetime.fromtimestamp(raw_path.stat().st_mtime).strftime("%Y-%m-%d")
             logger.warning(f"It may be out of date. (File mod date: {when})")
         else:
-            logger.info(f"Downloading new taxonomy file for taxon {taxon} .")
+            logger.notice(f"Downloading new taxonomy file for taxon {taxon} .")
             self._download(raw_path, taxon)
         path = self._resolve_non_vertebrate_final(taxon)
         self._fix(raw_path, taxon, path)
-        logger.info(f"Cached taxonomy at {path} .")
+        logger.notice(f"Cached taxonomy at {path} .")
         return Taxonomy.from_path(path)
+
+    def rebuild_vertebrata(self) -> None:
+        self.delete_exact(7742)
+        self.load_dl(7742)
+        logger.notice(f"Regenerated vertebrata tree")
+
+    def delete_exact(self, taxon: int) -> None:
+        raw = self._resolve_non_vertebrate_raw(taxon)
+        raw.unlink(missing_ok=True)
+        p = self._resolve_non_vertebrate_raw(taxon)
+        Path(str(p) + ".sha1").unlink(missing_ok=True)
+        if p.exists():
+            p.unlink()
+            logger.warning(f"Deleted cached taxonomy file {p}")
+
+    def resolve_path(self, taxon: int) -> Path:
+        return self._resolve_non_vertebrate_final(taxon)
 
     def _resolve_non_vertebrate_final(self, taxon: int) -> Path:
         raise NotImplementedError()
@@ -110,7 +123,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         # now process it!
         # unfortunately it won't include an entry for the root ancestor (`taxon`)
         # so, we'll add it in (in ``df.append`` below)
-        df = pd.read_file(raw_path)
+        df = TypedDfs.untyped("Raw").read_file(raw_path)
         # find the scientific name of the parent
         scientific_name = self._determine_name(df, taxon)
         # now fix the columns
@@ -159,12 +172,12 @@ class CacheDirTaxonomyCache(UniprotTaxonomyCache):
         self.cache_dir = cache_dir
 
     def _resolve_non_vertebrate_final(self, taxon: int) -> Path:
-        return self._get_resource(MANDOS_SETTINGS.taxonomy_filename_format.format(taxon))
+        return self._get_resource(f"{taxon}{MANDOS_SETTINGS.taxonomy_filename_suffix}")
 
     def _resolve_non_vertebrate_raw(self, taxon: int) -> Path:
         # this is what is downloaded from PubChem
         # the filename is the same
-        return self._get_resource(f"taxonomy-ancestor_{taxon}.feather")
+        return self._get_resource(f"taxonomy-ancestor_{taxon}.tsv.gz")
 
     def _get_resource(self, *nodes: Union[Path, str]) -> Path:
         path = MandosResources.path(*nodes)
@@ -180,8 +193,18 @@ class TaxonomyFactories:
     """
 
     @classmethod
-    def from_vertebrata(cls) -> UniprotTaxonomyCache:
-        return CacheDirTaxonomyCache(MandosResources.VERTEBRATA_PATH)
+    def list_cached_files(cls) -> Mapping[int, Path]:
+        suffix = MANDOS_SETTINGS.taxonomy_filename_suffix
+        return {
+            int(p.name.replace(suffix, "")): p
+            for p in MANDOS_SETTINGS.taxonomy_cache_path.iterdir()
+            if p.suffix.endswith(suffix)
+        }
+
+    @classmethod
+    def from_vertebrata(cls) -> FixedFileTaxonomyFactory:
+        path = CacheDirTaxonomyCache(MANDOS_SETTINGS.taxonomy_cache_path).resolve_path(7742)
+        return FixedFileTaxonomyFactory(path)
 
     @classmethod
     def from_uniprot(
@@ -190,10 +213,8 @@ class TaxonomyFactories:
         return CacheDirTaxonomyCache(cache_dir)
 
     @classmethod
-    def from_fixed_file(
-        cls, cache_dir: Path = MANDOS_SETTINGS.taxonomy_cache_path
-    ) -> TaxonomyFactory:
-        return FixedFileTaxonomyFactory(cache_dir)
+    def from_fixed_file(cls, path: Path) -> TaxonomyFactory:
+        return FixedFileTaxonomyFactory(path)
 
     @classmethod
     def get_smart_taxonomy(

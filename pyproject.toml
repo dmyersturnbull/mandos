@@ -58,7 +58,7 @@ mandos = "mandos.cli:cli"
 python                         = ">=3.9, <4"
 chembl-webresource-client      = "^0.10"
 defusedxml                     = ">=0.7, <1.0"
-loguru                         = "^0.5"
+loguru                         = ">=0.5, <1.0"
 numpy                          = "^1.20"
 orjson                         = "^3.5"
 pandas                         = "^1.2"
@@ -71,8 +71,16 @@ typeddfs                       = ">=0.7, <1.0"
 typer                          = ">=0.3, <1.0"
 tzdata                         = ">=2021.1"
 matplotlib                     = {version="^3.4", optional=true}
-seaborn                        = {version="^0.11", optional=true}
+seaborn                        = {version=">=0.11, <1.0", optional=true}
+selenium                       = {version="^3", optional=true}
+scikit-learn                   = {version=">=0.24, <1.0", optional=true}
+umap-learn                     = {version=">=0.5, <1.0", optional=true}
 
+[tool.poetry.extras]
+analysis = ["scikit-learn", "umap-learn"]
+plots = ["matplotlib", "seaborn", "scikit-learn", "umap-learn"]
+web = ["selenium"]
+extras = ["matplotlib", "seaborn", "scikit-learn", "umap-learn", "selenium"]
 
 [tool.poetry.dev-dependencies]
 pre-commit               = ">=2.13, <3.0"

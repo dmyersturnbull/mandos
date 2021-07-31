@@ -1,14 +1,8 @@
-from dataclasses import dataclass
 from typing import Sequence, Set
 
-from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class ComputedPropertyHit(PubchemHit):
-    pass
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import ComputedPropertyHit
 
 
 class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
@@ -38,8 +32,7 @@ class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
                         c_origin=inchikey,
                         c_matched=data.names_and_identifiers.inchikey,
                         c_name=data.name,
-                        predicate="has " + dd.key.lower(),
-                        statement="property:" + dd.key.lower(),
+                        predicate="property:" + dd.key.lower(),
                         object_id=dd.value,
                         object_name=dd.value,
                     )
@@ -50,4 +43,4 @@ class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
         return key.replace(" ", "").replace("-", "").replace("_", "").replace(".", "").lower()
 
 
-__all__ = ["ComputedPropertyHit", "ComputedPropertySearch"]
+__all__ = ["ComputedPropertySearch"]

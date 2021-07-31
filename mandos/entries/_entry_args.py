@@ -19,7 +19,7 @@ class EntryArgs:
 
     skip: bool = Opt.flag(
         """
-        Skip any search if the output file exists (only warns).
+        Skip any search if the output file exists.
 
         See also: ``--replace``
         """
@@ -33,15 +33,16 @@ class EntryArgs:
             max=120,
             help=cleandoc(
                 r"""
-                A free-text unique key for the search.
-                Should be a short, <60-character name that describes the search and any parameters.
-                The output file will be named according to a 'sanitized' variant of this value.
+                A unique key to designate the search.
+
+                Should be a short, <60-character name that describes the search and parameters.
+                Intermediate output filenames will use this value.
                 """
             ),
         )
 
     check = Opt.flag(
-        "Do not run searches; just check that the parameters are ok.",
+        r"Do not run searches; just check that the parameters are ok.",
         hidden=True,
     )
 
@@ -49,19 +50,19 @@ class EntryArgs:
 
     min_cooccurrence_score = typer.Option(
         0.0,
-        help="Minimum enrichment score, inclusive. See docs for more info.",
+        help=r"Minimum enrichment score, inclusive. See the docs.",
         min=0.0,
     )
 
     min_cooccurring_articles = typer.Option(
         0,
-        help="Minimum number of articles for both the compound and object, inclusive.",
+        help=r"Minimum number of articles for both the compound and object, inclusive.",
         min=0,
     )
 
     name_must_match = Opt.flag(
         """
-        Require that the name of the compound(s) exactly matches the compound name on PubChem (case-insensitive).
+        Require that the name of the compound(s) exactly matches those on PubChem (case-insensitive).
         """
     )
 
@@ -72,8 +73,7 @@ class EntryArgs:
         help=cleandoc(
             r"""
             The level in the ChemIDPlus hierarchy of effect names.
-            Level 1: e.g. 'behavioral'
-            Level 2: 'behavioral: excitement'
+            Level 1: e.g. 'behavioral'; level 2: 'behavioral: excitement'
             """
         ),
     )
@@ -87,7 +87,7 @@ class EntryArgs:
             Target traversal strategy name, file, or class.
             Dictates the way the network of ChEMBL targets is traversed (from the annotated target as a source).
             Specifies the network links that are followed and which targets are 'accepted' for final annotations.
-            This option has a dramatic effect on the search. See the docs for more info.
+            This has a dramatic effect. See the docs.
 
             Please note that these are experimental options.
 
@@ -98,7 +98,7 @@ class EntryArgs:
 
             The standard traversal strategies are: {Ca.list(TargetTraversalStrategies.standard_strategies())}
 
-            [default: @null] (No traversal; targets as-is)
+            [default: @null] (No traversal; leave targets as-is)
             """
         ),
     )
@@ -115,7 +115,6 @@ class EntryArgs:
             This means that this must be AT LEAST as restrictive as the traversal strategy.
 
             The ChEMBL-defined types are:
-
             {Ca.list(TargetType.all_types(), "name")}
 
             These special names are also accepted:
@@ -134,9 +133,11 @@ class EntryArgs:
         help=cleandoc(
             rf"""
             Minimum target confidence score, inclusive.
-            This is useful to modify in only some cases. More important options are min_pchembl and taxa.
 
-            Values are: {Ca.list([f"{s.weight} ({s.name})" for s in ConfidenceLevel])}
+            This is useful to modify in only some cases.
+            More important options are min_pchembl and taxa.
+
+            Values are: {Ca.list([f"{s.value} ({s.name})" for s in ConfidenceLevel])}
 
             [default: 3] ("Target assigned is molecular non-protein target")
             """
@@ -149,7 +150,8 @@ class EntryArgs:
         help=cleandoc(
             """
             Assay activity relations allowed, comma-separated.
-            You should include all if ``cutoff`` is set.
+
+            Include all if ``cutoff`` is set.
             Values are: <, <=, =, >, >=, ~.
             """
         ),
@@ -162,7 +164,8 @@ class EntryArgs:
         help=cleandoc(
             """
             Minimum pCHEMBL value, inclusive.
-            You should include all if ``cutoff`` is set.
+
+            Set to 0 if ``cutoff`` is set.
             """
         ),
     )
@@ -174,7 +177,9 @@ class EntryArgs:
         show_default=False,
         help=cleandoc(
             """
-            Cutoff of pCHEMBL at which "binds" is declared if the relation is >, >=, =, or ~.
+            Cutoff of pCHEMBL at which "binds" is declared.
+
+            Applies only if the relation is >, >=, =, or ~.
 
             [default: 7.0 (100 nanomolar)]
             """
@@ -188,7 +193,9 @@ class EntryArgs:
         show_default=False,
         help=cleandoc(
             r"""
-            Cutoff of pCHEMBL at which "does not bind" is declared if the relation is <, <=, =, or ~.
+            Cutoff of pCHEMBL at which "does not bind" is declared.
+
+            Applies only if the relation is <, <=, =, or ~.
 
             [default: 4.0 (100 micromolar)]
             """
@@ -200,6 +207,7 @@ class EntryArgs:
         help=cleandoc(
             rf"""
             Exclude activity annotations with data validity flags, comma-separated.
+
             It is rare to need to change this.
 
             Values are: {Ca.list(DataValidityComment)}.
@@ -220,6 +228,7 @@ class EntryArgs:
         help=cleandoc(
             r"""
             The fully qualified name of a class inheriting ``BindingSearch``.
+
             If specified, all parameters above are passed to its constructor.
             """
         ),
@@ -230,7 +239,8 @@ class EntryArgs:
         "--phase",
         help=cleandoc(
             r"""
-            Minimum phase of a clinical trial, inclusive.
+            Minimum clinical trial phase, inclusive.
+
             Values are: 0, 1, 2, 3.
             """
         ),
@@ -251,6 +261,7 @@ class EntryArgs:
         "charge": "Formal Charge",
         "complexity": None,
     }
+
     KNOWN_USELESS_KEYS: Mapping[str, str] = {
         "components": "Covalently-Bonded Unit Count",
         "isotope-atoms": "Isotope Atom Count",
@@ -266,6 +277,7 @@ class EntryArgs:
         help=cleandoc(
             rf"""
             The keys of the computed properties, comma-separated.
+
             Key names are case-insensitive and ignore punctuation like underscores and hyphens.
 
             Known keys are: {_stringify(KNOWN_USEFUL_KEYS)}

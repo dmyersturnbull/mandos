@@ -17,12 +17,13 @@ class Reifier:
 
     def _reify_one(self, hit: AbstractHit) -> Sequence[Triple]:
         uid = hit.universal_id
-        state = Triple(uid, "rdf:type", "rdf:statement")
-        pred = Triple(uid, "rdf:predicate", hit.predicate)
-        obj = Triple(uid, "rdf:object", hit.object_name)
+        state = Triple(uid, "rdf:type", "rdf:statement", None)
+        pred = Triple(uid, "rdf:predicate", hit.predicate, None)
+        obj = Triple(uid, "rdf:object", hit.object_name, None)
         exclude = {"origin_inchikey", "predicate"}
+        # search_key and data_source are included in others
         others = [
-            Triple(uid, "mandos:" + _camelcase(field), getattr(hit, field))
+            Triple(uid, "mandos:" + _camelcase(field), getattr(hit, field), None)
             for field in hit.fields()
             if field not in exclude
         ]

@@ -11,8 +11,7 @@ from typing import Generic, Mapping, Optional, Sequence, Set, Type, TypeVar, Uni
 import typer
 from typer.models import OptionInfo
 
-from mandos import logger
-from mandos.entries import EntryMeta
+from mandos import logger, MandosLogging, MANDOS_SETUP
 from mandos.entries._entry_args import EntryArgs
 from mandos.entries.api_singletons import Apis
 from mandos.entries.common_args import CommonArgs
@@ -32,7 +31,8 @@ from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.binding_search import BindingSearch
-from mandos.search.chembl.go_search import GoSearch, GoType
+from mandos.search.chembl.go_search import GoSearch
+from mandos.model.concrete_hits import GoType
 from mandos.search.chembl.indication_search import IndicationSearch
 from mandos.search.chembl.mechanism_search import MechanismSearch
 from mandos.search.g2p.g2p_interaction_search import G2pInteractionSearch
@@ -128,9 +128,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         verbose: bool,
         no_setup: bool,
     ):
-        if not no_setup:
-            level = EntryMeta.set_logging(verbose, quiet, log)
-            logger.notice(f"Ready. Set log level to {level}")
+        MANDOS_SETUP(verbose, quiet, log, no_setup)
         searcher = cls._get_searcher(built, path, to)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
         out = searcher.output_paths[built.key]
@@ -569,7 +567,7 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
     def run(
         cls,
         path: Path = CommonArgs.compounds,
-        key: str = EntryArgs.key("inter.drugbank:target"),
+        key: str = EntryArgs.key("inter.drugbank:targ"),
         as_of: Optional[str] = CommonArgs.as_of,
         to: Optional[Path] = CommonArgs.to_single,
         check: bool = EntryArgs.check,
@@ -594,7 +592,7 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     def run(
         cls,
         path: Path = CommonArgs.compounds,
-        key: str = EntryArgs.key("inter.drugbank:target-fn"),
+        key: str = EntryArgs.key("inter.drugbank:targ-fn"),
         as_of: Optional[str] = CommonArgs.as_of,
         to: Optional[Path] = CommonArgs.to_single,
         check: bool = EntryArgs.check,
@@ -707,7 +705,7 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
     def run(
         cls,
         path: Path = CommonArgs.compounds,
-        key: str = EntryArgs.key("assay.pubchem:activity"),
+        key: str = EntryArgs.key("assay.pubchem:act"),
         to: Optional[Path] = CommonArgs.to_single,
         name_must_match: bool = EntryArgs.name_must_match,
         ban_sources: Optional[str] = None,

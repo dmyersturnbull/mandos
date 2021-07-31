@@ -8,18 +8,9 @@ from typing import Collection, Dict, Generator, Sequence, Set, Tuple, Union, Typ
 
 import numpy as np
 import pandas as pd
-from typeddfs import TypedDfs
 
-from mandos.analysis import AnalysisUtils
-from mandos.analysis import SimilarityDfLongForm, SimilarityDfShortForm
+from mandos.analysis.io_defns import ConcordanceDf, SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.model import CleverEnum
-
-ConcordanceDf = (
-    TypedDfs.typed("ConcordanceDf")
-    .require("phi", "psi", dtype=str)
-    .require("sample", dtype=int)
-    .require("tau", dtype=float)
-).build()
 
 
 class ConcordanceCalculator(metaclass=abc.ABCMeta):
@@ -31,7 +22,9 @@ class ConcordanceCalculator(metaclass=abc.ABCMeta):
     def calc_all(self, phis: SimilarityDfLongForm, psis: SimilarityDfLongForm) -> ConcordanceDf:
         for phi in phis["phi"].unique():
             for psi in psis["psi"].unique():
-                self.calc(None, None, phi, psi)  # TODO
+                phi_mx = phis[phis["phi"] == phi]
+                psi_mx = phis[phis["psi"] == psi]
+                self.calc(phi_mx, psi_mx, phi, psi)  # TODO
 
     def calc(
         self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm, phi_name: str, psi_name: str

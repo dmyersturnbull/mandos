@@ -1,24 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import MiscUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
-from mandos.search.chembl import ChemblHit, ChemblSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class AtcHit(ChemblHit):
-    """
-    An ATC code found for a compound.
-    """
-
-    level: int
+from mandos.search.chembl import ChemblSearch
+from mandos.model.concrete_hits import AtcHit
 
 
 class AtcSearch(ChemblSearch[AtcHit]):
@@ -81,12 +71,12 @@ class AtcSearch(ChemblSearch[AtcHit]):
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
-            predicate=f"atc:level{level}",
-            statement=f"has ATC level {level} code",
+            predicate=f"atc",
             object_id=dots.get(f"level{level}"),
             object_name=object_name,
             level=level,
+            data_source=f"{self.data_source} :: level {level}",
         )
 
 
-__all__ = ["AtcHit", "AtcSearch"]
+__all__ = ["AtcSearch"]

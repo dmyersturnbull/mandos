@@ -286,7 +286,7 @@ class Taxonomy:
         descendents: Set[Taxon] = set()
         for item in items:
             for taxon in self.get_by_id_or_name(item):
-                descendents += {taxon, *taxon.descendents}
+                descendents.update({taxon, *taxon.descendents})
         by_id = {d.id: d for d in descendents}
         by_name = self.__class__._build_by_name(by_id.values())
         return Taxonomy(by_id, by_name)

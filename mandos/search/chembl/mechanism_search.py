@@ -1,22 +1,12 @@
-from dataclasses import dataclass
 from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
-from mandos.model import MiscUtils
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.search.chembl._protein_search import ProteinHit, ProteinSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class MechanismHit(ProteinHit):
-    """
-    A mechanism entry for a compound.
-    """
-
-    action_type: str
+from mandos.search.chembl._protein_search import ProteinSearch
+from mandos.model.concrete_hits import MechanismHit
 
 
 class MechanismSearch(ProteinSearch[MechanismHit]):
@@ -49,14 +39,12 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
         predicate = "moa:" + data.req_as("action_type", str).lower()
-        statement = data.req_as("action_type", str).lower() + " of"
         hit = self._create_hit(
             c_origin=lookup,
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
             predicate=predicate,
-            statement=statement,
             object_id=best_target.chembl,
             object_name=best_target.name,
             record_id=data["mec_id"],
@@ -66,4 +54,4 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         return [hit]
 
 
-__all__ = ["MechanismHit", "MechanismSearch"]
+__all__ = ["MechanismSearch"]

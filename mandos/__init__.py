@@ -116,6 +116,42 @@ class MandosLogging:
                 )
 
 
+class MandosSetup:
+    def __init__(self):
+        self._set_up = False
+
+    def __call__(
+        self,
+        log: Optional[Path],
+        quiet: bool,
+        verbose: bool,
+        no_setup: bool = False,
+    ):
+        if not self._set_up:
+            self.run_command_setup(verbose, quiet, log, no_setup)
+
+    def run_command_setup(
+        self, verbose: bool, quiet: bool, log: Optional[Path], skip_setup: bool
+    ) -> None:
+        if not skip_setup:
+            level = self._set_logging(verbose, quiet, log)
+            logger.notice(f"Ready. Set log level to {level}")
+
+    def _set_logging(self, verbose: bool, quiet: bool, log: Optional[Path]) -> str:
+        if verbose and quiet:
+            raise ValueError(f"Cannot set both --quiet and --verbose")
+        elif quiet:
+            level = "ERROR"
+        elif verbose:
+            level = "INFO"
+        else:
+            level = "WARNING"
+        MandosLogging.set_log_level(level, log)
+        return level
+
+
+MANDOS_SETUP = MandosSetup()
+
 if __name__ == "__main__":  # pragma: no cover
     if _metadata is not None:
         print(f"{pkg} (v{_metadata['version']})")
@@ -123,4 +159,4 @@ if __name__ == "__main__":  # pragma: no cover
         print("Unknown project info")
 
 
-__all__ = ["MandosMetadata", "logger", "MandosLogging"]
+__all__ = ["MandosMetadata", "logger", "MandosLogging", "MandosSetup", "MANDOS_SETUP"]

@@ -1,18 +1,11 @@
-from dataclasses import dataclass
 from typing import Optional, Sequence, Set
 
 from pocketutils.tools.common_tools import CommonTools
 
 from mandos.model import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.search.pubchem import PubchemHit, PubchemSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class TrialHit(PubchemHit):
-    phase: float
-    status: str
-    interventions: str
+from mandos.search.pubchem import PubchemSearch
+from mandos.model.concrete_hits import TrialHit
 
 
 class TrialSearch(PubchemSearch[TrialHit]):
@@ -56,15 +49,14 @@ class TrialSearch(PubchemSearch[TrialHit]):
                         c_matched=data.names_and_identifiers.inchikey,
                         c_name=data.name,
                         predicate=f"trials:{dd.mapped_status}:phase{dd.mapped_phase}",
-                        statement=f"was a {dd.mapped_status} {dd.mapped_phase} trial intervention for",
                         object_id=did,
                         object_name=condition,
                         phase=dd.mapped_phase,
                         status=dd.mapped_status,
-                        interventions=MiscUtils.serialize_list(dd.interventions),
+                        interventions=MiscUtils.serialize_list(list(dd.interventions)),
                     )
                 )
         return hits
 
 
-__all__ = ["TrialHit", "TrialSearch"]
+__all__ = ["TrialSearch"]

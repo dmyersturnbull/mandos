@@ -1,24 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model import MiscUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
-from mandos.search.chembl import ChemblHit, ChemblSearch
-
-
-@dataclass(frozen=True, order=True, repr=True)
-class IndicationHit(ChemblHit):
-    """
-    An indication with a MESH term.
-    """
-
-    max_phase: int
+from mandos.search.chembl import ChemblSearch
+from mandos.model.concrete_hits import IndicationHit
 
 
 class IndicationSearch(ChemblSearch[IndicationHit]):
@@ -33,14 +23,6 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
         return "ChEMBL :: indications"
 
     def find(self, lookup: str) -> Sequence[IndicationHit]:
-        """
-
-        Args:
-            lookup:
-
-        Returns:
-
-        """
         # 'atc_classifications': ['S01HA01', 'N01BC01', 'R02AD03', 'S02DA02']
         # 'indication_class': 'Anesthetic (topical)'
         ch = ChemblUtils(self.api).get_compound_dot_dict(lookup)
@@ -62,11 +44,10 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
             c_id=compound.chid,
             c_name=compound.name,
             predicate=f"trial:phase{phase}",
-            statement=f"used in a phase {phase} trial for",
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
             max_phase=phase,
         )
 
 
-__all__ = ["IndicationHit", "IndicationSearch"]
+__all__ = ["IndicationSearch"]

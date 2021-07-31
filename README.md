@@ -30,23 +30,13 @@ It can also fetch annotations for structurally similar compounds.
 
 ### 💡 Common uses
 
-Suppose you’re screening compounds in an organoid model of a genetic autoimmune disease,
-imaging under a fluorescent marker for C-reactive protein (CRP).
-The amount of the marker the main readout, but the localization could be useful, too.
+It’s a preprocessing tool for algorithms and data analysis on chemical screens.
+_Example uses:_
 
-First, you test 2,000 drugs and annotated research compounds
-(maybe a few hypothesized to treat the disease).
-300 significantly reduced CRP levels.
-What pharmacological properties distinguish them from non-hits?
-Are they involved in immune pathways? Do they bind the same target? Are they just toxic?
-Or maybe all of your hits are simply lipophilic – the rest didn’t penetrate the tissue fully.
-
-The idea is to learn what variables distinguish compounds or correlate with scores.
-
-The readout can be binary, like "hit" vs. "non-hit";
-single-variable like % inhibition of cell growth; a handful of variables;
-or high-content like cell morphology, dendritic arbor imaging, embryonic development,
-or zebrafish locomotion.
+- What distinguishes your screening hits pharmacologically?
+- What distinguishes groups from a multidimensional screen?
+- Build a training set for machine learning.
+- Make sure your results aren’t explained by something like solubility.
 
 These tasks are often performed with just [ATC codes](https://www.ema.europa.eu/en/glossary/atc-code)
 or binding to [ChEMBL](https://www.ebi.ac.uk/chembl/) targets.
@@ -68,8 +58,7 @@ The following info is perhaps enough to get started, but a lot is done behind-th
 **[See the docs 📚](https://mandos-chem.readthedocs.io/en/latest/)** for more.
 
 **Input:** compounds.txt is a line-by-line list of
-[InChI Keys](https://en.wikipedia.org/wiki/International_Chemical_Identifier#InChIKey),
-or a CSV-like file with a column called "inchikey".
+[InChI Keys](https://en.wikipedia.org/wiki/International_Chemical_Identifier#InChIKey)
 Pass type-specific command-line options like `--taxa vertebrata`,
 or run multiple searches with `mandos :search compounds.txt searches.toml`.
 (See: [example config file](https://github.com/dmyersturnbull/mandos/blob/main/mandos/resources/ags_example.toml))
@@ -124,10 +113,9 @@ Besides specific searches like chembl:mechanism, disease.ctd:mesh, etc.:
 - :export:copy
 - :export:state
 - :export:reify
-- :calc:enrichment
-- :calc:phi
-- :calc:psi
-- :calc:tau
+- :calc:scores
+- :calc:matrix
+- :calc:matrix-concordance
 
 ### 🍁 Contributing
 

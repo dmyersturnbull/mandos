@@ -7,9 +7,7 @@ from inspect import cleandoc
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, TypeVar, Union, List
 
-import colorama
 import typer
-import tabulate
 
 from mandos.model import CleverEnum
 from mandos.model.settings import MANDOS_SETTINGS
@@ -207,16 +205,16 @@ class CommonArgs:
         return [CommonArgs.parse_taxon_id_or_name(t) for t in taxa]
 
     output_formats = r"""
-        The filename suffix must be one of: .feather; .snappy/.parquet; or
+        The filename extension must be one of: .feather; .snappy/.parquet; or
         .csv, .tsv, .tab (with optional .gz/.bz2/.zip/.xz).
         Feather (.feather) and Parquet (.snappy) are recommended.
         If only a filename suffix is provided, only sets the format and suffix.
-        If no suffix is provided, interprets the path as a directory and uses Feather.
+        If no suffix is provided, interprets that path as a directory and uses Feather.
         Will fail if the file exists, unless `--replace` is passed.
     """
 
     input_formats = r"""
-        The filename suffix must be one of: .feather; .snappy/.parquet;
+        The filename extension must be one of: .feather; .snappy/.parquet;
         .csv, .tsv, .tab (with optional .gz/.bz2/.zip/.xz);
         Feather (.feather) and Parquet (.snappy) are recommended.
         (.json and .h5 may be accepted but are discouraged.)
@@ -239,14 +237,6 @@ class CommonArgs:
 
             {input_formats}
             """
-    )
-
-    ecfp_radius: int = Opt.val(r"""Radius of the ECFP fingerprint.""", "--radius", default=4)
-
-    ecfp_n_bits: int = Opt.val(
-        r"""Number of ECFP bits.""",
-        "--bits",
-        default=2048,
     )
 
     on: bool = Opt.val(
@@ -440,18 +430,6 @@ class CommonArgs:
         as a column. These will only be used as needed.
 
         {input_formats}
-        """
-    )
-
-    sanitize = Opt.flag(
-        r"""
-        First use rdkit to sanitize molecules.
-
-        Uses the standard rdkit sanitization with a subsequent de-duplication step.
-        Requires rdkit to be installed and either a "smiles" or "inchi" column.
-        The output will have the columns "inchi", "smiles", "inchikey",
-        "original_inchi", "original_smiles", and "original_inchikey";
-        along with "name" and "compound_id", if provided.
         """
     )
 
@@ -651,61 +629,6 @@ class CommonArgs:
         """,
     )
 
-    documentation_format = Opt.val(
-        rf"""
-        Output format for display/table-style formats.
-        Do not provide if you want to export machine-readable data
-        (use --to instead).
-
-        Choose one of: {', '.join(tabulate.tabulate_formats)}.
-        See https://pypi.org/project/tabulate/ for descriptions.
-        """,
-        default="",
-    )
-
-    documentation_level = Opt.val(
-        r"""
-            Increment verbosity per added x.
-
-            -x : show a 1-line description
-
-            -xx : Show a 1-line description, plus parameter names
-
-            -xxx : Show the full description, plus parameter names, types, and 1-line descriptions
-
-            -xxxx : Show the full description, plus parameter names types, and full descriptions
-            """,
-        count=True,
-        min=0,
-        max=4,
-        default=0,
-    )
-
-    documentation_out = Opt.out_file(
-        fr"""
-        Output table or formatted text file.
-
-        Machine-readable serialization formats are
-        .tsv/.tab, .csv, .json, .fwf, .flexwf, or .xml (optionally with .gz/.bz2/.zip/.xz);
-        .feather; .snappy/.parquet; .xls; and .xlsx.
-        Can be "stdout" to output to the command-line.
-        See --style for formatting of text.
-
-        If only a suffix is provided, only sets the format and suffix.
-        If no suffix is provided, interprets the path as a directory and uses the default format.
-        Will fail if the file exists, unless `--replace` is passed.
-
-        [default: .txt with --style; .tsv otherwise]
-        """
-    )
-
-    extended_help = Opt.flag(
-        r"""
-        Show extended usage information and exit.
-        """,
-        "--full-help",
-    )
-
     no_setup: bool = Opt.flag(
         r"Skip setup, such as configuring logging.",
         "--no-setup",
@@ -716,14 +639,16 @@ class CommonArgs:
 cli = typer.Typer()
 
 
-def fail(msg: str) -> None:
-    typer.echo(typer.style(msg, fg="red"), err=True)
-    raise typer.Exit(code=1)
+@cli.command()
+def run(
+    path: Path = CommonArgs.input_dir,
+    x=CommonArgs.log_path,
+):
+    pass
 
 
-def succeed(msg: str) -> None:
-    typer.echo(typer.style(msg, fg="blue"), err=True)
-    raise typer.Exit(code=0)
+if __name__ == "__main__":
+    typer.run(run)
 
 
-__all__ = ["CommonArgs", "Arg", "Opt", "fail", "succeed"]
+__all__ = ["CommonArgs", "Arg", "Opt"]

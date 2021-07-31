@@ -4,20 +4,15 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
-import typing
-from pathlib import Path
 from typing import Type
 
 import typer
 from typer.models import CommandInfo
 
-from mandos import MandosLogging, logger, MANDOS_SETUP
+from mandos import MandosLogging, logger
 from mandos.commands import MiscCommands
-from mandos.docs import Documenter
 from mandos.entries.api_singletons import Apis
-from mandos.entries.common_args import CommonArgs, Opt, fail
 from mandos.entries.entries import Entries
-from mandos.model import MiscUtils
 from mandos.model.settings import MANDOS_SETTINGS
 
 cli = typer.Typer()
@@ -43,7 +38,7 @@ def _init_commands():
 
     cli.registered_commands += [
         CommandInfo(":search", callback=MiscCommands.search),
-        CommandInfo(":export:taxa", callback=MiscCommands.build_taxonomy),
+        CommandInfo(":export:tax-tree", callback=MiscCommands.build_taxonomy),
         CommandInfo(":cache", callback=MiscCommands.find),
         CommandInfo(":cache:taxa", callback=MiscCommands.dl_tax),
         CommandInfo(":concat", callback=MiscCommands.concat),
@@ -57,7 +52,6 @@ def _init_commands():
         CommandInfo(":analyze", callback=MiscCommands.analyze),
         CommandInfo(":calc:score", callback=MiscCommands.alpha),
         CommandInfo(":format:phi", callback=MiscCommands.prep_phi),
-        CommandInfo(":format:input", callback=MiscCommands.prep_phi),
         CommandInfo(":calc:ecfp", callback=MiscCommands.calc_ecfp_psi),
         CommandInfo(":calc:psi", callback=MiscCommands.psi),
         CommandInfo(":calc:project", callback=MiscCommands.calc_umap),
@@ -70,31 +64,6 @@ def _init_commands():
 
 
 _init_commands()
-
-
-@cli.command(":document")
-def document(
-    x: int = CommonArgs.documentation_level,
-    to: str = CommonArgs.documentation_out,
-    style: str = CommonArgs.documentation_format,
-    search: bool = Opt.flag(r"Only include specific-search commands.", hidden=True),
-    main: bool = Opt.flag(r"Only include main commands.", hidden=True),
-    hidden: bool = Opt.flag(r"""Show hidden commands.""", hidden=True),
-    replace: bool = CommonArgs.replace,
-    log: typing.Optional[Path] = CommonArgs.log_path,
-    quiet: bool = CommonArgs.quiet,
-    verbose: bool = CommonArgs.verbose,
-):
-    """
-    Output information on available commands.
-    """
-    MANDOS_SETUP(log, quiet, verbose)
-    if main and search:
-        fail("Cannot provide both --only-main and --only-search")
-    default = Path("mandos-commands" + MANDOS_SETTINGS.default_table_suffix)
-    to = MiscUtils.adjust_filename(Path(to), default, replace)
-    documenter = Documenter(cli.registered_commands, main, search, hidden)
-    documenter.document(level=x, to=to, style=style, replace=replace)
 
 
 class MandosCli:

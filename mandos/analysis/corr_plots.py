@@ -16,6 +16,7 @@ except ImportError:
     Axes = None
     Figure = None
     umap = None
+    GridSpec = None
 
 from mandos.analysis.io_defns import SimilarityDfLongForm
 from mandos.analysis.concordance import ConcordanceDf

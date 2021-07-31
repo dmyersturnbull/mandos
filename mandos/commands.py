@@ -44,17 +44,6 @@ else:
     }
 
 
-def is_nonempty(ctx: typer.Context, param: typer.CallbackParam, value: str):
-    # documenting that this is needed
-    # otherwise adding a callback will break completion
-    # https://typer.tiangolo.com/tutorial/options/callback-and-context/
-    if ctx.resilient_parsing:
-        return
-    if value == "":
-        raise typer.BadParameter(f"{param.name} cannot be empty")
-    return value
-
-
 class MiscCommands:
     @staticmethod
     def search(
@@ -74,85 +63,6 @@ class MiscCommands:
         """
         set_up(log, quiet, verbose)
         MultiSearch.build(path, out_dir, config).run()
-
-    @staticmethod
-    def freeze_for(
-        path: Path = Ca.compounds,
-        config: Path = Arg.in_file(
-            r"""
-            TOML config file. See docs.
-            """
-        ),
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
-    ) -> None:
-        """
-        Finds compounds and database IDs for a search.
-        """
-        set_up(log, quiet, verbose)
-
-    @staticmethod
-    def clear_cache():
-        """"""
-
-    @staticmethod
-    def freeze_cache():
-        """"""
-
-    @staticmethod
-    def find(
-        path: Path = Ca.compounds,
-        sanitize: bool = Ca.sanitize,
-        fetch: bool = Opt.flag(
-            r"""
-            Search for the compound IDs in databases that Mandos needs.
-
-            These will be added to new columns, which will be automatically used in search
-            commands. Included are PubChem, ChEMBL, and HMDB.
-            Use --no pubchem, --no chembl, and --no hmdb if needed.
-
-            PLEASE NOTE: Data will be cached as a result.
-            This means that a subsequent search may use this data.
-            This is especially important for PubChem, which is not versioned.
-            """
-        ),
-        ecfp: str = Opt.val(
-            r"""
-            Calculate ECFP fingerprints.
-
-            The form should be "ECFP<radius>[:<n-bits=2048>]". E.g. "ECFP4" or "ECFP4:1024".
-            These will be added to a column called "ecfp", which Mandos will automatically use.
-            """
-        ),
-        to: Path = Ca.id_table_to,
-        replace: bool = Ca.replace,
-        no: Optional[List[str]] = Opt.val(
-            r"""
-            Do not download data from a source.
-
-            Case-insensitive. Valid values are "pubchem", "chembl", and "hmdb".
-            """
-        ),
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
-    ) -> None:
-        r"""
-        Fetches and caches compound data.
-
-        Useful to check what you can see before running a search.
-        """
-        set_up(log, quiet, verbose)
-        default = str(path) + "-ids" + START_TIMESTAMP + DEF_SUFFIX
-        to = MiscUtils.adjust_filename(to, default, replace)
-        inchikeys = SearcherUtils.read(path)
-        no = set() if no is None else {n.lower().strip() for n in no}
-        df = SearcherUtils.dl(
-            inchikeys, pubchem="pubchem" not in no, chembl="chembl" not in no, hmdb="hmdb" not in no
-        )
-        df.write_file(to)
-        typer.echo(f"Wrote to {to}")
 
     @staticmethod
     def serve(
@@ -194,11 +104,37 @@ class MiscCommands:
         set_up(log, quiet, verbose)
 
     @staticmethod
+    def find(
+        path: Path = Ca.compounds,
+        to: Path = Ca.id_table_to,
+        replace: bool = Ca.replace,
+        no_pubchem: bool = Opt.flag(r"Do not download data from PubChem"),
+        no_chembl: bool = Opt.flag(r"Do not fetch IDs from ChEMBL"),
+        no_hmdb: bool = Opt.flag("Do not download data from HMDB"),
+        log: Optional[Path] = CommonArgs.log_path,
+        quiet: bool = CommonArgs.quiet,
+        verbose: bool = CommonArgs.verbose,
+    ) -> None:
+        r"""
+        Fetches and caches compound data.
+
+        Useful to check what you can see before running a search.
+        """
+        set_up(log, quiet, verbose)
+        default = str(path) + "-ids" + START_TIMESTAMP + DEF_SUFFIX
+        to = MiscUtils.adjust_filename(to, default, replace)
+        inchikeys = SearcherUtils.read(path)
+        df = SearcherUtils.dl(
+            inchikeys, pubchem=not no_pubchem, chembl=not no_chembl, hmdb=not no_hmdb
+        )
+        df.write_file(to)
+        typer.echo(f"Wrote to {to}")
+
+    @staticmethod
     def build_taxonomy(
         taxa: str = Ca.taxa,
         forbid: str = Opt.val(
-            r"""Exclude descendents of these taxa IDs or names (comma-separated).""",
-            default="",
+            r"""Exclude descendents of these taxa IDs or names (comma-separated).""", default=""
         ),
         to: Path = typer.Option(
             None,
@@ -266,9 +202,9 @@ class MiscCommands:
             taxa not in ["all", "vertebrata"]
             and not taxa.replace(",", "").replace(" ", "").isdigit()
         ):
-            raise typer.BadParameter(f"Use either 'all', 'vertebrata', or a UniProt taxon ID")
+            raise ValueError(f"Use either 'all', 'vertebrata', or a UniProt taxon ID")
         if taxa == "all" and not replace:
-            raise typer.BadParameter(f"Use --replace with taxon 'all'")
+            raise ValueError(f"Use --replace with taxon 'all'")
         set_up(log, quiet, verbose)
         factory = TaxonomyFactories.from_uniprot()
         if taxa == "all" and replace:
@@ -580,8 +516,8 @@ class MiscCommands:
     @staticmethod
     def calc_ecfp_psi(
         path: Path = CommonArgs.compounds,
-        radius: int = Ca.ecfp_radius,
-        n_bits: int = Ca.ecfp_n_bits,
+        radius: int = Opt.val(r"""Radius of the ECFP fingerprint.""", default=4),
+        n_bits: int = Opt.val(r"""Number of bits.""", default=2048),
         psi: bool = Opt.flag(
             r"""Use "psi" as the type in the resulting matrix instead of "phi"."""
         ),
@@ -747,9 +683,6 @@ class MiscCommands:
         color_col: Optional[str] = Ca.color_col,
         marker_col: Optional[str] = Ca.marker_col,
         to: Optional[Path] = Ca.plot_to,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
     ) -> None:
         r"""
         Plot UMAP, etc. of compounds from psi matrices.
@@ -766,9 +699,6 @@ class MiscCommands:
         marker_col: Optional[str] = Ca.marker_col,
         ci: float = Ca.ci,
         to: Optional[Path] = Ca.plot_to,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
     ) -> None:
         r"""
         Plot correlation to scores.
@@ -815,9 +745,6 @@ class MiscCommands:
         color_col: Optional[str] = Ca.color_col,
         marker_col: Optional[str] = Ca.marker_col,
         to: Optional[Path] = Ca.plot_to,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
     ) -> None:
         r"""
         Plot line plots of phi against psi.
@@ -855,9 +782,6 @@ class MiscCommands:
         color_col: Optional[str] = Ca.color_col,
         marker_col: Optional[str] = Ca.marker_col,
         to: Optional[Path] = Ca.plot_to,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
     ) -> None:
         r"""
         Plot violin plots from tau values.

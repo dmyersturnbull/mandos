@@ -192,7 +192,7 @@ class Taxonomy:
 
     @classmethod
     def from_path(cls, path: Path) -> Taxonomy:
-        df = pd.read_csv(path, sep="\t", header=0)
+        df = TaxonomyDf.read_file(path)
         return cls.from_df(df)
 
     @classmethod
@@ -228,7 +228,7 @@ class Taxonomy:
         return Taxonomy(tax, by_name)
 
     def to_df(self) -> TaxonomyDf:
-        return TaxonomyDf(
+        return TaxonomyDf.convert(
             [
                 pd.Series(dict(taxon=taxon.id, scientific_name=taxon.name, parent=taxon.parent.id))
                 for taxon in self.taxa

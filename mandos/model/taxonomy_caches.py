@@ -123,7 +123,9 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         # now process it!
         # unfortunately it won't include an entry for the root ancestor (`taxon`)
         # so, we'll add it in (in ``df.append`` below)
-        df = TypedDfs.untyped("Raw").read_file(raw_path)
+        # noinspection PyPep8Naming
+        raw_type = TypedDfs.untyped("Raw")
+        df = raw_type.read_file(raw_path)
         # find the scientific name of the parent
         scientific_name = self._determine_name(df, taxon)
         # now fix the columns
@@ -136,6 +138,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         )
         # write it to a feather / csv / whatever
         df["parent"] = df["parent"].astype(int)
+        df = raw_type.convert(df)
         df.write_file(final_path)
 
     def _determine_name(self, df: pd.DataFrame, taxon: int) -> str:

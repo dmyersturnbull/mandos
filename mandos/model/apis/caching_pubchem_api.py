@@ -10,6 +10,7 @@ from typing import FrozenSet, Optional, Union
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import IllegalStateError
 
 from mandos import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
@@ -18,12 +19,21 @@ from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 
 
 class CachingPubchemApi(PubchemApi):
-    def __init__(
-        self, cache_dir: Path, querier: Optional[QueryingPubchemApi], compress: bool = True
-    ):
+    def __init__(self, cache_dir: Path, query: Optional[QueryingPubchemApi]):
         self._cache_dir = cache_dir
-        self._querier = querier
-        self._compress = compress
+        self._querier = query
+
+    def find_id(self, inchikey: str) -> Optional[int]:
+        if self.similarity_path(inchikey).exists():
+            x = self.fetch_data(inchikey)
+            return None if x is None else x.cid
+        elif self._querier is not None:
+            return self._querier.find_id(inchikey)
+
+    def find_inchikey(self, cid: int) -> Optional[str]:
+        if self._querier is None:
+            raise IllegalStateError(f"Needs a querying API")
+        return self._querier.find_inchikey(cid)
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
         path = self.data_path(inchikey)
@@ -49,25 +59,17 @@ class CachingPubchemApi(PubchemApi):
         return PubchemData(read)
 
     def data_path(self, inchikey: str):
-        ext = ".json.gz" if self._compress else ".json"
-        return self._cache_dir / "data" / f"{inchikey}{ext}"
+        return self._cache_dir / "data" / f"{inchikey}.json.gz"
 
     def similarity_path(self, inchikey: str):
-        ext = ".feather"
-        return self._cache_dir / "similarity" / f"{inchikey}{ext}"
+        return self._cache_dir / "similarity" / f"{inchikey}.snappy"
 
     def _write_json(self, encoded: str, path: Path) -> None:
-        if self._compress:
-            path.write_bytes(gzip.compress(encoded.encode(encoding="utf8")))
-        else:
-            path.write_text(encoded, encoding="utf8")
+        path.write_bytes(gzip.compress(encoded.encode(encoding="utf8")))
 
     def _read_json(self, path: Path) -> NestedDotDict:
-        if self._compress:
-            deflated = gzip.decompress(path.read_bytes())
-            read = orjson.loads(deflated)
-        else:
-            read = orjson.loads(path.read_text(encoding="utf8"))
+        deflated = gzip.decompress(path.read_bytes())
+        read = orjson.loads(deflated)
         return NestedDotDict(read)
 
     def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:

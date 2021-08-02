@@ -12,17 +12,15 @@ import pandas as pd
 from typeddfs import TypedDfs
 
 
-def _is_symmetric(df: pd.DataFrame):
-    if not np.array_equal(df.values, df.T.values):
-        return f"The matrix is not symmetric"
+def _to_long_form(self, kind: str, key: str):
+    if kind not in ["phi", "psi"]:
+        raise ValueError(f"'type' should be 'phi' or 'psi', not {kind}")
+    df = self.long_form()
+    df = df.rename(columns=dict(row="inchikey_1", column="inchikey_2"))
+    df["type"] = kind
+    df["key"] = key
+    return SimilarityDfLongForm.convert(df)
 
-
-SimilarityDfShortForm = (
-    TypedDfs.typed("SimilarityDfShortForm")
-    .symmetric()
-    .condition(_is_symmetric)
-    .add_read_kwargs("csv", index_col=0)  # TODO: shouldn't be needed
-).build()
 
 SimilarityDfLongForm = (
     TypedDfs.typed("SimilarityDfLongForm")
@@ -33,30 +31,9 @@ SimilarityDfLongForm = (
     .strict()
 ).build()
 
-
-def _to_long_form(self: SimilarityDfShortForm, kind: str, key: str) -> SimilarityDfLongForm:
-    if kind not in ["phi", "psi"]:
-        raise ValueError(f"'type' should be 'phi' or 'psi', not {kind}")
-    rows = []
-    for i in range(len(self)):
-        for j in range(0, i + 1):
-            v = self.iat[i, j]
-            rows.append(
-                pd.Series(
-                    dict(
-                        inchikey_1=self.index[i],
-                        inchikey_2=self.columns[j],
-                        type=kind,
-                        key=key,
-                        value=v,
-                    )
-                )
-            )
-    return SimilarityDfLongForm(rows)
-
-
-SimilarityDfShortForm.to_long_form = _to_long_form
-
+SimilarityDfShortForm = (
+    TypedDfs.affinity_matrix("SimilarityDfShortForm").add_methods(to_long_form=_to_long_form)
+).build()
 
 ScoreDf = (
     TypedDfs.typed("InputScoreFrame")

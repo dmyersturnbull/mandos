@@ -175,7 +175,7 @@ class CacheDirTaxonomyCache(UniprotTaxonomyCache):
         self.cache_dir = cache_dir
 
     def _resolve_non_vertebrate_final(self, taxon: int) -> Path:
-        return self._get_resource(f"{taxon}{MANDOS_SETTINGS.taxonomy_filename_suffix}")
+        return self._get_resource(f"{taxon}{MANDOS_SETTINGS.archive_filename_suffix}")
 
     def _resolve_non_vertebrate_raw(self, taxon: int) -> Path:
         # this is what is downloaded from PubChem
@@ -197,7 +197,7 @@ class TaxonomyFactories:
 
     @classmethod
     def list_cached_files(cls) -> Mapping[int, Path]:
-        suffix = MANDOS_SETTINGS.taxonomy_filename_suffix
+        suffix = MANDOS_SETTINGS.archive_filename_suffix
         return {
             int(p.name.replace(suffix, "")): p
             for p in MANDOS_SETTINGS.taxonomy_cache_path.iterdir()

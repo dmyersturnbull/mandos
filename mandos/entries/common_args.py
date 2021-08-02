@@ -433,6 +433,17 @@ class CommonArgs:
         """
     )
 
+    compounds_to_fill = Arg.in_file(
+        rf"""
+        The path to the file listing compounds by various IDs.
+
+        Can use columns called 'inchikey', 'chembl_id', and 'pubchem_id'.
+        Other columns are permitted but will not be used.
+
+        {input_formats}
+        """,
+    )
+
     input_dir = Arg.in_dir(
         rf"""
         Directory containing results from a mandos search.

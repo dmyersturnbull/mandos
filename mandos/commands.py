@@ -23,7 +23,7 @@ from mandos.entries.common_args import Arg, CommonArgs
 from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
 from mandos.entries.multi_searches import MultiSearch
-from mandos.entries.searcher import SearcherUtils, InputFrame
+from mandos.entries.searcher import SearcherUtils, InputFrame, CompoundIdFiller, IdMatchFrame
 from mandos.model import START_TIMESTAMP, MiscUtils
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
@@ -104,31 +104,46 @@ class MiscCommands:
         set_up(log, quiet, verbose)
 
     @staticmethod
-    def find(
-        path: Path = Ca.compounds,
+    def fill(
+        path: Path = Ca.compounds_to_fill,
         to: Path = Ca.id_table_to,
         replace: bool = Ca.replace,
-        no_pubchem: bool = Opt.flag(r"Do not download data from PubChem"),
-        no_chembl: bool = Opt.flag(r"Do not fetch IDs from ChEMBL"),
-        no_hmdb: bool = Opt.flag("Do not download data from HMDB"),
         log: Optional[Path] = CommonArgs.log_path,
         quiet: bool = CommonArgs.quiet,
         verbose: bool = CommonArgs.verbose,
     ) -> None:
         r"""
-        Fetches and caches compound data.
+        Match IDs; fetch and cache compound data.
 
         Useful to check what you can see before running a search.
         """
         set_up(log, quiet, verbose)
         default = str(path) + "-ids" + START_TIMESTAMP + DEF_SUFFIX
         to = MiscUtils.adjust_filename(to, default, replace)
-        inchikeys = SearcherUtils.read(path)
-        df = SearcherUtils.dl(
-            inchikeys, pubchem=not no_pubchem, chembl=not no_chembl, hmdb=not no_hmdb
-        )
+        df = IdMatchFrame.read_file(path)
+        df = CompoundIdFiller.fill(df)
         df.write_file(to)
         typer.echo(f"Wrote to {to}")
+
+    @staticmethod
+    def cache(
+        path: Path = Ca.compounds,
+        no_pubchem: bool = Opt.flag(r"Do not download data from PubChem"),
+        no_chembl: bool = Opt.flag(r"Do not fetch IDs from ChEMBL"),
+        no_hmdb: bool = Opt.flag(r"Do not download data from HMDB"),
+        log: Optional[Path] = CommonArgs.log_path,
+        quiet: bool = CommonArgs.quiet,
+        verbose: bool = CommonArgs.verbose,
+    ) -> None:
+        r"""
+        Fetch and cache compound data.
+
+        Useful to freeze data before running a search.
+        """
+        set_up(log, quiet, verbose)
+        inchikeys = SearcherUtils.read(path)
+        SearcherUtils.dl(inchikeys, pubchem=not no_pubchem, chembl=not no_chembl, hmdb=not no_hmdb)
+        typer.echo(f"Done caching.")
 
     @staticmethod
     def build_taxonomy(
@@ -153,7 +168,7 @@ class MiscCommands:
         verbose: bool = CommonArgs.verbose,
     ):
         """
-        Exports a taxonomic tree to a table.
+        Export a taxonomic tree to a table.
 
         Writes a taxonomy of given taxa and their descendants to a table.
         """
@@ -185,7 +200,7 @@ class MiscCommands:
         verbose: bool = CommonArgs.verbose,
     ) -> None:
         """
-        Preps a new taxonomy file for use in mandos.
+        Prep a new taxonomy file for use in mandos.
 
         With --replace set, will delete any existing file.
         This can be useful to make sure your cached taxonomy is up-to-date before running.
@@ -242,53 +257,6 @@ class MiscCommands:
         to = MiscUtils.adjust_filename(to, default, replace)
         for found in path.iterdir():
             pass
-
-    @staticmethod
-    def filter_taxa(
-        path: Path = Ca.file_input,
-        to: Path = Opt.out_path(
-            f"""
-            An output path (file or directory).
-
-            {Ca.output_formats}
-
-            [default: <path>/<filters>.feather]
-            """
-        ),
-        allow: str = Ca.taxa,
-        forbid: str = Ca.taxa,
-        replace: bool = Ca.replace,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
-    ):
-        r"""
-        Filter by taxa.
-
-        You can include any number of taxa to allow and any number to forbid.
-        All descendents of the specified taxa are used.
-        Taxa will be excluded if they fall under both.
-
-        Note that the <path> argument *could* not be from Mandos.
-        All that is required is a column called ``taxon``, ``taxon_id``, or ``taxon_name``.
-
-        See also: :filter, which is more general.
-        """
-        set_up(log, quiet, verbose)
-        concat = allow + "-" + forbid
-        allow = Ca.parse_taxa(allow)
-        forbid = Ca.parse_taxa(forbid)
-        default = str(path) + "-filter-taxa-" + concat + DEF_SUFFIX
-        to = MiscUtils.adjust_filename(to, default, replace)
-        df = HitFrame.read_file(path)
-        my_tax = TaxonomyFactories.get_smart_taxonomy(allow, forbid)
-        cols = [c for c in ["taxon", "taxon_id", "taxon_name"] if c in df.columns]
-
-        def permit(row) -> bool:
-            return any((my_tax.get_by_id_or_name(getattr(row, c)) is not None for c in cols))
-
-        df = df[df.apply(permit)]
-        df.write_file(to)
 
     @staticmethod
     def filter(
@@ -467,7 +435,7 @@ class MiscCommands:
         verbose: bool = CommonArgs.verbose,
     ) -> None:
         """
-        Compares annotations to user-supplied values.
+        Compare annotations to user-supplied values.
 
         Calculates correlation between provided scores and object/predicate pairs.
         For booleans, compares annotations for hits and non-hits.
@@ -528,7 +496,7 @@ class MiscCommands:
         verbose: bool = CommonArgs.verbose,
     ) -> None:
         r"""
-        Computes a similarity matrix from ECFP fingerprints.
+        Compute a similarity matrix from ECFP fingerprints.
 
         Requires rdkit to be installed.
 

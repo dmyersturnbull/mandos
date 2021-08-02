@@ -38,12 +38,12 @@ def _init_commands():
 
     cli.registered_commands += [
         CommandInfo(":search", callback=MiscCommands.search),
-        CommandInfo(":export:tax-tree", callback=MiscCommands.build_taxonomy),
-        CommandInfo(":cache", callback=MiscCommands.find),
-        CommandInfo(":cache:taxa", callback=MiscCommands.dl_tax),
+        CommandInfo(":fill", callback=MiscCommands.fill),
+        CommandInfo(":cache", callback=MiscCommands.cache),
+        CommandInfo(":export:taxa", callback=MiscCommands.build_taxonomy),
+        CommandInfo(":cache-taxa", callback=MiscCommands.dl_tax),
         CommandInfo(":concat", callback=MiscCommands.concat),
         CommandInfo(":filter", callback=MiscCommands.filter),
-        CommandInfo(":filter:taxa", callback=MiscCommands.filter_taxa),
         CommandInfo(":export:copy", callback=MiscCommands.copy),
         CommandInfo(":export:state", callback=MiscCommands.state),
         CommandInfo(":export:reify", callback=MiscCommands.reify),

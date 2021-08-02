@@ -15,10 +15,11 @@ class PubchemCompoundLookupError(CompoundNotFoundError):
 
 
 class PubchemApi(Api, metaclass=abc.ABCMeta):
-    def fetch_data_from_cid(self, cid: int) -> Optional[PubchemData]:
-        # separated from fetch_data to make it completely clear what an int value means
-        # noinspection PyTypeChecker
-        return self.fetch_data(cid)
+    def find_id(self, inchikey: str) -> Optional[int]:
+        raise NotImplementedError()
+
+    def find_inchikey(self, cid: int) -> Optional[str]:
+        raise NotImplementedError()
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
         raise NotImplementedError()

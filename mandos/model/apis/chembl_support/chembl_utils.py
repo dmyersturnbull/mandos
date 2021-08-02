@@ -40,12 +40,6 @@ class ChemblUtils:
     def get_compound(self, inchikey: str) -> ChemblCompound:
         """
         Calls ``get_compound_dot_dict`` and then ``compound_dot_dict_to_obj``.
-
-        Args:
-            inchikey:
-
-        Returns:
-
         """
         ch = self.get_compound_dot_dict(inchikey)
         return self.compound_dot_dict_to_obj(ch)
@@ -53,12 +47,6 @@ class ChemblUtils:
     def compound_dot_dict_to_obj(self, ch: NestedDotDict) -> ChemblCompound:
         """
         Turn results from ``get_compound_dot_dict`` into a ``ChemblCompound``.
-
-        Args:
-            ch:
-
-        Returns:
-
         """
         chid = ch["molecule_chembl_id"]
         mol_type = MolStructureType.of(ch["structure_type"])

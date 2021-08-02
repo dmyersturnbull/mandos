@@ -7,7 +7,7 @@ import io
 import re
 import time
 from datetime import datetime, timezone
-from typing import FrozenSet, Mapping, Optional, Sequence, Union
+from typing import FrozenSet, Mapping, Optional, Sequence, Union, Any
 from urllib.error import HTTPError
 
 import orjson
@@ -34,12 +34,40 @@ class QueryingPubchemApi(PubchemApi):
         self._use_extra_tables = extra_tables
         self._use_classifiers = classifiers
         self._use_extra_classifiers = extra_classifiers
+        self._query = query
 
     _pug = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
     _pug_view = "https://pubchem.ncbi.nlm.nih.gov/rest/pug_view"
     _sdg = "https://pubchem.ncbi.nlm.nih.gov/sdq/sdqagent.cgi"
     _classifications = "https://pubchem.ncbi.nlm.nih.gov/classification/cgi/classifications.fcgi"
     _link_db = "https://pubchem.ncbi.nlm.nih.gov/link_db/link_db_server.cgi"
+
+    def find_inchikey(self, cid: int) -> str:
+        return self.fetch_properties(cid)["inchikey"]
+
+    def find_id(self, inchikey: str) -> Optional[int]:
+        # we have to scrape to get the parent anyway,
+        # so just download it
+        x = self.fetch_data(inchikey)
+        return None if x is None else x.cid
+
+    def fetch_properties(self, cid: int) -> Mapping[str, Any]:
+        url = f"{self._pug}/compound/{cid}/JSON"
+        try:
+            matches: NestedDotDict = self._query_json(url)
+        except HTTPError:
+            raise PubchemCompoundLookupError(f"Failed finding pubchem compound {cid}")
+        props = matches["PC_Compounds"][0]["props"]
+        props = {NestedDotDict(p).get("urn.label"): p.get("value") for p in props}
+
+        def _get_val(v):
+            v = NestedDotDict(v)
+            for t in ["ival", "fval", "sval"]:
+                if t in v.keys():
+                    return v[t]
+
+        props = {k: _get_val(v) for k, v in props.items() if k is not None and v is not None}
+        return props
 
     def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
         # Dear God this is terrible

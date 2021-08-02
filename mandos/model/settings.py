@@ -55,7 +55,7 @@ class Settings:
     pubchem_query_delay_min: float
     pubchem_query_delay_max: float
     pubchem_use_parent: bool
-    taxonomy_filename_suffix: str
+    archive_filename_suffix: str
     default_table_suffix: str
     selenium_driver: str
 
@@ -122,8 +122,8 @@ class Settings:
             pubchem_query_delay_max=data.get_as("mandos.query.pubchem.delay_sec", float, 0.25),
             pubchem_n_retries=data.get_as("mandos.query.pubchem.n_retries", int, 1),
             pubchem_use_parent=data.get_as("mandos.query.pubchem.use_parent", bool, True),
-            taxonomy_filename_suffix=data.get_as(
-                "mandos.cache.taxonomy_filename_suffix", str, ".snappy"
+            archive_filename_suffix=data.get_as(
+                "mandos.cache.archive_filename_suffix", str, ".snappy"
             ),
             default_table_suffix=data.get_as("mandos.default_table_suffix", str, ".feather"),
             selenium_driver=data.get_as("mandos.selenium_driver", str, "Chrome").title(),

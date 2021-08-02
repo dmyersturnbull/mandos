@@ -31,9 +31,9 @@ meta_keys = {"verbose", "quiet", "check", "log", "to"}
 forbidden_keys = {"dir", "out-dir", "out_dir"}
 
 SearchExplainDf = (
-    TypedDfs.typed("SearchExplainDf").require(
-        "key", "search", "source", "category", "desc", "args", dtype=str
-    )
+    TypedDfs.typed("SearchExplainDf")
+    .require("key", "search", "source", dtype=str)
+    .require("category", "desc", "args", dtype=str)
 ).build()
 
 

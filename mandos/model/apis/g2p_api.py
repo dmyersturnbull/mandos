@@ -10,11 +10,12 @@ import pandas as pd
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDf, TypedDfs
 
-from mandos.model import Api, CompoundNotFoundError
+from mandos.model import Api, CompoundNotFoundError, MANDOS_SETTINGS
 from mandos.model.apis.g2p_data import G2pData, G2pInteraction, TrueFalseUnknown
 
 LIGANDS_URL = "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.tsv"
 INTERACTIONS_URL = "https://www.guidetopharmacology.org/DATA/interactions.tsv"
+_DEF_SUFFIX = MANDOS_SETTINGS.archive_filename_suffix
 
 
 def _oint(x: str) -> Optional[int]:
@@ -32,9 +33,9 @@ LigandDf = (
 
 InteractionDf = (
     TypedDfs.typed("InteractionDf")
-    .require(
-        "target", "target_id", "target_gene_symbol", "target_uniprot", "target_species", dtype=str
-    )
+    .require("target", "target_id", dtype=str)
+    .require("target_gene_symbol", "target_uniprot", "target_species", dtype=str)
+    .require("target_species", dtype=str)
     .require("ligand", dtype=str)
     .require("ligand_id", dtype=int)
     .require("type", "action", dtype=str)
@@ -93,18 +94,18 @@ class CachedG2pApi(G2pApi, metaclass=abc.ABCMeta):
 
     @property
     def ligands_path(self) -> Path:
-        return self.cache_path / "ligands.feather"
+        return (self.cache_path / "ligands").with_suffix(_DEF_SUFFIX)
 
     @property
     def interactions_path(self) -> Path:
-        return self.cache_path / "interactions.feather"
+        return (self.cache_path / "interactions").with_suffix(_DEF_SUFFIX)
 
     def _load_file(self, clazz: Type[TypedDf], path: Path, url: str) -> pd.DataFrame:
         if path.exists():
-            return clazz.read_file(self.ligands_path, sep="\t")
+            return clazz.read_file(self.ligands_path)
         else:
-            df = clazz.read_file(url, sep="\t")
-            df.to_csv(self.ligands_path, sep="\t")
+            df = clazz.read_file(url)
+            df.write_file(self.ligands_path)
             return df
 
     def _convert_interaction(self, series: pd.Series) -> G2pInteraction:

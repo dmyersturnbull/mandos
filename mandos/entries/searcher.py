@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional, Sequence, Mapping, Set
+from typing import Callable, Optional, Sequence
 
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
@@ -19,7 +19,7 @@ from mandos.entries.paths import EntryPaths
 from mandos.model import CompoundNotFoundError
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.model.hits import HitFrame
+from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.searches import Search
 from mandos.search.chembl import ChemblSearch
 from mandos.search.pubchem import PubchemSearch
@@ -73,18 +73,20 @@ class ChemFinder:
     @classmethod
     def pubchem(cls) -> ChemFinder:
         def how(inchikey: str) -> str:
-            api: PubchemApi = Apis.Pubchem
-            return str(api.find_id(inchikey))
+            # noinspection PyTypeChecker
+            return Apis.Pubchem.find_id(inchikey)
 
         return ChemFinder("PubChem", how)
 
     def find(self, inchikey: str) -> Optional[str]:
         try:
-            return self.how(inchikey)
+            data = self.how(inchikey)
         except CompoundNotFoundError:
-            logger.info(f"NOT FOUND: {self.what.rjust(8)}  ] {inchikey}")
+            data = None
             logger.debug(f"Did not find {self.what} {inchikey}", exc_info=True)
-        return None
+        if data is None:
+            logger.info(f"NOT FOUND: {self.what.rjust(8)}  ] {inchikey}")
+        return str(data)
 
 
 class SearcherUtils:
@@ -108,54 +110,6 @@ class SearcherUtils:
         df = InputFrame.read_file(input_path)
         logger.info(f"Read {len(df)} input compounds")
         return df
-
-
-class CompoundIdFiller:
-    @classmethod
-    def fill(
-        cls,
-        df: IdMatchFrame,
-    ) -> IdMatchFrame:
-        matchable = {"inchikey", "pubchem_id", "chembl_id"}
-        sources = {s for s in matchable if s in df.columns and not df[s].isnull().all()}
-        targets = {s for s in matchable if s not in df.columns or df[s].isnull().all()}
-        # noinspection PyUnresolvedReferences
-        logger.notice(f"Copying {sources} to {targets}")
-        source = next(iter(sources))
-        # watch out! these are simply in order, nothing more
-        remapped = {t: [] for t in targets}
-        for source_val in df[source].values:
-            matches = cls._matches(source, source_val, targets)
-            for target, target_val in matches.items():
-                remapped[target].append(target_val)
-            remapped.update(matches)
-        for target in targets:
-            df[target] = remapped[target]
-
-    @classmethod
-    def _matches(cls, source: str, source_val: str, targets: Set[str]) -> Mapping[str, str]:
-        if source == "pubchem_id":
-            inchikey = Apis.Pubchem.find_inchikey(int(source_val))
-        elif source == "chembl_id":
-            # TODO
-            # get_compound wants an inchikey,
-            # but we're secretly passing a CHEMBLxxxx ID instead
-            # we just know that that works
-            inchikey = ChemblUtils(Apis.Chembl).get_compound(source_val).inchikey
-        elif source == "inchikey":
-            inchikey = source
-        else:
-            raise AssertionError(source)
-        matched = {} if source == "inchikey" else dict(inchikey=inchikey)
-        if "pubchem_id" in targets:
-            pubchem_id = ChemFinder.pubchem().find(inchikey)
-            if pubchem_id is not None:
-                matched["pubchem_id"] = str(pubchem_id)
-        if "chembl_id" in targets:
-            chembl_id = ChemFinder.chembl().find(inchikey)
-            if chembl_id is not None:
-                matched["chembl_id"] = chembl_id
-        return matched
 
 
 class Searcher:
@@ -213,4 +167,4 @@ class Searcher:
         return self
 
 
-__all__ = ["Searcher", "IdMatchFrame", "SearcherUtils", "CompoundIdFiller", "InputFrame"]
+__all__ = ["Searcher", "IdMatchFrame", "SearcherUtils", "InputFrame"]

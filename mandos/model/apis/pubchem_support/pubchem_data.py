@@ -185,6 +185,14 @@ class NamesAndIdentifiers(PubchemMiniDataView):
         return self.descriptor("InChI")
 
     @property
+    def isomeric_smiles(self) -> str:
+        return ""  # self.descriptor("Isomeric SMILES")
+
+    @property
+    def iupac(self) -> str:
+        return self.descriptor("IUPAC Name")
+
+    @property
     def molecular_formula(self) -> str:
         return (
             self._mini

@@ -540,7 +540,9 @@ class CommonArgs:
         """
     )
 
-    replace: bool = Opt.flag(r"Replace output file(s) if they exist. See also: --skip.")
+    replace: bool = Opt.flag(
+        r"Replace output file(s) if they exist. See also: --skip.", "--replace"
+    )
 
     taxa = Opt.val(
         r"""
@@ -604,6 +606,7 @@ class CommonArgs:
         r"""
         Do not download any data, and fail if needed data is not cached.
         """,
+        "--in-cache",
         hidden=True,
     )
 

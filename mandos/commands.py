@@ -23,7 +23,8 @@ from mandos.entries.common_args import Arg, CommonArgs
 from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
 from mandos.entries.multi_searches import MultiSearch
-from mandos.entries.searcher import SearcherUtils, InputFrame, CompoundIdFiller, IdMatchFrame
+from mandos.entries.searcher import SearcherUtils, InputFrame, IdMatchFrame
+from mandos.entries.filler import CompoundIdFiller, IdType
 from mandos.model import START_TIMESTAMP, MiscUtils
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
@@ -107,21 +108,36 @@ class MiscCommands:
     def fill(
         path: Path = Ca.compounds_to_fill,
         to: Path = Ca.id_table_to,
+        fill: str = Opt.val(
+            rf"""
+            Comma-separated list of IDs to fill.
+
+            Allowed values are: @all, @primary, {Ca.list(IdType)}.
+            """,
+            default="inchikey,chembl_id,pubchem_id,inchi,smiles",
+        ),
+        fill_over: bool = Opt.flag(
+            """
+            Overwrite existing values.
+            """,
+            "--fill-over",
+        ),
         replace: bool = Ca.replace,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = Ca.log_path,
+        quiet: bool = Ca.quiet,
+        verbose: bool = Ca.verbose,
     ) -> None:
         r"""
-        Match IDs; fetch and cache compound data.
+        Fill in missing IDs from existing compound data.
 
-        Useful to check what you can see before running a search.
+        Useful to check compound/ID associations before running a search.
         """
+        wanted = IdType.parse(fill)
         set_up(log, quiet, verbose)
-        default = str(path) + "-ids" + START_TIMESTAMP + DEF_SUFFIX
+        default = str(Path(path).with_suffix("")) + "-filled" + "".join(path.suffixes)
         to = MiscUtils.adjust_filename(to, default, replace)
         df = IdMatchFrame.read_file(path)
-        df = CompoundIdFiller.fill(df)
+        df = CompoundIdFiller(wanted, fill_over).fill(df)
         df.write_file(to)
         typer.echo(f"Wrote to {to}")
 

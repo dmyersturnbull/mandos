@@ -34,7 +34,7 @@ LigandDf = (
 InteractionDf = (
     TypedDfs.typed("InteractionDf")
     .require("target", "target_id", dtype=str)
-    .require("target_gene_symbol", "target_uniprot", "target_species", dtype=str)
+    .require("target_gene_symbol", "target_uniprot", dtype=str)
     .require("target_species", dtype=str)
     .require("ligand", dtype=str)
     .require("ligand_id", dtype=int)

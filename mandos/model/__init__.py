@@ -164,11 +164,13 @@ class CleverEnum(enum.Enum):
         return None
 
     @classmethod
-    def of(cls, s: Union[int, str]) -> __qualname__:
+    def of(cls, s: Union[int, str, __qualname__]) -> __qualname__:
         """
         Turns a string or int into this type.
         Case-insensitive. Replaces `` `` and ``-`` with ``_``.
         """
+        if isinstance(s, cls):
+            return s
         key = s.replace(" ", "_").replace("-", "_").lower()
         try:
             if isinstance(s, str):
@@ -236,14 +238,19 @@ class MiscUtils:
     @classmethod
     def adjust_filename(cls, to: Optional[Path], default: Union[str, Path], replace: bool) -> Path:
         if to is None:
-            return Path(default)
+            path = Path(default)
         elif str(to).startswith("."):
-            return Path(default).with_suffix(str(to))
+            path = Path(default).with_suffix(str(to))
         elif to.is_dir() or to.suffix == "":
-            return to / default
-        if replace or not to.exists():
-            return to
-        raise FileExistsError(f"File {to} already exists")
+            path = to / default
+        else:
+            raise AssertionError(str(to))
+        path = Path(path)
+        if path.exists() and not replace:
+            raise FileExistsError(f"File {path} already exists")
+        elif replace:
+            logger.info(f"Overwriting existing file {path}.")
+        return path
 
     @classmethod
     def ntp_utc(cls) -> datetime:
@@ -266,7 +273,10 @@ class MiscUtils:
 
 
 START_TIME = MiscUtils.utc()
-START_TIMESTAMP = START_TIME.isoformat(timespec="milliseconds")
+# START_TIMESTAMP = START_TIME.isoformat(timespec="milliseconds")
+START_TIMESTAMP = (
+    START_TIME.isoformat(timespec="milliseconds").replace(":", "").replace(".", "").replace("-", "")
+)
 
 
 __all__ = [

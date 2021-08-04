@@ -6,7 +6,8 @@ import typing
 from typing import Generic, Sequence, TypeVar
 
 from mandos import logger
-from mandos.model import CompoundNotFoundError, MiscUtils, ReflectionUtils
+from mandos.model import CompoundNotFoundError, MiscUtils
+from mandos.model.utils import ReflectionUtils
 from mandos.model.hits import AbstractHit, HitFrame
 from mandos.model.hit_utils import HitUtils
 

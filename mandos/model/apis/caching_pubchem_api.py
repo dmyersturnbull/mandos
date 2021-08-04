@@ -31,13 +31,24 @@ class CachingPubchemApi(PubchemApi):
             return self._querier.find_id(inchikey)
 
     def find_inchikey(self, cid: int) -> Optional[str]:
-        if self._querier is None:
-            raise IllegalStateError(f"Needs a querying API")
+        path = self.cid_path(cid)
+        if path.exists():
+            return self._read_inchikey_from_cid(cid)
+        elif self._querier is None:
+            raise PubchemCompoundLookupError(f"No InChI Key link found at {path}")
         return self._querier.find_inchikey(cid)
 
-    def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
+    def fetch_data(self, inchikey: Union[str, int]) -> Optional[PubchemData]:
         path = self.data_path(inchikey)
         path.parent.mkdir(parents=True, exist_ok=True)
+        cid_path = self.cid_path(inchikey)
+        if isinstance(inchikey, int) and cid_path.exists():
+            inchikey = self._read_inchikey_from_cid(inchikey)
+        elif isinstance(inchikey, int) and self._querier is not None:
+            inchikey = self._querier.find_inchikey(inchikey)
+            cid_path.write_text(inchikey, encoding="utf8")
+        elif isinstance(inchikey, int):
+            raise PubchemCompoundLookupError(f"No InChI Key link found at {cid_path}")
         if path.exists():
             logger.debug(f"Found cached PubChem data at {path.absolute()}")
         elif self._querier is None:
@@ -51,6 +62,7 @@ class CachingPubchemApi(PubchemApi):
                 raise
             encoded = data.to_json()
             self._write_json(encoded, path)
+            cid_path.write_text(inchikey, encoding="utf8")
             logger.debug(f"Wrote PubChem data to {path.absolute()}")
             return data
         read = self._read_json(path)
@@ -58,11 +70,25 @@ class CachingPubchemApi(PubchemApi):
             raise PubchemCompoundLookupError(f"{inchikey} is empty at {path}")
         return PubchemData(read)
 
-    def data_path(self, inchikey: str):
+    def cid_path(self, cid: int) -> Path:
+        return self._cache_dir / "data" / f".{cid}"
+
+    def data_path(self, inchikey: str) -> Path:
         return self._cache_dir / "data" / f"{inchikey}.json.gz"
 
-    def similarity_path(self, inchikey: str):
+    def similarity_path(self, inchikey: str) -> Path:
         return self._cache_dir / "similarity" / f"{inchikey}.snappy"
+
+    def _read_inchikey_from_cid(self, cid: int):
+        path = self.cid_path(cid)
+        if not path.exists():
+            raise PubchemCompoundLookupError(f"No InChI Key link found at {path}")
+        z = path.read_text(encoding="utf8").strip()
+        if len(z) == 0:
+            path.unlink()
+            raise PubchemCompoundLookupError(f"No InChI Key link found at {path}")
+        else:
+            return z
 
     def _write_json(self, encoded: str, path: Path) -> None:
         path.write_bytes(gzip.compress(encoded.encode(encoding="utf8")))

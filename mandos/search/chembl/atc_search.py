@@ -23,14 +23,6 @@ class AtcSearch(ChemblSearch[AtcHit]):
         return "ChEMBL :: ATC codes"
 
     def find(self, lookup: str) -> Sequence[AtcHit]:
-        """
-
-        Args:
-            lookup:
-
-        Returns:
-
-        """
         # 'atc_classifications': ['S01HA01', 'N01BC01', 'R02AD03', 'S02DA02']
         # 'indication_class': 'Anesthetic (topical)'
         ch = ChemblUtils(self.api).get_compound_dot_dict(lookup)

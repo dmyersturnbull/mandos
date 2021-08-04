@@ -25,14 +25,6 @@ from mandos.search.chembl import ChemblSearch
 from mandos.search.pubchem import PubchemSearch
 
 
-def _get_structure(df) -> Optional[Sequence[str]]:
-    if "inchi" in df.columns:
-        return df["inchi"].values
-    if "smiles" in df.columns:
-        return df["smiles"].values
-    return None
-
-
 def _fix_cols(df):
     return df.rename(columns={s: s.lower() for s in df.columns})
 
@@ -44,72 +36,6 @@ InputFrame = (
     .post(_fix_cols)
     .strict(index=True, cols=False)
 ).build()
-InputFrame.get_structures = _get_structure
-
-
-IdMatchFrame = (
-    TypedDfs.typed("IdMatchFrame")
-    .reserve("inchikey", dtype=str)
-    .reserve("inchi", "smiles", "compound_id", dtype=str)
-    .reserve("chembl_id", "pubchem_id", "hmdb_id", dtype=str)
-    .reserve("origin_inchikey", "origin_smiles", dtype=str)
-    .reserve("library", dtype=str)
-    .strict(index=True, cols=False)
-).build()
-
-
-@dataclass(frozen=True, repr=True)
-class ChemFinder:
-    what: str
-    how: Callable[[str], str]
-
-    @classmethod
-    def chembl(cls) -> ChemFinder:
-        def how(inchikey: str) -> str:
-            return ChemblUtils(Apis.Chembl).get_compound(inchikey).chid
-
-        return ChemFinder("ChEMBL", how)
-
-    @classmethod
-    def pubchem(cls) -> ChemFinder:
-        def how(inchikey: str) -> str:
-            # noinspection PyTypeChecker
-            return Apis.Pubchem.find_id(inchikey)
-
-        return ChemFinder("PubChem", how)
-
-    def find(self, inchikey: str) -> Optional[str]:
-        try:
-            data = self.how(inchikey)
-        except CompoundNotFoundError:
-            data = None
-            logger.debug(f"Did not find {self.what} {inchikey}", exc_info=True)
-        if data is None:
-            logger.info(f"NOT FOUND: {self.what.rjust(8)}  ] {inchikey}")
-        return str(data)
-
-
-class SearcherUtils:
-    @classmethod
-    def dl(
-        cls,
-        inchikeys: Sequence[str],
-        pubchem: bool = True,
-        chembl: bool = True,
-        hmdb: bool = True,
-    ) -> IdMatchFrame:
-        df = IdMatchFrame([pd.Series(dict(inchikey=c)) for c in inchikeys])
-        if chembl:
-            df["chembl_id"] = df["inchikey"].map(ChemFinder.chembl().find)
-        if pubchem:
-            df["pubchem_id"] = df["inchikey"].map(ChemFinder.pubchem().find)
-        return df
-
-    @classmethod
-    def read(cls, input_path: Path) -> InputFrame:
-        df = InputFrame.read_file(input_path)
-        logger.info(f"Read {len(df)} input compounds")
-        return df
 
 
 class Searcher:
@@ -142,12 +68,10 @@ class Searcher:
         """
         if self.input_df is not None:
             raise ValueError(f"Already ran a search")
-        self.input_df = SearcherUtils.read(self.input_path)
+        self.input_df = InputFrame.read_file(self.input_path)
+        logger.info(f"Read {len(self.input_df)} input compounds")
         inchikeys = self.input_df["inchikey"].unique()
-        has_pubchem = any((isinstance(what, PubchemSearch) for what in self.what))
-        has_chembl = any((isinstance(what, ChemblSearch) for what in self.what))
-        # find the compounds first so the user knows what's missing before proceeding
-        SearcherUtils.dl(inchikeys, pubchem=has_pubchem, chembl=has_chembl)
+        # TODO: find the compounds first so the user knows what's missing before proceeding
         for what in self.what:
             output_path = self.output_paths[what.key]
             metadata_path = output_path.with_suffix(".json.metadata")
@@ -167,4 +91,4 @@ class Searcher:
         return self
 
 
-__all__ = ["Searcher", "IdMatchFrame", "SearcherUtils", "InputFrame"]
+__all__ = ["Searcher", "InputFrame"]

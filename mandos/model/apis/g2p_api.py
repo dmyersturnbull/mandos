@@ -1,5 +1,4 @@
 import abc
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Type
@@ -10,8 +9,11 @@ import pandas as pd
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDf, TypedDfs
 
-from mandos.model import Api, CompoundNotFoundError, MANDOS_SETTINGS
-from mandos.model.apis.g2p_data import G2pData, G2pInteraction, TrueFalseUnknown
+from mandos import logger
+from mandos.model import Api, CompoundNotFoundError
+from mandos.model.settings import MANDOS_SETTINGS
+from mandos.model.apis.g2p_data import G2pData, G2pInteraction
+from mandos.model.utils import TrueFalseUnknown
 
 LIGANDS_URL = "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.tsv"
 INTERACTIONS_URL = "https://www.guidetopharmacology.org/DATA/interactions.tsv"
@@ -80,10 +82,12 @@ class CachedG2pApi(G2pApi, metaclass=abc.ABCMeta):
     def download(self, force: bool = False) -> None:
         if self.ligands is None or self.interactions is None or force:
             # always download both together -- we don't want them non-synced
-            if self.ligands_path.exists() and self.interactions_path.exists() and not force:
+            exists = self.ligands_path.exists() and self.interactions_path.exists()
+            if exists and not force:
                 self.ligands = LigandDf.read_file(self.ligands_path)
                 self.interactions = InteractionDf.read_file(self.ligands_path)
             else:
+                logger.info(f"Downloading G2P data...")
                 self.ligands = LigandDf.read_file(LIGANDS_URL, sep="\t")
                 self.ligands.write_file(self.ligands_path)
                 self.interactions = InteractionDf.read_file(INTERACTIONS_URL, sep="\t")
@@ -91,6 +95,10 @@ class CachedG2pApi(G2pApi, metaclass=abc.ABCMeta):
                 info = dict(dt_downloaded=datetime.now().isoformat())
                 info = orjson.dumps(info).decode(encoding="utf8")
                 (self.cache_path / "info.json").write_text(info)
+                if exists:
+                    logger.notice(f"Cached missing G2P data to {self.cache_path}")
+                else:
+                    logger.notice(f"Overwrote existing cached G2P data in {self.cache_path}")
 
     @property
     def ligands_path(self) -> Path:

@@ -19,10 +19,10 @@ from pocketutils.tools.string_tools import StringTools
 from mandos import logger
 
 # noinspection PyProtectedMember
-from mandos.model import MultipleMatchesError
+from mandos.model import MultipleMatchesError, CompoundStruct
 
 # noinspection PyProtectedMember
-from mandos.model.apis.pubchem_support._nav import JsonNavigator
+from mandos.model.apis.pubchem_support._nav import JsonNavigator, FlatmapError
 from mandos.model.apis.pubchem_support._nav_fns import Filter, Flatmap, Mapx
 
 # noinspection PyProtectedMember
@@ -185,12 +185,11 @@ class NamesAndIdentifiers(PubchemMiniDataView):
         return self.descriptor("InChI")
 
     @property
-    def isomeric_smiles(self) -> str:
-        return ""  # self.descriptor("Isomeric SMILES")
-
-    @property
-    def iupac(self) -> str:
-        return self.descriptor("IUPAC Name")
+    def iupac(self) -> Optional[str]:
+        try:
+            return self.descriptor("IUPAC Name")
+        except FlatmapError:  # TODO
+            return None
 
     @property
     def molecular_formula(self) -> str:
@@ -1056,6 +1055,15 @@ class PubchemData(PubchemDataView):
     def parent_or_self(self) -> int:
         parent = self.related_records.parent
         return self.cid if parent is None else parent
+
+    @property
+    def struct_view(self) -> CompoundStruct:
+        return CompoundStruct(
+            "pubchem",
+            str(self.cid),
+            self.names_and_identifiers.inchi,
+            self.names_and_identifiers.inchikey,
+        )
 
 
 __all__ = [

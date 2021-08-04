@@ -1,7 +1,7 @@
 import re
 from typing import Optional, Sequence, Tuple
 
-from loguru import logger
+from mandos import logger
 
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankDdi
 from mandos.search.pubchem import PubchemSearch

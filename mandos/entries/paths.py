@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from loguru import logger
+from mandos import logger
 from pocketutils.tools.path_tools import PathTools
 
 from mandos.model.searches import Search

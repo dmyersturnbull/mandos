@@ -16,7 +16,7 @@ from mandos.entries._entry_args import EntryArgs
 from mandos.entries.api_singletons import Apis
 from mandos.entries.common_args import CommonArgs
 from mandos.entries.searcher import Searcher
-from mandos.model import InjectionError, ReflectionUtils
+from mandos.model.utils import ReflectionUtils, InjectionError
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_targets import TargetType
@@ -67,12 +67,8 @@ class Utils:
 
     @staticmethod
     def get_taxa(taxa: str) -> Sequence[Taxonomy]:
-        return [
-            TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path).load(
-                str(taxon).strip()
-            )
-            for taxon in taxa.split(",")
-        ]
+        factory = TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path)
+        return [factory.load(str(taxon).strip()) for taxon in taxa.split(",")]
 
     @staticmethod
     def get_trial_statuses(st: str) -> Set[str]:

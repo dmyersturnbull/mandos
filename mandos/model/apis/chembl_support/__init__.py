@@ -4,7 +4,7 @@ import enum
 from dataclasses import dataclass
 from typing import Set, Union
 
-from mandos.model import CleverEnum, CompoundNotFoundError
+from mandos.model import CleverEnum, CompoundNotFoundError, CompoundStruct
 
 
 class ChemblCompoundLookupError(CompoundNotFoundError):
@@ -90,6 +90,16 @@ class ChemblCompound:
     chid: str
     inchikey: str
     name: str
+    inchi: str
+
+    @property
+    def struct_view(self) -> CompoundStruct:
+        return CompoundStruct(
+            "chembl",
+            self.chid,
+            self.inchi,
+            self.inchikey,
+        )
 
 
 class AssayType(enum.Enum):

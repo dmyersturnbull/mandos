@@ -9,7 +9,8 @@ from typing import Dict, Mapping, Optional, Sequence, Set
 from typing import Tuple as Tup
 from typing import Type
 
-from mandos.model import MandosResources, ReflectionUtils
+from mandos.model import MandosResources
+from mandos.model.utils import ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraph,

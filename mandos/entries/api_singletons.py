@@ -8,9 +8,9 @@ from mandos.model.settings import MANDOS_SETTINGS
 
 class Apis:
 
-    Pubchem = None
-    Chembl = None
-    G2p = None
+    Pubchem: PubchemApi = None
+    Chembl: ChemblApi = None
+    G2p: G2pApi = None
 
     @classmethod
     def set(cls, chembl: ChemblApi, pubchem: PubchemApi, g2p: G2pApi) -> None:

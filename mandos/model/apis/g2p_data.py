@@ -1,22 +1,7 @@
-import enum
 from dataclasses import dataclass
 from typing import List, Optional
 
-
-class TrueFalseUnknown(enum.Enum):
-    true = enum.auto()
-    false = enum.auto()
-    unknown = enum.auto()
-
-    @classmethod
-    def parse(cls, s: str):
-        tf_map = {
-            "t": TrueFalseUnknown.true,
-            "f": TrueFalseUnknown.false,
-            "true": TrueFalseUnknown.true,
-            "false": TrueFalseUnknown.false,
-        }
-        return tf_map.get(s.lower().strip(), TrueFalseUnknown.unknown)
+from mandos.model.utils import TrueFalseUnknown
 
 
 @dataclass
@@ -47,4 +32,4 @@ class G2pData:
     interactions: List[G2pInteraction]
 
 
-__all__ = ["G2pInteraction", "G2pData", "TrueFalseUnknown"]
+__all__ = ["G2pInteraction", "G2pData"]

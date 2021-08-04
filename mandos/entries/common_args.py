@@ -602,6 +602,12 @@ class CommonArgs:
         "--quiet",
     )
 
+    yes: bool = Opt.flag(
+        r"""
+        Answer yes to all prompts (non-interactive).
+        """,
+    )
+
     in_cache: bool = Opt.flag(
         r"""
         Do not download any data, and fail if needed data is not cached.

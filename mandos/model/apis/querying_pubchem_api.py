@@ -43,16 +43,23 @@ class QueryingPubchemApi(PubchemApi):
     _link_db = "https://pubchem.ncbi.nlm.nih.gov/link_db/link_db_server.cgi"
 
     def find_inchikey(self, cid: int) -> str:
-        return self.fetch_properties(cid)["inchikey"]
+        # return self.fetch_data(cid).names_and_identifiers.inchikey
+        props = self.fetch_properties(cid)
+        return props["InChIKey"]
 
     def find_id(self, inchikey: str) -> Optional[int]:
         # we have to scrape to get the parent anyway,
         # so just download it
-        x = self.fetch_data(inchikey)
-        return None if x is None else x.cid
+        # TODO: there's a faster way
+        try:
+            return self.fetch_data(inchikey).cid
+        except PubchemCompoundLookupError:
+            logger.debug(f"Could not find pubchem ID for {inchikey}", exc_info=True)
+            return None
 
     def fetch_properties(self, cid: int) -> Mapping[str, Any]:
-        url = f"{self._pug}/compound/{cid}/JSON"
+        url = f"{self._pug}/compound/cid/{cid}/JSON"
+        #
         try:
             matches: NestedDotDict = self._query_json(url)
         except HTTPError:
@@ -69,7 +76,7 @@ class QueryingPubchemApi(PubchemApi):
         props = {k: _get_val(v) for k, v in props.items() if k is not None and v is not None}
         return props
 
-    def fetch_data(self, inchikey: str) -> Optional[PubchemData]:
+    def fetch_data(self, inchikey: Union[str, int]) -> [PubchemData]:
         # Dear God this is terrible
         # Here are the steps:
         # 1. Download HTML for the InChI key and scrape the CID
@@ -82,13 +89,14 @@ class QueryingPubchemApi(PubchemApi):
         # 8. Attach metadata about how we found this.
         # 9. Return the stupid, stupid result as a massive JSON struct.
         logger.info(f"Downloading PubChem data for {inchikey}")
-        cid = self._scrape_cid(inchikey)
-        try:
-            data = self._fetch_data(cid, inchikey)
-        except HTTPError:
-            raise PubchemCompoundLookupError(
-                f"Failed finding pubchem compound (JSON) from cid {cid}, inchikey {inchikey}"
-            )
+        if isinstance(inchikey, int):
+            cid = inchikey
+            # note: this might not be the parent
+            # that's ok -- we're about to fix that
+            inchikey = self.find_inchikey(cid)
+        else:
+            cid = self._scrape_cid(inchikey)
+        data = self._fetch_data(cid, inchikey)
         data = self._get_parent(cid, inchikey, data)
         return data
 
@@ -136,13 +144,11 @@ class QueryingPubchemApi(PubchemApi):
             html = self._query(url)
         except HTTPError:
             raise PubchemCompoundLookupError(
-                f"Failed finding pubchem compound (HTML) from inchikey {inchikey} [url: {url}]"
+                f"Failed finding pubchem compound (HTML) from {inchikey} [url: {url}]"
             )
         match = pat.search(html)
         if match is None:
-            raise PubchemCompoundLookupError(
-                f"Something is wrong with the HTML from {url}; og:url not found"
-            )
+            raise ValueError(f"Something is wrong with the HTML from {url}; og:url not found")
         return int(match.group(1))
 
     def _get_parent(self, cid: int, inchikey: str, data: PubchemData) -> PubchemData:
@@ -160,7 +166,12 @@ class QueryingPubchemApi(PubchemApi):
     def _fetch_data(self, cid: int, inchikey: str) -> PubchemData:
         when_started = datetime.now(timezone.utc).astimezone()
         t0 = time.monotonic_ns()
-        data = self._fetch_core_data(cid)
+        try:
+            data = self._fetch_core_data(cid)
+        except HTTPError:
+            raise PubchemCompoundLookupError(
+                f"Failed finding pubchem compound (JSON) from cid {cid}, inchikey {inchikey}"
+            )
         t1 = time.monotonic_ns()
         when_finished = datetime.now(timezone.utc).astimezone()
         data["meta"] = self._get_metadata(inchikey, when_started, when_finished, t0, t1)
@@ -174,6 +185,7 @@ class QueryingPubchemApi(PubchemApi):
             external_tables=self._fetch_external_tables(cid),
             link_sets=self._fetch_external_linksets(cid),
             classifications=self._fetch_hierarchies(cid),
+            properties=NestedDotDict(self.fetch_properties(cid)),
         )
 
     def _get_metadata(self, inchikey: str, started: datetime, finished: datetime, t0: int, t1: int):
@@ -225,6 +237,7 @@ class QueryingPubchemApi(PubchemApi):
         url = self._external_table_url(cid, table)
         data = self._query(url)
         df: pd.DataFrame = pd.read_csv(io.StringIO(data))
+        # TODO: UserWarning: DataFrame columns are not unique, some columns will be omitted.
         return list(df.T.to_dict().values())
 
     def _fetch_external_linkset(self, cid: int, table: str) -> NestedDotDict:

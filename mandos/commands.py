@@ -4,10 +4,14 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import Optional, List
 
 import typer
+from mandos.entries.searcher import InputFrame
+
+from mandos.entries.api_singletons import Apis
 
 from mandos import logger, MANDOS_SETUP
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
@@ -23,9 +27,10 @@ from mandos.entries.common_args import Arg, CommonArgs
 from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
 from mandos.entries.multi_searches import MultiSearch
-from mandos.entries.searcher import SearcherUtils, InputFrame, IdMatchFrame
-from mandos.entries.filler import CompoundIdFiller, IdType
-from mandos.model import START_TIMESTAMP, MiscUtils
+from mandos.entries.filler import CompoundIdFiller, IdMatchFrame
+from mandos.model import START_TIMESTAMP
+from mandos.model.utils import MiscUtils
+from mandos.model.apis.g2p_api import CachedG2pApi
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy_caches import TaxonomyFactories
@@ -108,20 +113,8 @@ class MiscCommands:
     def fill(
         path: Path = Ca.compounds_to_fill,
         to: Path = Ca.id_table_to,
-        fill: str = Opt.val(
-            rf"""
-            Comma-separated list of IDs to fill.
-
-            Allowed values are: @all, @primary, {Ca.list(IdType)}.
-            """,
-            default="inchikey,chembl_id,pubchem_id,inchi,smiles",
-        ),
-        fill_over: bool = Opt.flag(
-            """
-            Overwrite existing values.
-            """,
-            "--fill-over",
-        ),
+        no_pubchem: bool = Opt.flag("Do not use PubChem.", "--no-pubchem"),
+        no_chembl: bool = Opt.flag("Do not use ChEMBL.", "--no-chembl"),
         replace: bool = Ca.replace,
         log: Optional[Path] = Ca.log_path,
         quiet: bool = Ca.quiet,
@@ -130,23 +123,50 @@ class MiscCommands:
         r"""
         Fill in missing IDs from existing compound data.
 
+        The idea is to find a ChEMBL ID, a PubChem ID, and parent-compound InChI/InChI Key.
         Useful to check compound/ID associations before running a search.
+
+        To be filled, each row must should have a non-null value for
+        "inchikey", "chembl_id", and/or "pubchem_id".
+        "inchi" will be used but not to match to PubChem and ChEMBL.
+
+        No existing columns will be dropped or modified.
+        Any conflicting column will be renamed to 'origin_<column>'.
+        E.g. 'inchikey' will be renamed to 'origin_inchikey'.
+        (Do not include a column beginning with 'origin_').
+
+        Final columns (assuming --no-chembl and --no-pubchem) will include:
+        inchikey, inchi, pubchem_id, chembl_id, pubchem_inch, chembl_inchi,
+        pubchem_inchikey, and chembl_inchikey.
+        The "inchikey" and "inchikey" columns will be the "best" available:
+        chembl (preferred), then pubchem, then your source inchikey column.
+        In cases where PubChem and ChEMBL differ, an error will be logged.
+        You can always check the columns "origin_inchikey" (yours),
+        chembl_inchikey, and pubchem_inchikey.
+
+        The steps are:
+
+        - If "chembl_id" or "pubchem_id" is non-null, uses that to find an InChI Key (for each).
+
+        - Otherwise, if only "inchikey" is non-null, uses it to find ChEMBL and PubChem records.
+
+        - Log an error if the inchikeys or inchis differ between PubChem and ChEMBL.
+
+        - Set the final "inchi" and "inchikey" to the best choice,
+          falling back to the input inchi and inchikey if they are missing.
         """
-        wanted = IdType.parse(fill)
         set_up(log, quiet, verbose)
         default = str(Path(path).with_suffix("")) + "-filled" + "".join(path.suffixes)
         to = MiscUtils.adjust_filename(to, default, replace)
         df = IdMatchFrame.read_file(path)
-        df = CompoundIdFiller(wanted, fill_over).fill(df)
+        df = CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
         df.write_file(to)
-        typer.echo(f"Wrote to {to}")
 
     @staticmethod
     def cache(
         path: Path = Ca.compounds,
-        no_pubchem: bool = Opt.flag(r"Do not download data from PubChem"),
-        no_chembl: bool = Opt.flag(r"Do not fetch IDs from ChEMBL"),
-        no_hmdb: bool = Opt.flag(r"Do not download data from HMDB"),
+        no_pubchem: bool = Opt.flag(r"Do not download data from PubChem", "--no-pubchem"),
+        no_chembl: bool = Opt.flag(r"Do not fetch IDs from ChEMBL", "--no_chembl"),
         log: Optional[Path] = CommonArgs.log_path,
         quiet: bool = CommonArgs.quiet,
         verbose: bool = CommonArgs.verbose,
@@ -157,9 +177,10 @@ class MiscCommands:
         Useful to freeze data before running a search.
         """
         set_up(log, quiet, verbose)
-        inchikeys = SearcherUtils.read(path)
-        SearcherUtils.dl(inchikeys, pubchem=not no_pubchem, chembl=not no_chembl, hmdb=not no_hmdb)
-        typer.echo(f"Done caching.")
+        logger.error(f"Not implemented fully yet.")
+        df = IdMatchFrame.read_file(path)
+        df = CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
+        logger.notice(f"Done caching.")
 
     @staticmethod
     def build_taxonomy(
@@ -252,6 +273,43 @@ class MiscCommands:
         else:
             for taxon in [int(t.strip()) for t in taxa.split(",")]:
                 factory.delete_exact(taxon)
+
+    @staticmethod
+    def dl_g2p(
+        replace: bool = Ca.replace,
+        log: Optional[Path] = CommonArgs.log_path,
+        quiet: bool = CommonArgs.quiet,
+        verbose: bool = CommonArgs.verbose,
+    ) -> None:
+        """
+        Caches GuideToPharmacology data.
+
+        With --replace set, will overwrite existing cached data.
+        Data will generally be stored under``~/.mandos/g2p/``.
+        """
+        set_up(log, quiet, verbose)
+        api = CachedG2pApi(MANDOS_SETTINGS.g2p_cache_path)
+        api.download(force=replace)
+
+    @staticmethod
+    def clear_cache(
+        log: Optional[Path] = CommonArgs.log_path,
+        quiet: bool = CommonArgs.quiet,
+        verbose: bool = CommonArgs.verbose,
+        yes: bool = CommonArgs.yes,
+    ) -> None:
+        """
+        Deletes all cached data.
+        """
+        set_up(log, quiet, verbose)
+        typer.echo(f"Will recursively delete all of these paths:")
+        for p in MANDOS_SETTINGS.all_cache_paths:
+            typer.echo(f"    {p}")
+        if not yes:
+            typer.confirm("Delete?", abort=True)
+        for p in MANDOS_SETTINGS.all_cache_paths:
+            p.unlink(missing_ok=True)
+        logger.notice("Deleted all cached data")
 
     @staticmethod
     def concat(

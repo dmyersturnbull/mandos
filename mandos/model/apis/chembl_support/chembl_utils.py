@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import enum
+from json.decoder import JSONDecodeError
 
+import numpy as np
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.tools.common_tools import CommonTools
 from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 
@@ -54,10 +57,12 @@ class ChemblUtils:
             logger.info(f"No structure found for compound {chid} of type {mol_type.name}.")
             logger.debug(f"No structure found for compound {ch}.")
             inchikey = "N/A"
+            inchi = "N/A"
         else:
+            inchi = ch["molecule_structures"]["standard_inchi"]
             inchikey = ch["molecule_structures"]["standard_inchi_key"]
         name = ch["pref_name"]
-        return ChemblCompound(chid, inchikey, name)
+        return ChemblCompound(chid, inchikey, name, inchi)
 
     def get_compound_dot_dict(self, inchikey: str) -> NestedDotDict:
         """
@@ -74,7 +79,9 @@ class ChemblUtils:
         if ch.get("molecule_hierarchy") is not None:
             parent = ch["molecule_hierarchy"]["parent_chembl_id"]
             if parent != ch["molecule_chembl_id"]:
-                ch = NestedDotDict(self._get_compound(inchikey))
+                ch = NestedDotDict(self._get_compound(parent))
+        else:
+            logger.caution(f"Missing hierarchy for {ch}")
         return ch
 
     def _get_compound_from_smiles(self, smiles: str) -> NestedDotDict:
@@ -94,6 +101,10 @@ class ChemblUtils:
         return NestedDotDict(result)
 
     def _get_compound(self, inchikey: str) -> NestedDotDict:
+        # saves a slow query
+        if CommonTools.is_null(inchikey) or str(inchikey) == "nan":
+            raise TypeError(f"Cannot get ChEMBL compound from {inchikey} (type {type(inchikey)}")
+        # noinspection PyBroadException
         try:
             result = self.api.molecule.get(inchikey)
             if result is None:
@@ -101,6 +112,8 @@ class ChemblUtils:
             return NestedDotDict(result)
         except (HTTPError, RequestException):
             raise CompoundNotFoundError(f"Failed to find compound {inchikey}")
+        except Exception:
+            logger.error(f"Error on ChEMBL query for compound {inchikey}")
 
 
 __all__ = ["MolStructureType", "ChemblUtils"]

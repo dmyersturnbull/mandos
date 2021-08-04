@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Optional
 
 from loguru import logger
+from loguru._logger import Logger
+from typeddfs.file_formats import FileFormat, compression_suffixes
+from typeddfs import TypedDfs
+
+from mandos.model import MANDOS_SETTINGS
 
 pkg = "mandos"
 _metadata = None
@@ -58,6 +63,22 @@ def _notice(__message: str, *args, **kwargs):
     return logger.log("NOTICE", __message, *args, **kwargs)
 
 
+def _caution(__message: str, *args, **kwargs):
+    return logger.log("CAUTION", __message, *args, **kwargs)
+
+
+class MyLogger(Logger):
+    """
+    A wrapper that has a fake notice() method to trick static analysis.
+    """
+
+    def notice(self, __message: str, *args, **kwargs):
+        raise NotImplementedError()  # not real
+
+    def caution(self, __message: str, *args, **kwargs):
+        raise NotImplementedError()  # not real
+
+
 class MandosLogging:
     # this is required for mandos to run
     try:
@@ -66,7 +87,12 @@ class MandosLogging:
         # this happens if it's already been added (e.g. from an outside library)
         # if we don't have it set after this, we'll find out soon enough
         logger.debug("Could not add 'NOTICE' loguru level. Did you already set it?")
+    try:
+        logger.level("CAUTION", no=25)
+    except TypeError:
+        logger.debug("Could not add 'CAUTION' loguru level. Did you already set it?")
     logger.notice = _notice
+    logger.caution = _caution
 
     @classmethod
     def init(cls) -> None:
@@ -103,17 +129,22 @@ class MandosLogging:
         match = re.compile(r"(?:[A-Z]+:)??(.*)").match(str(path))
         level = "DEBUG" if match.group(1) is None else match.group(1)
         path = Path(match.group(2))
-        for e, c in dict(gz="gzip", zip="zip", bz2="bzip2", xz="xz"):
-            if str(path).endswith("." + e):
-                serialize = True if path.suffix == f".json.{e}" else False
-                logger.add(
-                    str(path),
-                    level=level,
-                    compression=c,
-                    serialize=serialize,
-                    backtrace=True,
-                    diagnose=True,
-                )
+        serialize = FileFormat.from_path(path) is FileFormat.json
+        compression = FileFormat.compression_from_path(path).name.lstrip(".")
+        logger.add(
+            str(path),
+            level=level,
+            compression=compression,
+            serialize=serialize,
+            backtrace=True,
+            diagnose=True,
+            enqueue=True,
+        )
+
+
+# weird as hell, but it works
+# noinspection PyTypeChecker
+logger: MyLogger = logger
 
 
 class MandosSetup:
@@ -151,6 +182,7 @@ class MandosSetup:
 
 
 MANDOS_SETUP = MandosSetup()
+
 
 if __name__ == "__main__":  # pragma: no cover
     if _metadata is not None:

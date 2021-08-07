@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import enum
-import re
 import typing
 from dataclasses import dataclass
 from datetime import date
 from typing import FrozenSet, Mapping, Optional, Sequence, Set, Union
 
+import regex
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.string_tools import StringTools
 
@@ -308,7 +308,7 @@ class AcuteEffectEntry:
     @property
     def mg_per_kg(self) -> float:
         # TODO: Could it ever start with just a dot; e.g. '.175'?
-        match = re.compile(r".+?\((\d+(?:.\d+)?) *mg/kg\)").fullmatch(self.dose)
+        match = regex.compile(r".+?\((\d+(?:.\d+)?) *mg/kg\)").fullmatch(self.dose, flags=regex.V1)
         if match is None:
             raise ValueError(f"Dose {self.dose} (accute effect {self.gid}) could not be parsed")
         return float(match.group(1))
@@ -334,7 +334,7 @@ class AtcCode:
 
     @property
     def parts(self) -> Sequence[str]:
-        pat = re.compile(r"([A-Z])([0-9]{2})?([A-Z])?([A-Z])?([A-Z])?")
+        pat = regex.compile(r"([A-Z])([0-9]{2})?([A-Z])?([A-Z])?([A-Z])?", flags=regex.V1)
         match = pat.fullmatch(self.code)
         return [g for g in match.groups() if g is not None]
 
@@ -397,7 +397,7 @@ class Bioactivity:
         # We use \)+ at the end instead of \)
         # this is to catch cases where we have parentheses inside of the species name
         # this happens with some virus strains, for e.g.
-        match = re.compile(r"^(.+?)\(([^)]+)\)+$").fullmatch(self.target_name)
+        match = regex.compile(r"^(.+?)\(([^)]+)\)+$", flags=regex.V1).fullmatch(self.target_name)
         if match is None:
             species = None
             target = self.target_name
@@ -405,7 +405,7 @@ class Bioactivity:
             species = match.group(2)
             target = match.group(1)
         # now try to get an abbreviation
-        match = re.compile(r"^ *([^ ]+) +- +(.+)$").fullmatch(target)
+        match = regex.compile(r"^ *([^ ]+) +- +(.+)$, flags=regex.V1").fullmatch(target)
         if match is None:
             abbrev = None
             name = target

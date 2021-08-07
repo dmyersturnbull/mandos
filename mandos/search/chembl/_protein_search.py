@@ -1,7 +1,7 @@
 import abc
-import re
 from typing import Optional, Sequence, Set, TypeVar, Union
 
+import regex
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
@@ -145,7 +145,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         return lst
 
     def _set_to_regex(self, values) -> str:
-        return "(" + "|".join([f"(?:{re.escape(v)})" for v in values]) + ")"
+        return "(" + "|".join([f"(?:{regex.escape(v)})" for v in values]) + ")"
 
 
 __all__ = ["ProteinSearch"]

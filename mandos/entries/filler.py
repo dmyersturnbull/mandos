@@ -228,4 +228,4 @@ class CompoundIdFiller:
             return None
 
 
-__all__ = ["CompoundIdFiller"]
+__all__ = ["CompoundIdFiller", "IdMatchFrame"]

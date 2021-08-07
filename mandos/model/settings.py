@@ -26,8 +26,6 @@ class Globals:
         env_vars = {k.lower(): v for k, v in os.environ.items()}
         mandos_path = Path(env_vars.get("MANDOS_HOME", _default_mandos_home))
     settings_path = mandos_path / "settings.toml"
-    chembl_cache = mandos_path / "chembl"
-    taxonomy_cache = mandos_path / "taxonomy"
     disable_chembl = CommonTools.parse_bool(os.environ.get("MANDOS_NO_CHEMBL", "false"))
     disable_pubchem = CommonTools.parse_bool(os.environ.get("MANDOS_NO_PUBCHEM", "false"))
 
@@ -79,6 +77,10 @@ class Settings:
     @property
     def chembl_cache_path(self) -> Path:
         return self.cache_path / "chembl"
+
+    @property
+    def chembl_scrape_path(self) -> Path:
+        return self.chembl_cache_path / "scrape"
 
     @property
     def pubchem_cache_path(self) -> Path:
@@ -142,15 +144,12 @@ class Settings:
         if not Globals.disable_chembl:
             instance = Globals.chembl_settings
             instance.CACHING = True
-            if not Globals.is_in_ci:  # not sure if this is needed
-                instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
+            instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
             instance.TOTAL_RETRIES = self.chembl_n_retries
             instance.FAST_SAVE = self.chembl_fast_save
             instance.TIMEOUT = self.chembl_timeout_sec
             instance.BACKOFF_FACTOR = self.chembl_backoff_factor
             instance.CACHE_EXPIRE = self.chembl_expire_sec
-        for p in self.all_cache_paths:
-            p.mkdir(exist_ok=True, parents=True)
 
 
 if Globals.settings_path.exists():

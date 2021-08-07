@@ -4,7 +4,6 @@ Scoring (regression and enrichment) calculations.
 import abc
 import enum
 import math
-from dataclasses import dataclass
 from typing import Generic, Mapping, Sequence, Type, TypeVar, Union, Optional, Any, Tuple
 
 import numpy as np
@@ -12,9 +11,8 @@ import pandas as pd
 from numpy.random import RandomState
 
 from mandos.analysis import AnalysisUtils as Au
-from mandos.model import CleverEnum
-from mandos.model.hits import AbstractHit, HitFrame, KeyPredObjSource, KeyPredObj
-from mandos.model.hit_utils import HitUtils
+from mandos.model.utils import CleverEnum
+from mandos.model.hits import AbstractHit, HitFrame, KeyPredObj
 from mandos.analysis.io_defns import ScoreDf, EnrichmentDf
 
 S = TypeVar("S", bound=Union[int, float, bool])
@@ -55,22 +53,16 @@ class AlphaCalculator(_RegressCalculator):
 
     def for_pair(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
         source_to_hits = Au.hit_multidict(hits, "data_source")
-        return float(
-            np.mean(
-                self._calc_term(source_hits, scores)
-                for source, source_hits in source_to_hits.items()
-            )
-        )
+        vals = [
+            self._calc_term(source_hits, scores) for source, source_hits in source_to_hits.items()
+        ]
+        return float(np.mean(vals))
 
     def _calc_term(self, hits: Sequence[AbstractHit], scores: Mapping[str, S]) -> float:
-        return float(
-            np.mean(
-                [
-                    Au.elle(hit.weight) * (2 * float(scores[hit.origin_inchikey] - 1)) ** 2
-                    for hit in hits
-                ]
-            )
-        )
+        vals = [
+            Au.elle(hit.weight) * (2 * float(scores[hit.origin_inchikey] - 1)) ** 2 for hit in hits
+        ]
+        return float(np.mean(vals))
 
 
 class SumWeightedCalc(_RegressCalculator):
@@ -198,14 +190,9 @@ class EnrichmentCalculation:
 
     def _default_scores(self, hit_df: HitFrame) -> ScoreDf:
         inchikeys = hit_df["origin_inchikey"].unique().values
-        return ScoreDf(
-            pd.concat(
-                [
-                    pd.DataFrame(dict(inchikey=inchikeys, weight=[1 for _ in inchikeys])),
-                    pd.DataFrame(dict(inchikey=inchikeys, count=[1 for _ in inchikeys])),
-                ]
-            )
-        )
+        counts = ScoreDf.of_constant(inchikeys, score_name="count")
+        weights = ScoreDf.of_constant(inchikeys, score_name="count")
+        return ScoreDf.concat([counts, weights])
 
     def _get_dict(self, scores: ScoreDf) -> Mapping[str, Tuple[_Alg, pd.Series]]:
         fold_cols = [c for c in scores.columns if c.startswith("is_") or c == "count"]

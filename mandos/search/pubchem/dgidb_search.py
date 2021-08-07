@@ -19,12 +19,12 @@ class DgiSearch(PubchemSearch[DgiHit]):
         data = self.api.fetch_data(inchikey)
         results = []
         for dd in data.biomolecular_interactions_and_pathways.drug_gene_interactions:
-            interactions = (
+            predicates = (
                 ["interaction:generic"]
                 if len(dd.interactions) == 0
-                else [("interaction" + s, s + " for") for s in dd.interactions]
+                else [f"interaction:{s}" for s in dd.interactions]
             )
-            for predicate in interactions:
+            for predicate in predicates:
                 results.append(
                     self._create_hit(
                         inchikey=inchikey,

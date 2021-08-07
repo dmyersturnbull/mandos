@@ -15,7 +15,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
 from mandos.entries.api_singletons import Apis
-from mandos.entries.entries import Entries, Entry
+from mandos.entries.entries import Entries
+from mandos.entries.abstract_entries import Entry
 from mandos.model.utils import InjectionError
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS

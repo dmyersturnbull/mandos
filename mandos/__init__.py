@@ -3,13 +3,13 @@ Metadata for this project.
 """
 
 import logging
-import re
 import sys
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import metadata as __load
 from pathlib import Path
 from typing import Optional
 
+import regex
 from loguru import logger
 from loguru._logger import Logger
 from typeddfs.file_formats import FileFormat, compression_suffixes
@@ -126,7 +126,7 @@ class MandosLogging:
     def _add_path_logger(cls, path: Path) -> None:
         if path is None:
             return
-        match = re.compile(r"(?:[A-Z]+:)??(.*)").match(str(path))
+        match = regex.compile(r"(?:[A-Z]+:)??(.*)", flags=regex.V1).match(str(path))
         level = "DEBUG" if match.group(1) is None else match.group(1)
         path = Path(match.group(2))
         serialize = FileFormat.from_path(path) is FileFormat.json

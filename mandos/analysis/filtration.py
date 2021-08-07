@@ -4,16 +4,16 @@ Tool to filter annotations.
 from __future__ import annotations
 
 import enum
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Mapping, Optional, Sequence, Set, Union
 
+import regex
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.hits import AbstractHit, HitFrame
-from mandos.model.hit_utils import HitUtils
+from mandos.model.utils.hit_utils import HitUtils
 
 _Type = Union[str, int, float, datetime]
 
@@ -62,7 +62,7 @@ class Expression:
         if type(value) != type(self.val):
             raise TypeError(f"{type(value)} != {type(self.val)}")
         if self.op is Operator.like:
-            return re.compile(self.val).fullmatch(str(value)) is not None
+            return regex.compile(self.val, flags=regex.V1).fullmatch(str(value)) is not None
         if self.op is Operator.is_in:
             return value in self.extra
         if self.op is Operator.not_in:

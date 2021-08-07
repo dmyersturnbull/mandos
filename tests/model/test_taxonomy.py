@@ -12,11 +12,11 @@ class TestFind:
         assert tax.roots == [Taxon(7742, "Vertebrata", None, set())]
         assert len(tax.roots[0].descendents) == 100669
         assert tax[7742] is not None
-        assert tax[7742].name == "Vertebrata"
+        assert tax[7742].scientific_name == "Vertebrata"
         assert tax[7742].parent is None
         assert tax[117571].id == 117571
-        assert tax[117571].name == "Euteleostomi"
-        assert tax[10116].name == "Rattus norvegicus"
+        assert tax[117571].scientific_name == "Euteleostomi"
+        assert tax[10116].scientific_name == "Rattus norvegicus"
         assert 117571 in tax
         assert [c.id for c in tax[117571].children] == [7898, 8287]
         with pytest.raises(KeyError):

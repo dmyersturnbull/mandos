@@ -4,7 +4,6 @@ PubChem data views and processors.
 from __future__ import annotations
 
 import abc
-import re
 from datetime import date, datetime
 from typing import Any, Dict, FrozenSet, Mapping, Optional, Sequence
 from typing import Tuple as Tup
@@ -12,6 +11,7 @@ from typing import Union
 from urllib.parse import unquote as url_unescape
 
 import orjson
+import regex
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
@@ -54,11 +54,13 @@ class Misc:
 
 
 class Patterns:
-    ghs_code = re.compile(r"((?:H\d+)(?:\+H\d+)*)")
-    ghs_code_singles = re.compile(r"(H\d+)")
-    pubchem_compound_url = re.compile(r"^https:\/\/pubchem\.ncbi\.nlm\.nih\.gov\/compound\/(.+)$")
-    atc_codes = re.compile(r"([A-Z])([0-9]{2})?([A-Z])?([A-Z])?([A-Z])?")
-    mesh_codes = re.compile(r"[A-Z]")
+    ghs_code = regex.compile(r"((?:H\d+)(?:\+H\d+)*)", flags=regex.V1)
+    ghs_code_singles = regex.compile(r"(H\d+)")
+    pubchem_compound_url = regex.compile(
+        r"^https:\/\/pubchem\.ncbi\.nlm\.nih\.gov\/compound\/(.+)$", flags=regex.V1
+    )
+    atc_codes = regex.compile(r"([A-Z])([0-9]{2})?([A-Z])?([A-Z])?([A-Z])?", flags=regex.V1)
+    mesh_codes = regex.compile(r"[A-Z]", flags=regex.V1)
 
 
 class PubchemDataView(metaclass=abc.ABCMeta):

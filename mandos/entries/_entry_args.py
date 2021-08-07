@@ -6,7 +6,7 @@ import typer
 
 from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
-from mandos.model.apis.chembl_support import DataValidityComment
+from mandos.model.apis.chembl_support.chembl_activity import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_targets import ConfidenceLevel, TargetType
 from mandos.search.chembl.target_traversal import TargetTraversalStrategies
 
@@ -198,6 +198,20 @@ class EntryArgs:
             Applies only if the relation is <, <=, =, or ~.
 
             [default: 4.0 (100 micromolar)]
+            """
+        ),
+    )
+
+    min_threshold = typer.Option(
+        70,
+        "--min-threshold",
+        min=70,
+        help=cleandoc(
+            """
+            Minimum pCHEMBL threshold used to limit the true examples when training the QSAR model.
+
+            Must be either 70, 80, or 90.
+            An "active" or "inactive" prediction is required for this threshold or higher.
             """
         ),
     )

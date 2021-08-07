@@ -43,7 +43,7 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
-            predicate=f"trial:phase{phase}",
+            predicate="trial",
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
             max_phase=phase,

@@ -8,6 +8,14 @@ from mandos.model.settings import MANDOS_SETTINGS
 
 from mandos import logger
 
+
+try:
+    import selenium
+except ImportError:
+    selenium = None
+    logger.info("Selenium not installed")
+
+
 # noinspection PyBroadException
 try:
     from selenium import webdriver
@@ -23,6 +31,7 @@ if webdriver is not None:
     # noinspection PyBroadException
     try:
         driver_fn = getattr(webdriver, MANDOS_SETTINGS.selenium_driver)
+        logger.notice(f"Loaded Selenium driver {MANDOS_SETTINGS.selenium_driver}")
     except AttributeError:
         driver_fn = None
         logger.warning(f"Selenium driver {MANDOS_SETTINGS.selenium_driver} not found")

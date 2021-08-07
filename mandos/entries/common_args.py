@@ -9,7 +9,7 @@ from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, TypeVar
 
 import typer
 
-from mandos.model import CleverEnum
+from mandos.model.utils import CleverEnum
 from mandos.model.settings import MANDOS_SETTINGS
 
 T = TypeVar("T", covariant=True)
@@ -269,8 +269,8 @@ class CommonArgs:
     ci = (
         Opt.val(
             f"""
-        The upper side of the confidence interval, as a percentage.
-        """,
+            The upper side of the confidence interval, as a percentage.
+            """,
             default=95.0,
         ),
     )
@@ -548,9 +548,13 @@ class CommonArgs:
         r"""
         The IDs of UniProt taxa, comma-separated.
 
-        Taxon names and common names can be used for vertebrate species.
-
         This can have a significant effect on searches. See the docs.
+        Taxon scientific names, common names, and mnemonics can be used for vertebrate species.
+        To find more, explore the hierarchy under:
+
+        - https://www.uniprot.org/taxonomy/131567 (cellular species)
+
+        - https://www.uniprot.org/taxonomy/10239 (viral species)
 
         [default: 7742] (Euteleostomi)
         """,

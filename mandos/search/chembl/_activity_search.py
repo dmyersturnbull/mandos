@@ -102,10 +102,10 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
             tax = next(iter(taxes))
             if len(taxes) > 1:
                 logger.warning(f"Multiple matches for taxon {tax_id}: {taxes}; using {tax}")
-            if organism != tax.name:
-                logger.warning(f"Target organism {organism} is not {tax.name}")
+            if organism != tax.scientific_name:
+                logger.warning(f"Target organism {organism} is not {tax.scientific_name}")
             tax_id = tax.id
-            tax_name = tax.name
+            tax_name = tax.scientific_name
         return NestedDotDict(
             {
                 **dict(

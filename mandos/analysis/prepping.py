@@ -14,7 +14,7 @@ from typeddfs.df_errors import UnsupportedOperationError
 from mandos import logger
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.entries.searcher import InputFrame
-from mandos.model.rdkit_utils import RdkitUtils
+from mandos.model.utils.rdkit_utils import RdkitUtils
 
 T = TypeVar("T", bound=BaseDf)
 

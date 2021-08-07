@@ -12,7 +12,7 @@ import pandas as pd
 
 from mandos.analysis import AnalysisUtils as Au
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
-from mandos.model import CleverEnum
+from mandos.model.utils import CleverEnum
 from mandos.model.hits import AbstractHit
 
 # note that most of these math functions are much faster than their numpy counterparts

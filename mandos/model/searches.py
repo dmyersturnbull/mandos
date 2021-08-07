@@ -9,7 +9,7 @@ from mandos import logger
 from mandos.model import CompoundNotFoundError, MiscUtils
 from mandos.model.utils import ReflectionUtils
 from mandos.model.hits import AbstractHit, HitFrame
-from mandos.model.hit_utils import HitUtils
+from mandos.model.utils.hit_utils import HitUtils
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 

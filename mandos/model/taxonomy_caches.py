@@ -20,8 +20,6 @@ from mandos.model import MandosResources
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy
 
-hasher = Hasher("sha1")
-
 
 class TaxonomyFactory(metaclass=abc.ABCMeta):
     def load(self, taxon: Union[int, str]) -> Taxonomy:
@@ -96,10 +94,11 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         raw = self._resolve_non_vertebrate_raw(taxon)
         raw.unlink(missing_ok=True)
         p = self._resolve_non_vertebrate_raw(taxon)
-        Path(str(p) + ".sha1").unlink(missing_ok=True)
         if p.exists():
             p.unlink()
             logger.warning(f"Deleted cached taxonomy file {p}")
+        # delete either way:
+        MandosResources.hasher.any(p).hash_path.unlink(missing_ok=True)
 
     def resolve_path(self, taxon: int) -> Path:
         return self._resolve_non_vertebrate_final(taxon)
@@ -117,7 +116,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         with requests.get(url, stream=True) as r:
             with raw_path.open("wb") as f:
                 shutil.copyfileobj(r.raw, f)
-        hasher.to_write(raw_path).write()
+        MandosResources.hasher.to_write(raw_path).write()
 
     def _fix(self, raw_path: Path, taxon: int, final_path: Path) -> None:
         # now process it!
@@ -199,7 +198,7 @@ class TaxonomyFactories:
     def list_cached_files(cls) -> Mapping[int, Path]:
         suffix = MANDOS_SETTINGS.archive_filename_suffix
         return {
-            int(p.name.replace(suffix, "")): p
+            int(p.scientific_name.replace(suffix, "")): p
             for p in MANDOS_SETTINGS.taxonomy_cache_path.iterdir()
             if p.suffix.endswith(suffix)
         }

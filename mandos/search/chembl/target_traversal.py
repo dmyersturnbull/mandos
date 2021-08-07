@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import abc
 import enum
-import re
 import sre_compile
 from pathlib import Path
 from typing import Dict, Mapping, Optional, Sequence, Set
 from typing import Tuple as Tup
 from typing import Type
+
+import regex
 
 from mandos.model import MandosResources
 from mandos.model.utils import ReflectionUtils
@@ -108,7 +109,7 @@ class StandardStrategyParser:
         pat_dest_words = r"(?:dest:'''(.+?)''')?"
         comment = r"(?:#(.*))?"
         pat = f"^ *{pat_type} *{pat_rel} *{pat_type} *{pat_accept} *{pat_src_words} *{pat_dest_words} *{comment} *$"
-        pat = re.compile(pat)
+        pat = regex.compile(pat, flags=regex.V1)
         to_rel = {
             ">": TargetRelType.superset_of,
             "<": TargetRelType.subset_of,
@@ -137,12 +138,12 @@ class StandardStrategyParser:
                 src_pat = (
                     None
                     if match.group(5) is None or match.group(5) == ""
-                    else re.compile(match.group(5))
+                    else regex.compile(match.group(5), flags=regex.V1)
                 )
                 dest_pat = (
                     None
                     if match.group(6) is None or match.group(6) == ""
-                    else re.compile(match.group(6))
+                    else regex.compile(match.group(6), flags=regex.V1)
                 )
             except (KeyError, TypeError, sre_compile.error):
                 raise AssertionError(f"Could not parse line '{line}'")

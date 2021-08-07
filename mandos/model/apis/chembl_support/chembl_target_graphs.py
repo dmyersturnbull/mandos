@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import abc
 import enum
-import re
 from dataclasses import dataclass
 from functools import total_ordering
 from typing import Optional, Sequence, Set
 from typing import Tuple as Tup
 from typing import Type
+
+import regex
 
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetFactory, TargetType
@@ -60,10 +61,10 @@ class TargetEdgeReqs(AbstractTargetEdgeReqs):
     """
 
     src_type: TargetType
-    src_pattern: Optional[re.Pattern]
+    src_pattern: Optional[regex.Pattern]
     rel_type: TargetRelType
     dest_type: TargetType
-    dest_pattern: Optional[re.Pattern]
+    dest_pattern: Optional[regex.Pattern]
 
     @classmethod
     def cross(

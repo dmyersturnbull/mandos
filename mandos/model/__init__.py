@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import abc
-import enum
 import typing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, TypeVar, Union
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.hashers import Hasher
 from pocketutils.tools.common_tools import CommonTools
 
-from mandos import logger
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.utils import MiscUtils
 
@@ -48,48 +47,14 @@ class CompoundStruct:
         return f"[{db}{self.id} : {self.inchikey}]"
 
 
-class CleverEnum(enum.Enum):
-    """
-    An enum with a ``.of`` method that finds values
-    with limited string/value fixing.
-    May support an "unmatched" type -- a fallback value when there is no match.
-    This is similar to pocketutils' simpler ``SmartEnum``.
-    It is mainly useful for enums corresponding to concepts in ChEMBL and PubChem,
-    where it's acceptable for the user to input spaces (like the database concepts use)
-    rather than the underscores that Python requires.
-    """
-
-    @classmethod
-    def _unmatched_type(cls) -> Optional[__qualname__]:
-        return None
-
-    @classmethod
-    def of(cls, s: Union[int, str, __qualname__]) -> __qualname__:
-        """
-        Turns a string or int into this type.
-        Case-insensitive. Replaces `` `` and ``-`` with ``_``.
-        """
-        if isinstance(s, cls):
-            return s
-        key = s.replace(" ", "_").replace("-", "_").lower()
-        try:
-            if isinstance(s, str):
-                return cls[key]
-            elif isinstance(key, int):
-                return cls(key)
-            else:
-                raise TypeError(f"Lookup type {type(s)} for value {s} not a str or int")
-        except KeyError:
-            unk = cls._unmatched_type()
-            if unk is None:
-                raise
-            logger.error(f"Value {key} not found. Using TargetType.unknown.")
-            if not isinstance(unk, cls):
-                raise AssertionError(f"Wrong type {type(unk)} (lookup: {s})")
-            return unk
-
-
 class MandosResources:
+
+    start_time = MiscUtils.utc()
+    start_time_local = start_time.astimezone()
+    start_timestamp = start_time.isoformat(timespec="milliseconds")
+    start_timestamp_filesys = start_time_local.strftime("%Y-%m-%d_%H-%M-%S")
+    hasher: Hasher = Hasher("sha256", buffer_size=16 * 1024)
+
     @classmethod
     def contains(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> bool:
         """Returns whether a resource file (or dir) exists."""
@@ -119,19 +84,10 @@ class MandosResources:
         return NestedDotDict.read_json(cls.path(*nodes, suffix=suffix))
 
 
-START_TIME = MiscUtils.utc()
-# START_TIMESTAMP = START_TIME.isoformat(timespec="milliseconds")
-START_TIMESTAMP = (
-    START_TIME.isoformat(timespec="milliseconds").replace(":", "").replace(".", "").replace("-", "")
-)
-
-
 __all__ = [
     "Api",
     "CompoundStruct",
     "CompoundNotFoundError",
+    "MultipleMatchesError",
     "MandosResources",
-    "CleverEnum",
-    "START_TIME",
-    "START_TIMESTAMP",
 ]

@@ -241,4 +241,19 @@ class TrialHit(PubchemHit):
     interventions: str
 
 
+@dataclass(frozen=True, order=True, repr=True)
+class ChemblTargetPredictionHit(ChemblHit):
+    """
+    Predictions from ChEMBL's SAR.
+    """
+
+    taxon_id: int
+    taxon_name: str
+    exact_target_id: int
+    exact_target_name: str
+    threshold: float
+    prediction: str
+    confidence_set: int
+
+
 HIT_CLASSES = ReflectionUtils.subclass_dict(AbstractHit, concrete=True)

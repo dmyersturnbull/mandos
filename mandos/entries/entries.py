@@ -6,35 +6,29 @@ from __future__ import annotations
 
 import abc
 from pathlib import Path
-from typing import Generic, Mapping, Optional, Sequence, Set, Type, TypeVar, Union
+from typing import Optional, TypeVar
 
-import typer
-from typer.models import OptionInfo
-
-from mandos import logger, MandosLogging, MANDOS_SETUP
+from mandos import logger
 from mandos.entries._entry_args import EntryArgs
+from mandos.entries._entry_utils import EntryUtils
+from mandos.entries.abstract_entries import Entry
 from mandos.entries.api_singletons import Apis
 from mandos.entries.common_args import CommonArgs
 from mandos.entries.searcher import Searcher
 from mandos.model.utils import ReflectionUtils, InjectionError
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.chembl_support import DataValidityComment
-from mandos.model.apis.chembl_support.chembl_targets import TargetType
 from mandos.model.apis.pubchem_support.pubchem_models import (
-    ClinicalTrialsGovUtils,
     CoOccurrenceType,
     DrugbankTargetType,
 )
 from mandos.model.searches import Search
-from mandos.model.settings import MANDOS_SETTINGS
-from mandos.model.taxonomy import Taxonomy
-from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.binding_search import BindingSearch
 from mandos.search.chembl.go_search import GoSearch
 from mandos.model.concrete_hits import GoType
 from mandos.search.chembl.indication_search import IndicationSearch
 from mandos.search.chembl.mechanism_search import MechanismSearch
+from mandos.search.chembl.target_predictions import TargetPredictionSearch
 from mandos.search.g2p.g2p_interaction_search import G2pInteractionSearch
 from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
@@ -56,108 +50,6 @@ from mandos.search.pubchem.drugbank_interaction_search import (
 
 S = TypeVar("S", bound=Search, covariant=True)
 U = TypeVar("U", covariant=True, bound=CoOccurrenceSearch)
-
-
-class Utils:
-    """ """
-
-    @staticmethod
-    def split(st: str) -> Set[str]:
-        return {s.strip() for s in st.split(",")}
-
-    @staticmethod
-    def get_taxa(taxa: str) -> Sequence[Taxonomy]:
-        factory = TaxonomyFactories.from_uniprot(MANDOS_SETTINGS.taxonomy_cache_path)
-        return [factory.load(str(taxon).strip()) for taxon in taxa.split(",")]
-
-    @staticmethod
-    def get_trial_statuses(st: str) -> Set[str]:
-        return ClinicalTrialsGovUtils.resolve_statuses(st)
-
-    @staticmethod
-    def get_target_types(st: str) -> Set[str]:
-        return {s.name for s in TargetType.resolve(st)}
-
-    @staticmethod
-    def get_flags(st: str) -> Set[str]:
-        return {s.name for s in DataValidityComment.resolve(st)}
-
-
-class Entry(Generic[S], metaclass=abc.ABCMeta):
-    @classmethod
-    def cmd(cls) -> str:
-        key = cls._get_default_key()
-        if isinstance(key, typer.models.OptionInfo):
-            key = key.default
-        if key is None or not isinstance(key, str):
-            raise AssertionError(f"Key for {cls.__name__} is {key}")
-        return key
-
-    @classmethod
-    def describe(cls) -> str:
-        lines = [line.strip() for line in cls.run.__doc__.splitlines() if line.strip() != ""]
-        return lines[0]
-
-    @classmethod
-    def run(cls, path: Path, **params) -> None:
-        raise NotImplementedError()
-
-    @classmethod
-    def get_search_type(cls) -> Type[S]:
-        # noinspection PyTypeChecker
-        return ReflectionUtils.get_generic_arg(cls, Search)
-
-    # noinspection PyUnusedLocal
-    @classmethod
-    def test(cls, path: Path, **params) -> None:
-        cls.run(path, **{**params, **dict(check=True)})
-
-    @classmethod
-    def _run(
-        cls,
-        built: S,
-        path: Path,
-        to: Optional[Path],
-        check: bool,
-        log: Optional[Path],
-        quiet: bool,
-        verbose: bool,
-        no_setup: bool,
-    ):
-        MANDOS_SETUP(verbose, quiet, log, no_setup)
-        searcher = cls._get_searcher(built, path, to)
-        logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
-        out = searcher.output_paths[built.key]
-        if not check:
-            searcher.search()
-        logger.notice(f"Done! Wrote to {out}")
-        return searcher
-
-    @classmethod
-    def _get_searcher(
-        cls,
-        built: S,
-        path: Path,
-        to: Optional[Path],
-    ):
-        return Searcher([built], [to], path)
-
-    @classmethod
-    def default_param_values(cls) -> Mapping[str, Union[str, float, int, Path]]:
-        return {
-            param: (value.default if isinstance(value, OptionInfo) else value)
-            for param, value in ReflectionUtils.default_arg_values(cls.run).items()
-            if param not in {"key", "path"}
-        }
-
-    @classmethod
-    def _get_default_key(cls) -> str:
-        vals = ReflectionUtils.default_arg_values(cls.run)
-        try:
-            return vals["key"]
-        except KeyError:
-            logger.error(f"key not in {vals.keys()} for {cls.__name__}")
-            raise
 
 
 class EntryChemblBinding(Entry[BindingSearch]):
@@ -192,30 +84,20 @@ class EntryChemblBinding(Entry[BindingSearch]):
 
         OBJECT: ChEMBL preferred target name
 
-        PREDICATE: Either "binds", "does not bind", or "binding <relation> at"
+        PREDICATE: "binding:yes" or "binding:no"
 
-        OTHER COLUMNS:
-
-        - taxon_id: From UniProt
-
-        - taxon_name: From Uniprot (scientific name)
-
-        - pchembl: Negative base-10 log of activity value (see docs on ChEMBL)
-
-        - standard_relation: One of '<', '<=', '=', '>=', '>', '~'. Consider using <, <=, and = to indicate hits.
-
-        - std_type: e.g. EC50, Kd
+        WEIGHT: pchembl value
         """
         built = BindingSearch(
             key=key,
             api=Apis.Chembl,
-            taxa=Utils.get_taxa(taxa),
+            taxa=EntryUtils.get_taxa(taxa),
             traversal=traversal,
-            target_types=Utils.get_target_types(target_types),
+            target_types=EntryUtils.get_target_types(target_types),
             min_conf_score=confidence,
-            allowed_relations=Utils.split(relations),
+            allowed_relations=EntryUtils.split(relations),
             min_pchembl=min_pchembl,
-            banned_flags=Utils.get_flags(banned_flags),
+            banned_flags=EntryUtils.get_flags(banned_flags),
             binds_cutoff=binding,
             does_not_bind_cutoff=nonbinding,
         )
@@ -245,23 +127,58 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
 
         OBJECT: ChEMBL preferred target name
 
-        PREDICATE: Target action; e.g. "agonist of" or "positive allosteric modulator of"
+        PREDICATE: Target action; e.g. "agonist" or "positive allosteric modulator"
 
-        OTHER COLUMNS:
-
-        - direct_interaction: true or false
-
-        - description: From ChEMBL
-
-        - exact_target_id: the specifically annotated target, before traversal
+        WEIGHT: 1.0
         """
         built = MechanismSearch(
             key=key,
             api=Apis.Chembl,
-            taxa=Utils.get_taxa(taxa),
+            taxa=EntryUtils.get_taxa(taxa),
             traversal_strategy=traversal,
-            allowed_target_types=Utils.get_target_types(target_types),
+            allowed_target_types=EntryUtils.get_target_types(target_types),
             min_confidence_score=min_confidence,
+        )
+        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+
+
+class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = CommonArgs.compounds,
+        key: str = EntryArgs.key("chembl:predictions"),
+        to: Optional[Path] = CommonArgs.to_single,
+        taxa: str = CommonArgs.taxa,
+        traversal: str = EntryArgs.traversal_strategy,
+        target_types: str = EntryArgs.target_types,
+        min_threshold: float = EntryArgs.min_threshold,
+        as_of: Optional[str] = CommonArgs.as_of,
+        check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log_path,
+        quiet: bool = CommonArgs.quiet,
+        verbose: bool = CommonArgs.verbose,
+        no_setup: bool = CommonArgs.no_setup,
+    ) -> Searcher:
+        """
+        Predicted target binding from ChEMBL.
+
+        https://mandos-chem.readthedocs.io/en/latest/binding.html
+
+        OBJECT: ChEMBL preferred target name
+
+        PREDICATE: Either "binding:yes", "binding:no", or "binding:unknown".
+
+        WEIGHT: The sqrt pchembl multiplied by a normalized odds ratio from the confidence set
+        """
+        built = TargetPredictionSearch(
+            key=key,
+            api=Apis.Chembl,
+            scrape=Apis.ChemblScrape,
+            taxa=EntryUtils.get_taxa(taxa),
+            traversal=traversal,
+            target_types=EntryUtils.get_target_types(target_types),
+            min_threshold=min_threshold,
         )
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
 
@@ -286,7 +203,9 @@ class EntryChemblTrials(Entry[IndicationSearch]):
 
         OBJECT: MeSH code
 
-        PREDICATE: "phase <level> trial"
+        PREDICATE: "trial"
+
+        WEIGHT: phase (can be 1, 1.5, 2, etc.)
         """
         built = IndicationSearch(key=key, api=Apis.Chembl, min_phase=min_phase)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -313,6 +232,8 @@ class EntryChemblAtc(Entry[AtcSearch]):
         OBJECT: ATC Code
 
         PREDICATE: "ATC L<leveL> code"
+
+        WEIGHT: 1.0
         """
         built = AtcSearch(
             key=key, api=Apis.Chembl, levels={int(x.strip()) for x in levels.split(",")}
@@ -356,15 +277,13 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
 
         OBJECT: GO Term name
 
-        PREDICATE: "associated with ""Function"|"Process"|"Component"" term"
+        PREDICATE: "go:<type>"
 
-        OTHER COLUMNS:
-            See the docs for ``mandos chembl:binding``
+        WEIGHT: pchembl value
 
         Note:
 
             By default, the key is the "chembl:go.function", "chembl:go.process", or "chembl:go.component".
-
         """
         if key is None or key == "<see above>":
             key = cls.cmd()
@@ -378,13 +297,13 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
             binding_search = binding_clazz(
                 key=key,
                 api=Apis.Chembl,
-                taxa=Utils.get_taxa(taxa),
+                taxa=EntryUtils.get_taxa(taxa),
                 traversal=traversal_strategy,
-                target_types=Utils.get_target_types(target_types),
+                target_types=EntryUtils.get_target_types(target_types),
                 min_conf_score=confidence,
-                allowed_relations=Utils.split(relations),
+                allowed_relations=EntryUtils.split(relations),
                 min_pchembl=min_pchembl,
-                banned_flags=Utils.get_flags(banned_flags),
+                banned_flags=EntryUtils.get_flags(banned_flags),
             )
         except (TypeError, ValueError):
             raise InjectionError(f"Failed to build {binding_clazz.__qualname__}")
@@ -431,7 +350,9 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
 
         OBJECT: MeSH code of disease
 
-        PREDICATE: "marker/mechanism evidence for" or "disease evidence for"
+        PREDICATE: "disease:marker/mechanism", etc.
+
+        WEIGHT: depends on the evidence type
         """
         built = DiseaseSearch(key, Apis.Pubchem)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -470,17 +391,9 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
 
         OBJECT: Name of gene/chemical/disease
 
-        PREDICATE: "co-occurs with <gene/chemical/disease>"
+        PREDICATE: "co-occurrence:<gene/chemical/disease>"
 
-        OTHER COLUMNS:
-
-        - score: enrichment score; see PubChem docs
-
-        - intersect_count: Number of articles co-occurring
-
-        - query_count: Total number of articles for query compound
-
-        - neighbor_count: Total number of articles for target (co-occurring) compound
+        WEIGHT: enrichment score; see PubChem docs
         """
         if key is None or key == "<see above>":
             key = cls.cmd()
@@ -523,7 +436,9 @@ class EntryPubchemDgi(Entry[DgiSearch]):
 
         OBJECT: Name of the gene
 
-        PREDICATE: "interacts with gene"
+        PREDICATE: "interaction:generic" or "interaction:<type>"
+
+        WEIGHT: 1.0
         """
         built = DgiSearch(key, Apis.Pubchem)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -551,8 +466,9 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
 
         OBJECT: Name of the gene
 
-        PREDICATE: "compound/gene interaction"
+        PREDICATE: derived from the interaction type (e.g. downregulation)
 
+        WEIGHT: 1.0
         """
         built = CtdGeneSearch(key, Apis.Pubchem)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -577,7 +493,7 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
 
         OBJECT: Target name (e.g. "Solute carrier family 22 member 11") from DrugBank
 
-        PREDICATE: Action (e.g. "binder", "downregulator", or "agonist")
+        PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankTargetSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -602,7 +518,7 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
 
         OBJECT: Name of the general function (e.g. "Toxic substance binding")
 
-        PREDICATE: against on target (e.g. "binder", "downregulator", or "agonist").
+        PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -627,7 +543,7 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
 
         OBJECT: Transporter name (e.g. "Solute carrier family 22 member 11") from DrugBank
 
-        PREDICATE: "transported by", "carried by", or "metabolized by"
+        PREDICATE: "<target_type>:<action>" (e.g. metabolized, transported, etc.)
         """
         target_types = {
             DrugbankTargetType.transporter,
@@ -657,7 +573,7 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
 
         OBJECT: Name of the general function (e.g. "Toxic substance binding")
 
-        PREDICATE: "transported by", "carried by", or "metabolized by"
+        PREDICATE: "<target_type>:<action>" (e.g. metabolized, transported, etc.)
         """
         target_types = {
             DrugbankTargetType.transporter,
@@ -690,7 +606,7 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
 
         OBJECT: name of the drug (e.g. "ibuprofen")
 
-        PREDICATE: "ddi"
+        PREDICATE: typically increase/decrease/change followed by risk/activity/etc.
         """
         built = DrugbankDdiSearch(key, Apis.Pubchem)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -722,7 +638,7 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
 
         PREDICATE: "active"|"inactive"|"inconclusive"|"undetermined"
 
-        SOURCE: "PubChem: <referrer> "(""confirmatory"|"literature"|"other"")"
+        WEIGHT: 2 for confirmatory; 1 otherwise
         """
         built = BioactivitySearch(key, Apis.Pubchem, compound_name_must_match=name_must_match)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -747,7 +663,9 @@ class EntryDeaSchedule(Entry[BioactivitySearch]):
 
         OBJECT: (1 to 4, or "unscheduled")
 
-        PREDICATE: "has DEA schedule"
+        PREDICATE: "dea:schedule"
+
+        WEIGHT: 1.0
         """
         pass
 
@@ -771,7 +689,9 @@ class EntryDeaClass(Entry[BioactivitySearch]):
 
         OBJECT: e.g. "hallucinogen"
 
-        PREDICATE: "is in DEA class"
+        PREDICATE: "dea:class"
+
+        WEIGHT: 1.0
         """
         pass
 
@@ -796,15 +716,9 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
 
         OBJECT: E.g. "behavioral: excitement"
 
-        PREDICATE: "causes acute effect"
+        PREDICATE: "effect:acute"
 
-        OTHER COLUMNS:
-
-            - organism: e.g. 'women', 'infant', 'men', 'human', 'dog', 'domestic animals - sheep and goats'
-            - human: true or false
-            - test_type: e.g. 'TDLo'
-            - route: e.g. 'skin'
-            - mg_per_kg: e.g. 17.5
+        WEIGHT: 1.0
         """
         built = AcuteEffectSearch(
             key,
@@ -833,12 +747,9 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
 
         OBJECT: A dose in mg/kg (e.g. 3100)
 
-        PREDICATE: "LD50 :: <route>" (e.g. "LD50 :: intravenous)
+        PREDICATE: "LD50::<route>" (e.g. "LD50::intravenous)
 
-        OTHER COLUMNS:
-
-            - organism: e.g. 'women', 'infant', 'men', 'human', 'dog', 'domestic animals - sheep and goats'
-            - human: true or false
+        WEIGHT: 1.0
         """
         built = Ld50Search(key, Apis.Pubchem)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -863,16 +774,9 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
 
         OBJECT: A molecular target
 
-        PREDICATE: "agonism at", etc.
+        PREDICATE: "interaction:agonism", etc.
 
-        OTHER COLUMNS:
-
-            - affinity: log affinity value
-            - measurement: e.g. pIC50
-            - primary: whether it is the primary target of the drug
-            - selective: whether it is selective for that target
-            - endogenous: whether the interaction is endogenous
-            - organism: e.g. 'human', 'pig'
+        WEIGHT: 1.0
         """
         built = G2pInteractionSearch(key, Apis.G2p)
         return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
@@ -898,7 +802,7 @@ class EntryHmdbTissue(Entry[BioactivitySearch]):
 
         OBJECT:
 
-        PREDICATE: "tissue"
+        PREDICATE: "tissue:..."
         """
         pass
 
@@ -926,30 +830,6 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
         OBJECT: A number; booleans are converted to 0/1
 
         PREDICATE: The name of the property
-        """
-        pass
-
-
-class EntryPubchemReact(Entry[BioactivitySearch]):
-    @classmethod
-    def run(
-        cls,
-        path: Path = CommonArgs.compounds,
-        key: str = EntryArgs.key("inter.pubchem:react"),
-        to: Optional[Path] = CommonArgs.to_single,
-        as_of: Optional[str] = CommonArgs.as_of,
-        check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
-        no_setup: bool = CommonArgs.no_setup,
-    ) -> Searcher:
-        """
-        Metabolic reactions (PENDING).
-
-        OBJECT: Equation
-
-        PREDICATE: "<pathway>"
         """
         pass
 
@@ -1114,6 +994,5 @@ Entries = [
     EntryChemidPlusAcute,
     EntryChemidPlusLd50,
     EntryHmdbTissue,
-    EntryPubchemReact,
     EntryMetaRandom,
 ]

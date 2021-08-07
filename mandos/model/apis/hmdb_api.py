@@ -2,7 +2,7 @@ import abc
 import gzip
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Union, Sequence
+from typing import Union, Sequence, Optional
 
 import defusedxml.ElementTree as Xml
 import orjson
@@ -74,13 +74,13 @@ class JsonBackedHmdbApi(HmdbApi, metaclass=abc.ABCMeta):
 
 
 class QueryingHmdbApi(JsonBackedHmdbApi):
-    def __init__(self, query: QueryExecutor = QUERY_EXECUTORS.hmdb):
-        self._query = query
+    def __init__(self, executor: QueryExecutor = QUERY_EXECUTORS.hmdb):
+        self._executor = executor
 
     def fetch(self, hmdb_id: str) -> NestedDotDict:
         # e.g. https://hmdb.ca/metabolites/HMDB0001925.xml
         url = f"https://hmdb.ca/metabolites/{hmdb_id}.xml"
-        data = self._query(url)
+        data = self._executor(url)
         data = self._to_json(data)
         return NestedDotDict(data)
 
@@ -95,8 +95,11 @@ class QueryingHmdbApi(JsonBackedHmdbApi):
 
 
 class CachingHmdbApi(JsonBackedHmdbApi):
-    def __init__(self, query: QueryingHmdbApi):
+    def __init__(
+        self, query: Optional[QueryingHmdbApi], cache_dir: Path = MANDOS_SETTINGS.hmdb_cache_path
+    ):
         self._query = query
+        self._cache_dir = cache_dir
 
     def fetch(self, hmdb_id: str) -> NestedDotDict:
         path = self.path(hmdb_id)
@@ -108,7 +111,7 @@ class CachingHmdbApi(JsonBackedHmdbApi):
             return data
 
     def path(self, hmdb_id: str):
-        return (MANDOS_SETTINGS.hmdb_cache_path / hmdb_id).with_suffix(".json.gz")
+        return (self._cache_dir / hmdb_id).with_suffix(".json.gz")
 
     def _write_json(self, data: NestedDotDict, path: Path) -> None:
         path.write_bytes(gzip.compress(data.to_json()))

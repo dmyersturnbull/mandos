@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from mandos.analysis.io_defns import ConcordanceDf, SimilarityDfLongForm, SimilarityDfShortForm
-from mandos.model import CleverEnum
+from mandos.model.utils import CleverEnum
 
 
 class ConcordanceCalculator(metaclass=abc.ABCMeta):

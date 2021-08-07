@@ -3,10 +3,10 @@ Support classes to help with querying and processing web data.
 """
 from __future__ import annotations
 
-import re
 from datetime import date, datetime
 from typing import Any, Callable, FrozenSet, Iterable, Optional, Set, Type, TypeVar, Union
 
+import regex
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools
 
@@ -105,9 +105,13 @@ class Mapx:
 
     @classmethod
     def extract_group_1(
-        cls, pattern: Union[str, re.Pattern]
+        cls, pattern: Union[str, regex.Pattern]
     ) -> Callable[[Optional[Any]], Optional[str]]:
-        pattern = pattern if isinstance(pattern, re.Pattern) else re.compile(pattern)
+        pattern = (
+            pattern
+            if isinstance(pattern, regex.Pattern)
+            else regex.compile(pattern, flags=regex.V1)
+        )
 
         def _match(thing: Optional[str]) -> Optional[str]:
             if thing is None:

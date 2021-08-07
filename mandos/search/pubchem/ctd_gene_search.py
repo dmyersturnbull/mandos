@@ -1,7 +1,8 @@
-import re
 from typing import Any, Mapping, Optional, Sequence
 
-from mandos.model import MiscUtils
+import regex
+
+from mandos.model.utils import MiscUtils
 from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import CtdGeneHit
 
@@ -65,7 +66,7 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
         for txt, effect in expression.items():
             result = self._if_match(
                 interaction,
-                re.escape(compound)
+                regex.escape(compound)
                 + " "
                 + txt
                 + " "
@@ -80,7 +81,7 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
                 # TODO: could this catch something weird:
                 if result is None:
                     result = self._if_match(
-                        interaction, re.escape(compound) + " " + txt + " of and .+", effect
+                        interaction, regex.escape(compound) + " " + txt + " of and .+", effect
                     )
                 if result is not None:
                     results.append(result)
@@ -88,13 +89,13 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
             return results
         result = self._if_match(
             interaction,
-            re.escape(compound) + " ((?:affects)|(?:promotes)|(?:inhibits)) the reaction",
+            regex.escape(compound) + " ((?:affects)|(?:promotes)|(?:inhibits)) the reaction",
             "affects a reaction involving",
         )
         return [interaction.replace(compound, "").strip()] if result is None else [result]
 
     def _if_match(self, interaction: str, pattern: str, result: str) -> Optional[str]:
-        pat = re.compile("^" + pattern + "$", flags=re.IGNORECASE)
+        pat = regex.compile("^" + pattern + "$", flags=regex.V1 | regex.IGNORECASE)
         match = pat.fullmatch(interaction)
         if match is None:
             return None

@@ -14,8 +14,6 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
         super().__init__(key, api)
         self.target_types = target_types
 
-    """"""
-
     @classmethod
     def _get_obj(cls, dd: DrugbankInteraction) -> str:
         raise NotImplementedError()

@@ -4,38 +4,33 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import Optional, List
 
 import typer
 from mandos.entries.searcher import InputFrame
 
-from mandos.entries.api_singletons import Apis
-
 from mandos import logger, MANDOS_SETUP
-from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
+from mandos.analysis.io_defns import SimilarityDfLongForm
 from mandos.analysis.concordance import ConcordanceCalculation
 from mandos.analysis.distances import MatrixCalculation
 from mandos.analysis.filtration import Filtration
 from mandos.analysis.enrichment import EnrichmentCalculation, RealAlg, BoolAlg
 from mandos.analysis.io_defns import ScoreDf
 from mandos.analysis.prepping import MatrixPrep
-from mandos.analysis.projection import UmapCalc
 from mandos.analysis.reification import Reifier
 from mandos.entries.common_args import Arg, CommonArgs
 from mandos.entries.common_args import CommonArgs as Ca
 from mandos.entries.common_args import Opt
 from mandos.entries.multi_searches import MultiSearch
 from mandos.entries.filler import CompoundIdFiller, IdMatchFrame
-from mandos.model import START_TIMESTAMP
+from mandos.model import MandosResources
 from mandos.model.utils import MiscUtils
-from mandos.model.apis.g2p_api import CachedG2pApi
+from mandos.model.apis.g2p_api import CachingG2pApi
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.analysis.projection import UMAP
-from mandos.model.rdkit_utils import RdkitUtils, Fingerprint
 
 set_up = MANDOS_SETUP
 DEF_SUFFIX = MANDOS_SETTINGS.default_table_suffix
@@ -86,7 +81,7 @@ class MiscCommands:
         set_up(log, quiet, verbose)
 
     @staticmethod
-    def deposit(
+    def export_db(
         path: Path = Ca.file_input,
         db: str = Opt.val(r"Name of the MySQL database", default="mandos"),
         host: str = Opt.val(
@@ -163,7 +158,7 @@ class MiscCommands:
         df.write_file(to)
 
     @staticmethod
-    def cache(
+    def cache_data(
         path: Path = Ca.compounds,
         no_pubchem: bool = Opt.flag(r"Do not download data from PubChem", "--no-pubchem"),
         no_chembl: bool = Opt.flag(r"Do not fetch IDs from ChEMBL", "--no_chembl"),
@@ -183,7 +178,7 @@ class MiscCommands:
         logger.notice(f"Done caching.")
 
     @staticmethod
-    def build_taxonomy(
+    def export_taxa(
         taxa: str = Ca.taxa,
         forbid: str = Opt.val(
             r"""Exclude descendents of these taxa IDs or names (comma-separated).""", default=""
@@ -213,7 +208,7 @@ class MiscCommands:
         concat = taxa + "-" + forbid
         taxa = Ca.parse_taxa(taxa)
         forbid = Ca.parse_taxa(forbid)
-        default = concat + "-" + START_TIMESTAMP + DEF_SUFFIX
+        default = concat + "-" + MandosResources.start_timestamp_filesys + DEF_SUFFIX
         to = MiscUtils.adjust_filename(to, default, replace)
         my_tax = TaxonomyFactories.get_smart_taxonomy(taxa, forbid)
         my_tax = my_tax.to_df()
@@ -221,7 +216,7 @@ class MiscCommands:
         my_tax.write_file(to)
 
     @staticmethod
-    def dl_tax(
+    def cache_taxa(
         taxa: str = Opt.val(
             r"""
             Either "vertebrata", "all", or a comma-separated list of UniProt taxon IDs.
@@ -275,7 +270,7 @@ class MiscCommands:
                 factory.delete_exact(taxon)
 
     @staticmethod
-    def dl_g2p(
+    def cache_d2p(
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log_path,
         quiet: bool = CommonArgs.quiet,
@@ -288,11 +283,11 @@ class MiscCommands:
         Data will generally be stored under``~/.mandos/g2p/``.
         """
         set_up(log, quiet, verbose)
-        api = CachedG2pApi(MANDOS_SETTINGS.g2p_cache_path)
+        api = CachingG2pApi(MANDOS_SETTINGS.g2p_cache_path)
         api.download(force=replace)
 
     @staticmethod
-    def clear_cache(
+    def cache_clear(
         log: Optional[Path] = CommonArgs.log_path,
         quiet: bool = CommonArgs.quiet,
         verbose: bool = CommonArgs.verbose,
@@ -362,7 +357,7 @@ class MiscCommands:
         Filtration.from_file(by).apply(df).write_file(to)
 
     @staticmethod
-    def state(
+    def export_state(
         path: Path = Ca.file_input,
         to: Optional[Path] = Opt.out_path(
             """
@@ -397,7 +392,7 @@ class MiscCommands:
                 f.write(hit.to_triple.n_triples)
 
     @staticmethod
-    def reify(
+    def export_reify(
         path: Path = Ca.file_input,
         to: Optional[Path] = Opt.out_path(
             r"""
@@ -429,7 +424,7 @@ class MiscCommands:
                 f.write(triple.n_triples)
 
     @staticmethod
-    def copy(
+    def export_copy(
         path: Path = Ca.file_input,
         to: Optional[Path] = Opt.out_path(
             rf"""
@@ -457,7 +452,7 @@ class MiscCommands:
         df.write_file(to)
 
     @staticmethod
-    def analyze(
+    def calc_analysis(
         path: Path = Ca.file_input,
         phi: Path = Ca.input_matrix,
         scores: Path = Ca.alpha_input,
@@ -480,7 +475,7 @@ class MiscCommands:
         """
 
     @staticmethod
-    def alpha(
+    def calc_score(
         path: Path = Ca.file_input,
         scores: Path = Ca.alpha_input,
         bool_alg: Optional[str] = Opt.val(
@@ -525,7 +520,7 @@ class MiscCommands:
         df.write_file(to)
 
     @staticmethod
-    def psi(
+    def calc_psi(
         path: Path = Ca.file_input,
         algorithm: str = Opt.val(
             r"""
@@ -556,7 +551,7 @@ class MiscCommands:
         matrix.write_file(to)
 
     @staticmethod
-    def calc_ecfp_psi(
+    def calc_ecfp(
         path: Path = CommonArgs.compounds,
         radius: int = Opt.val(r"""Radius of the ECFP fingerprint.""", default=4),
         n_bits: int = Opt.val(r"""Number of bits.""", default=2048),
@@ -591,7 +586,7 @@ class MiscCommands:
         long_form.write_file(to)
 
     @staticmethod
-    def tau(
+    def calc_tau(
         phi: Path = Ca.input_matrix,
         psi: Path = Ca.input_matrix,
         algorithm: str = Opt.val(
@@ -642,7 +637,7 @@ class MiscCommands:
         concordance.write_file(to)
 
     @staticmethod
-    def calc_umap(
+    def calc_project(
         psi_matrix: Path = Ca.input_matrix,
         algorithm: str = Opt.val(
             r"""
@@ -688,7 +683,7 @@ class MiscCommands:
             raise ImportError(f"UMAP is not available")
 
     @staticmethod
-    def prep_phi(
+    def format_phi(
         matrices: List[Path] = Ca.input_matrix_short_form,
         kind: str = Ca.var_type,
         to: Path = Ca.output_matrix,
@@ -719,7 +714,7 @@ class MiscCommands:
         long_form.write_file(to)
 
     @staticmethod
-    def plot_umap(
+    def plot_project(
         umap_df: Path = Ca.project_input,
         style: Optional[Path] = Ca.style_for_compounds,
         color_col: Optional[str] = Ca.color_col,
@@ -752,7 +747,7 @@ class MiscCommands:
         """
 
     @staticmethod
-    def plot_pairing(
+    def plot_phi_psi(
         path: Path = Ca.input_matrix,
         join: Optional[bool] = Opt.flag(
             r"""
@@ -811,7 +806,7 @@ class MiscCommands:
         """
 
     @staticmethod
-    def plot_pairing_violin(
+    def plot_tau(
         path: Path = Ca.input_matrix,
         split: bool = Opt.flag(
             r"""

@@ -1,7 +1,7 @@
-import re
 from pathlib import Path
 from typing import Sequence
 
+import regex
 import pandas as pd
 from typeddfs import TypedDfs
 
@@ -21,7 +21,7 @@ def _targets(self: pd.DataFrame) -> Sequence[str]:
 def _get(self: pd.DataFrame, s: str) -> Sequence[str]:
     for irow, pattern in enumerate(self[self.columns[0]].values):
         try:
-            match: re.Match = pattern.fullmatch(s)
+            match: regex.Match = pattern.fullmatch(s)
         except AttributeError:
             raise ValueError(f"Failed on regex {pattern}") from None
         if match is not None:
@@ -60,10 +60,10 @@ class _Compiler:
     def __init__(self):
         self._i = 0
 
-    def compile(self, s: str) -> re.Pattern:
+    def compile(self, s: str) -> regex.Pattern:
         self._i += 1  # header is the first
         try:
-            return re.compile("^" + s.strip() + "$", flags=re.IGNORECASE)
+            return regex.compile("^" + s.strip() + "$", flags=regex.V1 | regex.IGNORECASE)
         except Exception:
             raise ValueError(
                 f"Failed to parse '{s}' on line {self._i} (excluding comments and blank lines)"

@@ -1,11 +1,15 @@
-import re
 from typing import Optional, Sequence, Tuple
 
-from mandos import logger
+import regex
 
+from mandos import logger
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankDdi
 from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import DrugbankDdiHit
+
+
+def _re(s: str) -> regex.Pattern:
+    return regex.compile(s, flags=regex.V1)
 
 
 class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
@@ -69,7 +73,7 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
         return "change"
 
     def _guess_efficacy(self, desc: str) -> Optional[str]:
-        match = re.compile("efficacy of (.+)").search(desc)
+        match = _re("efficacy of (.+)").search(desc)
         if match is None or match.group(1) is None:
             return None
         split = match.group(1).split(" can")
@@ -78,40 +82,40 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
         return split[0].strip()
 
     def _guess_activity(self, desc: str) -> Optional[str]:
-        match = re.compile("may increase the (.+)").search(desc)
+        match = _re("may increase the (.+)").search(desc)
         if match is None or match.group(1) is None:
-            match = re.compile("may decrease the (.+)").search(desc)
+            match = _re("may decrease the (.+)").search(desc)
         if match is None or match.group(1) is None:
             return None
-        split = re.compile("activities").split(match.group(1))
+        split = _re("activities").split(match.group(1))
         if len(split) != 2:
             return None
         return split[0].strip()
 
     def _guess_adverse(self, desc: str) -> Optional[str]:
-        match = re.compile(" risk or severity of (.+)").search(desc)
+        match = _re(" risk or severity of (.+)").search(desc)
         if match is None or match.group(1) is None:
-            match = re.compile(" risk of (.+)").search(desc)
+            match = _re(" risk of (.+)").search(desc)
             if match is None or match.group(1) is None:
                 return None
-        split = re.compile(" (?:can)|(?:may) be").split(match.group(1))
+        split = _re(" (?:can)|(?:may) be").split(match.group(1))
         if len(split) != 2:
             return None
         return split[0].strip()
 
     def _guess_pk(self, desc: str) -> Optional[str]:
-        match = re.compile("^The (.+)").search(desc)
+        match = _re("^The (.+)").search(desc)
         if match is not None and match.group(1) is not None:
-            split = re.compile("can be").split(match.group(1))
+            split = _re("can be").split(match.group(1))
             if len(split) == 2:
                 return split[0].strip()
         # try another way
-        match = re.compile("may increase the (.+)").search(desc)
+        match = _re("may increase the (.+)").search(desc)
         if match is None or match.group(1) is None:
-            match = re.compile("may decrease the (.+)").search(desc)
+            match = _re("may decrease the (.+)").search(desc)
         if match is None or match.group(1) is None:
             return None
-        split = re.compile("which").split(match.group(1))
+        split = _re("which").split(match.group(1))
         if len(split) != 2:
             return None
         return split[0].strip()

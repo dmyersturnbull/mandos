@@ -12,7 +12,7 @@ from typeddfs import TypedDf, TypedDfs
 from mandos import logger
 from mandos.model import Api, CompoundNotFoundError
 from mandos.model.settings import MANDOS_SETTINGS
-from mandos.model.apis.g2p_data import G2pData, G2pInteraction
+from mandos.model.apis.g2p_support.g2p_data import G2pData, G2pInteraction
 from mandos.model.utils import TrueFalseUnknown
 
 LIGANDS_URL = "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.tsv"
@@ -52,8 +52,8 @@ class G2pApi(Api, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
-class CachedG2pApi(G2pApi, metaclass=abc.ABCMeta):
-    def __init__(self, cache_path: Path):
+class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
+    def __init__(self, cache_path: Path = MANDOS_SETTINGS.g2p_cache_path):
         self.cache_path = Path(cache_path)
         self.ligands: LigandDf = None
         self.interactions: InteractionDf = None

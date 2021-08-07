@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from mandos.model.apis.g2p_data import G2pData, G2pInteraction
+from mandos.model.apis.g2p_support.g2p_data import G2pData, G2pInteraction
 from mandos.model.concrete_hits import G2pInteractionHit
 from mandos.search.g2p import G2pSearch
 

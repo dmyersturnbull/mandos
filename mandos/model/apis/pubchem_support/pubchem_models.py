@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import FrozenSet, Mapping, Optional, Sequence, Set, Union
 
+import orjson
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.string_tools import StringTools
@@ -13,9 +14,10 @@ from pocketutils.tools.string_tools import StringTools
 from mandos.model import MandosResources
 from mandos.model.apis.pubchem_support._nav_fns import Mapx
 
-hazards = {
-    d["code"]: d for d in NestedDotDict.read_toml(MandosResources.path("hazards.toml"))["signals"]
-}
+
+hazards = MandosResources.path("hazards.json").read_text(encoding="utf8")
+hazards = NestedDotDict(orjson.loads(hazards))
+hazards = {d["code"]: d for d in hazards["signals"]}
 
 
 @dataclass(frozen=True, repr=True, eq=True, order=True)
@@ -41,7 +43,7 @@ class Code(str):
         return self.__class__.__name__.lower()
 
     @classmethod
-    def of(cls, value: Union[str, int, float]):
+    def of(cls, value: Union[str, int, float]) -> __qualname__:
         if isinstance(value, float):
             try:
                 value = int(value)
@@ -53,18 +55,10 @@ class Code(str):
         return cls(value)
 
     @classmethod
-    def of_nullable(cls, value: Union[None, str, int, float]):
+    def of_nullable(cls, value: Union[None, str, int, float]) -> Optional[__qualname__]:
         if value is None:
             return None
-        if isinstance(value, float):
-            try:
-                value = int(value)
-                value = StringTools.strip_off_end(str(value).strip(), ".0")
-            except ArithmeticError:
-                value = str(value)
-                value = StringTools.strip_off_end(str(value).strip(), ".0")
-        value = str(value).strip()
-        return cls(value)
+        return cls.of(value)
 
 
 class Codes:
@@ -310,7 +304,7 @@ class AcuteEffectEntry:
         # TODO: Could it ever start with just a dot; e.g. '.175'?
         match = regex.compile(r".+?\((\d+(?:.\d+)?) *mg/kg\)").fullmatch(self.dose, flags=regex.V1)
         if match is None:
-            raise ValueError(f"Dose {self.dose} (accute effect {self.gid}) could not be parsed")
+            raise ValueError(f"Dose {self.dose} (acute effect {self.gid}) could not be parsed")
         return float(match.group(1))
 
 

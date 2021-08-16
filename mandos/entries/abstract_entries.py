@@ -1,15 +1,17 @@
 import abc
 from pathlib import Path
-from typing import Generic, Type, Optional, Mapping, Union
+from typing import Generic, Type, Optional, Mapping, Union, TypeVar
 
 import typer
 from typer.models import OptionInfo
 
 from mandos import MANDOS_SETUP, logger
-from mandos.entries.entries import S
 from mandos.entries.searcher import Searcher
 from mandos.model.searches import Search
 from mandos.model.utils import ReflectionUtils
+
+
+S = TypeVar("S", bound=Search, covariant=True)
 
 
 class Entry(Generic[S], metaclass=abc.ABCMeta):
@@ -53,7 +55,8 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         verbose: bool,
         no_setup: bool,
     ):
-        MANDOS_SETUP(verbose, quiet, log, no_setup)
+        if not no_setup:
+            MANDOS_SETUP(verbose, quiet, log, no_setup)
         searcher = cls._get_searcher(built, path, to)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
         out = searcher.output_paths[built.key]

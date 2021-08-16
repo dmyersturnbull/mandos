@@ -51,7 +51,6 @@ class Settings:
     pubchem_backoff_factor: float
     pubchem_query_delay_min: float
     pubchem_query_delay_max: float
-    pubchem_use_parent: bool
     hmdb_expire_sec: int
     hmdb_timeout_sec: float
     hmdb_backoff_factor: float
@@ -128,7 +127,6 @@ class Settings:
             pubchem_query_delay_min=data.get_as("query.pubchem.delay_sec", float, 0.25),
             pubchem_query_delay_max=data.get_as("query.pubchem.delay_sec", float, 0.25),
             pubchem_n_retries=data.get_as("query.pubchem.n_retries", int, 1),
-            pubchem_use_parent=data.get_as("query.pubchem.use_parent", bool, True),
             hmdb_expire_sec=data.get_as("query.pubchem.expire_sec", int, ONE_MONTH),
             hmdb_timeout_sec=data.get_as("query.pubchem.timeout_sec", int, 1),
             hmdb_backoff_factor=data.get_as("query.pubchem.pubchem_backoff_factor", float, 2),

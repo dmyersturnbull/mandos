@@ -998,6 +998,27 @@ class PubchemData(PubchemDataView):
         return self._data.get("record.RecordTitle")
 
     @property
+    def inchikey(self) -> Optional[str]:
+        return self.names_and_identifiers.inchikey
+
+    @property
+    def inchi(self) -> Optional[str]:
+        return self.names_and_identifiers.inchi
+
+    @property
+    def parent_or_none(self) -> Optional[int]:
+        return self.related_records.parent
+
+    @property
+    def parent_or_self(self) -> int:
+        parent = self.related_records.parent
+        return self.cid if parent is None else parent
+
+    @property
+    def siblings(self) -> Sequence[int]:
+        return self._data["related_records"]["same_parent_stereo"]
+
+    @property
     def title_and_summary(self) -> TitleAndSummary:
         return TitleAndSummary(self._data)
 
@@ -1048,15 +1069,6 @@ class PubchemData(PubchemDataView):
     @property
     def classification(self) -> Classification:
         return Classification(self._data)
-
-    @property
-    def parent_or_none(self) -> Optional[int]:
-        return self.related_records.parent
-
-    @property
-    def parent_or_self(self) -> int:
-        parent = self.related_records.parent
-        return self.cid if parent is None else parent
 
     @property
     def struct_view(self) -> CompoundStruct:

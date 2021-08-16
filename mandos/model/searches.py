@@ -171,7 +171,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             data_source=self.data_source,
             run_date=MiscUtils.utc(),
             cache_date=None,
-            value=1,
+            weight=1,
             compound_id=c_id,
             origin_inchikey=c_origin,
             matched_inchikey=c_matched,
@@ -180,9 +180,10 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             object_id=object_id,
             object_name=object_name,
         )
+        entry.update(kwargs)
         clazz = self.__class__.get_h()
         # noinspection PyArgumentList
-        return clazz(**entry, **kwargs)
+        return clazz(**entry)
 
     def __repr__(self) -> str:
         return ", ".join([k + "=" + str(v) for k, v in self.get_params().items()])

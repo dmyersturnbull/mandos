@@ -5,14 +5,14 @@ from __future__ import annotations
 
 import gzip
 from pathlib import Path
-from typing import FrozenSet, Optional, Union, Sequence
+from typing import FrozenSet, Optional, Union, Set
 
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
-from pocketutils.core.exceptions import IllegalStateError
 
-from mandos import logger, MANDOS_SETTINGS
+from mandos import logger
+from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
@@ -26,129 +26,78 @@ class CachingPubchemApi(PubchemApi):
     ):
         self._cache_dir = cache_dir
         self._query = query
-        self._add_all_cids()
 
-    def find_id(self, inchikey: str) -> Optional[int]:
-        if self.similarity_path(inchikey).exists():
-            x = self.fetch_data(inchikey)
-            return None if x is None else x.cid
-        elif self._query is not None:
-            return self._query.find_id(inchikey)
+    def follow_link(self, inchikey_or_cid: Union[int, str]) -> Optional[Path]:
+        link = self.link_path(inchikey_or_cid)
+        cid = link.read_text(encoding="utf8").strip()
+        if len(cid) == 0:
+            return None
+        return self.data_path(int(cid))
 
-    def find_inchikey(self, cid: int) -> Optional[str]:
-        path = self.cid_path(cid)
-        if path.exists():
-            return self._read_inchikey_from_cid(cid)
-        elif self._query is None:
-            raise PubchemCompoundLookupError(f"No InChI Key link found at {path}")
-        return self._query.find_inchikey(cid)
+    def get_links(self, cid: int) -> Set[Path]:
+        data = self._read_json(self.data_path(cid))
+        siblings = set(data.siblings)
+        for sibling in siblings:
+            sibling_path = self.follow_link(sibling)
+            if sibling_path is not None:
+                inchikey_siblings = self._read_json(sibling_path).siblings
+                siblings.update(inchikey_siblings)
+        links = {data.inchikey, data.cid, *siblings}
+        return {self.link_path(link) for link in links}
 
-    def fetch_data(self, inchikey: Union[str, int]) -> Optional[PubchemData]:
-        path = self.data_path(inchikey)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        cid_path = self.cid_path(inchikey)
-        if isinstance(inchikey, int) and cid_path.exists():
-            cid = inchikey
-            inchikey = self._read_inchikey_from_cid(inchikey)
-        elif isinstance(inchikey, int) and self._query is not None:
-            cid = inchikey
-            inchikey = self._query.find_inchikey(inchikey)
-            self._add_cid(cid, inchikey)
-            cid_path.write_text(inchikey, encoding="utf8")
-        elif isinstance(inchikey, int):
-            raise PubchemCompoundLookupError(f"No InChI Key link found at {cid_path}")
-        if path.exists():
-            logger.debug(f"Found cached PubChem data at {path.absolute()}")
-        elif self._query is None:
-            raise PubchemCompoundLookupError(f"{inchikey} not found cached at {path}")
-        else:
-            try:
-                data = self._query.fetch_data(inchikey)
-            except PubchemCompoundLookupError:
-                # write an empty dict so we don't query again
-                self._write_json(NestedDotDict({}).to_json(), path)
-                raise
-            encoded = data.to_json()
-            self._write_json(encoded, path)
-            cid_path.write_text(inchikey, encoding="utf8")
-            logger.debug(f"Wrote PubChem data to {path.absolute()}")
-            return data
-        read = self._read_json(path)
-        if len(read) == 0:
-            raise PubchemCompoundLookupError(f"{inchikey} is empty at {path}")
-        return PubchemData(read)
+    def fetch_data(self, inchikey_or_cid: Union[str, int]) -> Optional[PubchemData]:
+        followed = self.follow_link(inchikey_or_cid)
+        if followed is not None:
+            logger.debug(f"Found cached PubChem data")
+            return self._read_json(followed)
+        return self._download(inchikey_or_cid)
 
-    def list_data(self) -> Sequence[Path]:
-        return {
-            p.name.replace(".json.gz", ""): p for p in (self._cache_dir / "data").glob("*.json.gz")
-        }
+    def _download(self, inchikey_or_cid: Union[int, str]) -> PubchemData:
+        if self._query is None:
+            raise PubchemCompoundLookupError(f"{inchikey_or_cid} not cached")
+        data: PubchemData = self._query.fetch_data(inchikey_or_cid)
+        cid = data.parent_or_self
+        path = self.data_path(cid)
+        self._write_json(data.to_json(), path)
+        links = {inchikey_or_cid, *self.get_links(cid)}
+        for link in links:
+            if not link.exists():
+                link.write_text(str(cid), encoding="utf8")
+        logger.debug(f"Wrote PubChem data to {path.absolute()}")
+        return data
 
-    def cid_path(self, cid: int) -> Path:
-        return self._cache_dir / "cids" / f"{cid}.txt"
+    def link_path(self, inchikey_or_cid: Union[int, str]) -> Path:
+        return self._cache_dir / "links" / f"{inchikey_or_cid}.txt"
 
-    def data_path(self, inchikey: str) -> Path:
-        return self._cache_dir / "data" / f"{inchikey}.json.gz"
+    def data_path(self, cid: int) -> Path:
+        return self._cache_dir / "data" / f"{cid}.json.gz"
 
-    def similarity_path(self, inchikey: str) -> Path:
-        return self._cache_dir / "similarity" / f"{inchikey}.snappy"
-
-    def _add_all_cids(self):
-        # not normally needed, but we run this for mainly historical reasons
-        logger.info(f"Adding missing CID links.")
-        for inchikey, path in self.list_data():
-            data = self.fetch_data(inchikey)
-            cid = data.cid
-            self._add_cid(cid, inchikey)
-
-    def _add_cid(self, cid: int, inchikey: str):
-        cid_path = self.cid_path(cid)
-        cid_path.parent.mkdir(parents=True, exist_ok=True)
-        if cid_path.exists():
-            loaded_inchikey = self._read_inchikey_from_cid(cid)
-            if loaded_inchikey != inchikey:
-                logger.error(
-                    f"For {cid}, existing entry points to {loaded_inchikey}, not {inchikey}. Overwriting."
-                )
-        cid_path.write_text(inchikey, encoding="utf8")
-
-    def _read_inchikey_from_cid(self, cid: int):
-        path = self.cid_path(cid)
-        if not path.exists():
-            raise PubchemCompoundLookupError(f"No InChI Key link found at {path}")
-        z = path.read_text(encoding="utf8").strip()
-        if len(z) == 0:
-            path.unlink()
-            raise PubchemCompoundLookupError(f"No InChI Key link found at {path}")
-        else:
-            return z
+    def similarity_path(self, inchi: str, min_tc: float) -> Path:
+        if not (min_tc * 100).is_integer():
+            raise ValueError(f"min_tc {min_tc} is not an increment of 1%")
+        percent = int(min_tc * 100)
+        path = self._cache_dir / "similarity" / f"{inchi}_{percent}"
+        return path.with_suffix(MANDOS_SETTINGS.archive_filename_suffix)
 
     def _write_json(self, encoded: str, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(gzip.compress(encoded.encode(encoding="utf8")))
 
-    def _read_json(self, path: Path) -> NestedDotDict:
+    def _read_json(self, path: Path) -> Optional[PubchemData]:
         deflated = gzip.decompress(path.read_bytes())
         read = orjson.loads(deflated)
-        return NestedDotDict(read)
+        return PubchemData(NestedDotDict(read)) if len(read) > 0 else None
 
-    def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:
-        path = self.similarity_path(inchi)
-        if not path.exists():
-            df = None
-            existing = set()
-        else:
-            df = pd.read_csv(path, sep="\t")
-            df = df[df["min_tc"] < min_tc]
-            existing = set(df["cid"].values)
-        if len(existing) == 0:
-            found = self._query.find_similar_compounds(inchi, min_tc)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            new_df = pd.DataFrame([pd.Series(dict(cid=cid, min_tc=min_tc)) for cid in found])
-            if df is not None:
-                new_df = pd.concat([df, new_df])
-            new_df.to_csv(path, sep="\t")
-            return frozenset(existing.union(found))
-        else:
-            return frozenset(existing)
+    def find_similar_compounds(self, inchi: str, min_tc: float) -> FrozenSet[int]:
+        path = self.similarity_path(inchi, min_tc)
+        if path.exists():
+            df = pd.read_file(path)
+            return frozenset(set(df["cid"].values))
+        found = self._query.find_similar_compounds(inchi, min_tc)
+        df = pd.DataFrame([pd.Series(dict(cid=cid)) for cid in found])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        df.write_file(path)
+        return frozenset(set(df["cid"].values))
 
 
 __all__ = ["CachingPubchemApi"]

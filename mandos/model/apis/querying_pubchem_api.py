@@ -100,7 +100,7 @@ class QueryingPubchemApi(PubchemApi):
         data = self._get_parent(cid, inchikey, data)
         return data
 
-    def find_similar_compounds(self, inchi: Union[int, str], min_tc: float) -> FrozenSet[int]:
+    def find_similar_compounds(self, inchi: str, min_tc: float) -> FrozenSet[int]:
         req = self._executor(
             f"{self._pug}/compound/similarity/inchikey/{inchi}/JSON?Threshold={min_tc}",
             method="post",
@@ -182,6 +182,7 @@ class QueryingPubchemApi(PubchemApi):
     def _fetch_core_data(self, cid: int) -> dict:
         return dict(
             record=self._fetch_display_data(cid),
+            linked_records=self._get_linked_records(cid),
             structure=self._fetch_structure_data(cid),
             external_tables=self._fetch_external_tables(cid),
             link_sets=self._fetch_external_linksets(cid),
@@ -196,6 +197,14 @@ class QueryingPubchemApi(PubchemApi):
             from_lookup=inchikey,
             fetch_nanos_taken=str(t1 - t0),
         )
+
+    def _get_linked_records(self, cid: int) -> NestedDotDict:
+        results = {}
+        for kind in ["same_parent_stereo"]:
+            url = f"{self._pug_view}/compound/cid/{cid}/cids/JSON?cids_type={kind}"
+            data = self._query_json(url).sub("IdentifierList")
+            results[kind] = data.get_list_as("CID", str, [])
+        return NestedDotDict(data)
 
     def _fetch_display_data(self, cid: int) -> Optional[NestedDotDict]:
         url = f"{self._pug_view}/data/compound/{cid}/JSON/?response_type=display"

@@ -156,17 +156,12 @@ class MandosSetup:
         log: Optional[Path],
         quiet: bool,
         verbose: bool,
-        no_setup: bool = False,
     ):
-        if not self._set_up:
-            self.run_command_setup(verbose, quiet, log, no_setup)
+        self.run_command_setup(verbose, quiet, log)
 
-    def run_command_setup(
-        self, verbose: bool, quiet: bool, log: Optional[Path], skip_setup: bool
-    ) -> None:
-        if not skip_setup:
-            level = self._set_logging(verbose, quiet, log)
-            logger.notice(f"Ready. Set log level to {level}")
+    def run_command_setup(self, verbose: bool, quiet: bool, log: Optional[Path]) -> None:
+        level = self._set_logging(verbose, quiet, log)
+        logger.notice(f"Ready. Set log level to {level}")
 
     def _set_logging(self, verbose: bool, quiet: bool, log: Optional[Path]) -> str:
         if verbose and quiet:

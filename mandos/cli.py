@@ -10,7 +10,9 @@ import typer
 from typer.models import CommandInfo
 
 from mandos import MandosLogging, logger
-from mandos.commands import MiscCommands
+
+# noinspection PyUnresolvedReferences
+from mandos.commands import MiscCommands, _InsertedCommandListSingleton
 from mandos.entries.api_singletons import Apis
 from mandos.entries.entries import Entries
 from mandos.model.settings import MANDOS_SETTINGS
@@ -38,10 +40,11 @@ def _init_commands():
 
     cli.registered_commands += [
         CommandInfo(":search", callback=MiscCommands.search),
+        CommandInfo(":describe", callback=MiscCommands.describe),
         CommandInfo(":fill", callback=MiscCommands.fill),
         CommandInfo(":cache:data", callback=MiscCommands.cache_data),
         CommandInfo(":cache:taxa", callback=MiscCommands.cache_taxa),
-        CommandInfo(":cache:g2p", callback=MiscCommands.cache_d2p),
+        CommandInfo(":cache:g2p", callback=MiscCommands.cache_g2p),
         CommandInfo(":cache:clear", callback=MiscCommands.cache_clear),
         CommandInfo(":export:taxa", callback=MiscCommands.export_taxa),
         CommandInfo(":concat", callback=MiscCommands.concat),
@@ -66,6 +69,7 @@ def _init_commands():
 
 
 _init_commands()
+_InsertedCommandListSingleton.commands = cli.registered_commands
 
 
 class MandosCli:

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, TypeVar, Union, List
 
 import typer
+from typeddfs.utils import Utils as TypedDfsUtils
 
 from mandos.model.utils import CleverEnum
 from mandos.model.settings import MANDOS_SETTINGS
@@ -220,6 +221,30 @@ class CommonArgs:
         (.json and .h5 may be accepted but are discouraged.)
     """
 
+    doc_output = Arg.in_file(
+        r"""
+        The path to write command documentation to.
+
+        The filename can end with .txt with optional compression (e.g. .txt.gz)
+        for formatted text output alongside --format.
+
+        Can can also use any table format: .feather; .snappy/.parquet;
+        or .csv, .tsv, .tab, .json, .flexwf (with optional .gz/.bz2/.zip/.xz).
+
+        [default: "commands-level<level>.txt"]
+        """
+    )
+
+    doc_style = Arg.x(
+        rf"""
+        The format for formatted text output.
+
+        This is ignored if --to is not a .txt file (or .txt.gz, etc.).
+        The choices are: {", ".join(TypedDfsUtils.table_formats())}.
+        """,
+        default="fancy_grid",
+    )
+
     file_input = Arg.in_file(
         r"""
         The path to a file output by ``:concat`` or ``:search``.
@@ -266,17 +291,15 @@ class CommonArgs:
         """
     )
 
-    ci = (
-        Opt.val(
-            f"""
-            The upper side of the confidence interval, as a percentage.
-            """,
-            default=95.0,
-        ),
+    ci = Opt.val(
+        f"""
+        The upper side of the confidence interval, as a percentage.
+        """,
+        default=95.0,
     )
 
     plot_to: Optional[Path] = Opt.out_file(
-        rf"""
+        r"""
             Path to an output directory for figures.
 
             All plots will be vectorized and written as PDF.
@@ -286,16 +309,16 @@ class CommonArgs:
     )
 
     project_to: Optional[Path] = Opt.out_file(
-        rf"""
+        r"""
             Path to the output table.
 
             The columns will include 'x' and 'y'.
 
-            [default: <path>-<algorithm>...]
+            [default: <path>-<algorithm>...],
         """
     )
 
-    project_input: Optional[Path] = Opt.out_file(
+    project_input: Optional[Path] = Opt.in_file(
         rf"""
             Path to data from ``:calc:umap`` or a similar command.
         """
@@ -459,8 +482,7 @@ class CommonArgs:
         {output_formats}
 
         [default: <input-path>/{...}.{MANDOS_SETTINGS.default_table_suffix}]
-        """,
-        "--to",
+        """
     )
 
     misc_out_dir = Opt.val(

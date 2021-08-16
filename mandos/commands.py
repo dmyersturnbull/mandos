@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Optional, List
 
 import typer
+from typeddfs import FileFormat
+
+from mandos.entries.docs import Documenter
 from mandos.entries.searcher import InputFrame
 
 from mandos import logger, MANDOS_SETUP
@@ -45,7 +48,83 @@ else:
     }
 
 
+class _InsertedCommandListSingleton:
+    commands = None
+
+
 class MiscCommands:
+    @staticmethod
+    def describe(
+        to: Path = Ca.doc_output,
+        style: str = Ca.doc_style,
+        width: int = Opt.val(
+            r"""
+            Max line width for a single cell.
+
+            After that, the text is wrapped.
+            Only applies when writing formatted text (.txt, etc.).
+            """,
+            default=100,
+        ),
+        flatten: bool = Opt.flag(
+            r"""
+            Flatten all columns into a single one.
+
+            Only affects pretty-printing.
+            """
+        ),
+        level: int = Opt.val(
+            r"""
+            The amount of detail to output.
+
+            - 1 : show a 1-line description
+
+            - 2 : Show a 1-line description, plus parameter names
+
+            - 3 : Show the full description, plus parameter names, types, and 1-line descriptions
+
+            - 4 : Show the full description, plus parameter names types, and full descriptions
+
+            - 5 : Same as 4, but enable --hidden and --common
+            """,
+            default=4,
+        ),
+        main_only: bool = Opt.flag(r"Only include main commands."),
+        search_only: bool = Opt.flag(r"Only include search commands."),
+        hidden: bool = Opt.flag(r"Show hidden commands."),
+        common: bool = Opt.flag(
+            r"""
+            Show common arguments and options.
+
+            Normally --log, --quiet, and --verbose are excluded,
+            along with path, --key, --to, --as-of for searches,
+            and the hidden flags for searches --check and --no-setup.
+        """
+        ),
+        replace: bool = CommonArgs.replace,
+        log: Optional[Path] = CommonArgs.log_path,
+        quiet: bool = CommonArgs.quiet,
+        verbose: bool = CommonArgs.verbose,
+    ):
+        r"""
+        Write documentation on commands to a file.
+        """
+        set_up(log, quiet, verbose)
+        if level == 5:
+            hidden = common = True
+        default = f"commands-level{level}.txt"
+        to = MiscUtils.adjust_filename(to, default, replace)
+        doc = Documenter(
+            level=level,
+            main=main_only,
+            search=search_only,
+            hidden=hidden,
+            common=common,
+            width=width,
+            flatten=flatten,
+        )
+        doc.document(_InsertedCommandListSingleton.commands, to, style)
+
     @staticmethod
     def search(
         path: Path = Ca.compounds,
@@ -59,7 +138,7 @@ class MiscCommands:
         verbose: bool = CommonArgs.verbose,
         out_dir: Path = Ca.out_dir,
     ) -> None:
-        """
+        r"""
         Run multiple searches.
         """
         set_up(log, quiet, verbose)
@@ -270,7 +349,7 @@ class MiscCommands:
                 factory.delete_exact(taxon)
 
     @staticmethod
-    def cache_d2p(
+    def cache_g2p(
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log_path,
         quiet: bool = CommonArgs.quiet,

@@ -61,9 +61,22 @@ class EntryArgs:
     )
 
     name_must_match = Opt.flag(
-        """
+        r"""
         Require that the name of the compound(s) exactly matches those on PubChem (case-insensitive).
         """
+    )
+
+    banned_sources = Opt.val(
+        r"""
+        Comma-separated list of sources to exclude.
+        """
+    )
+
+    min_nanomolar = Opt.val(
+        r"""
+        Minimum tissue concentration in nanomolar required to include.
+        """,
+        default=1,
     )
 
     acute_effect_level = typer.Option(

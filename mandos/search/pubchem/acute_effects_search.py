@@ -1,5 +1,7 @@
 from typing import Sequence
 
+import numpy as np
+
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import AcuteEffectHit, Ld50Hit
@@ -54,6 +56,7 @@ class Ld50Search(PubchemSearch[Ld50Hit]):
         for dd in data.toxicity.acute_effects:
             if dd.test_type != "LD50":
                 continue
+            weight = -np.log10(dd.mg_per_kg)
             results.append(
                 self._create_hit(
                     Ld50Hit,
@@ -64,6 +67,7 @@ class Ld50Search(PubchemSearch[Ld50Hit]):
                     object_name=str(dd.mg_per_kg),
                     organism=dd.organism,
                     human=dd.organism.is_human,
+                    weight=weight,
                 )
             )
         return results

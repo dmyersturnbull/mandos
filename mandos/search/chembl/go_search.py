@@ -20,10 +20,6 @@ class GoSearch(ChemblSearch[GoHit]):
         self.go_type = go_type
         self.binding_search = binding_search
 
-    @property
-    def data_source(self) -> str:
-        return "ChEMBL :: GO terms"
-
     def find(self, compound: str) -> Sequence[GoHit]:
         matches = self.binding_search.find(compound)
         terms = []
@@ -42,13 +38,16 @@ class GoSearch(ChemblSearch[GoHit]):
                             terms.add((xref["xref_id"], xref["xref_name"]))
         hits = []
         for xref_id, xref_name in terms:
+            source = self._format_source(type=self.go_type.name)
+            predicate = self._format_predicate(type=self.go_type.name)
             hits.append(
                 self._create_hit(
                     c_origin=lookup,
                     c_matched=compound.matched_inchikey,
                     c_id=compound.compound_id,
                     c_name=compound.compound_name,
-                    predicate=f"go:{self.go_type.name}",
+                    data_source=source,
+                    predicate=predicate,
                     object_id=xref_id,
                     object_name=xref_name,
                     go_type=self.go_type.name,

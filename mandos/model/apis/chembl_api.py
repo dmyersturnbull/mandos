@@ -9,8 +9,6 @@ from typing import Any, Callable, Iterator, Mapping, Optional, Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
-
 
 class ChemblFilterQuery(metaclass=abc.ABCMeta):
     """

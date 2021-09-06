@@ -4,8 +4,11 @@ import os
 from collections import Set
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Type, TypeVar, Any, Mapping
 
+import orjson
 from chembl_webresource_client.settings import Settings as ChemblSettings
+from mandos.model.utils.resources import MandosResources
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 from pocketutils.tools.common_tools import CommonTools
@@ -13,7 +16,9 @@ from suretime import Suretime
 
 from mandos import logger
 
-ONE_MONTH = int(round(60 * 60 * 24 * 30.437))
+defaults = MandosResources.path("default_settings.json").read_text(encoding="utf8")
+defaults = orjson.loads(defaults)
+T = TypeVar("T")
 
 
 class Globals:
@@ -39,14 +44,14 @@ class Settings:
     cache_path: Path
     cache_gzip: bool
     chembl_expire_sec: int
-    chembl_n_retries: int
+    chembl_n_tries: int
     chembl_timeout_sec: int
     chembl_backoff_factor: float
     chembl_query_delay_min: float
     chembl_query_delay_max: float
     chembl_fast_save: bool
     pubchem_expire_sec: int
-    pubchem_n_retries: int
+    pubchem_n_tries: int
     pubchem_timeout_sec: float
     pubchem_backoff_factor: float
     pubchem_query_delay_min: float
@@ -56,6 +61,7 @@ class Settings:
     hmdb_backoff_factor: float
     hmdb_query_delay_min: float
     hmdb_query_delay_max: float
+    taxon_expire_sec: int
     archive_filename_suffix: str
     default_table_suffix: str
     selenium_driver: str
@@ -107,35 +113,42 @@ class Settings:
 
     @classmethod
     def load(cls, data: NestedDotDict) -> Settings:
-        #  117571
+        def get(s: str, t: Type[T]) -> T:
+            return data.get_as(s, t, defaults[s])
+
         _continent = Suretime.Types.NtpContinents.of
         return cls(
-            is_testing=data.get_as("is_testing", bool, False),
-            ntp_continent=data.get_as("continent_code", _continent, "north-america"),
-            cache_path=data.get_as("cache.path", Path, Globals.mandos_path).expanduser(),
-            cache_gzip=data.get_as("cache.gzip", bool),
-            chembl_expire_sec=data.get_as("query.chembl.expire_sec", int, ONE_MONTH),
-            chembl_n_retries=data.get_as("query.chembl.n_retries", int, 1),
-            chembl_fast_save=data.get_as("query.chembl.fast_save", bool, True),
-            chembl_timeout_sec=data.get_as("query.chembl.timeout_sec", int, 1),
-            chembl_backoff_factor=data.get_as("query.chembl.pubchem_backoff_factor", float, 2),
-            chembl_query_delay_min=data.get_as("query.chembl.delay_sec", float, 0.25),
-            chembl_query_delay_max=data.get_as("query.chembl.delay_sec", float, 0.25),
-            pubchem_expire_sec=data.get_as("query.pubchem.expire_sec", int, ONE_MONTH),
-            pubchem_timeout_sec=data.get_as("query.pubchem.timeout_sec", int, 1),
-            pubchem_backoff_factor=data.get_as("query.pubchem.pubchem_backoff_factor", float, 2),
-            pubchem_query_delay_min=data.get_as("query.pubchem.delay_sec", float, 0.25),
-            pubchem_query_delay_max=data.get_as("query.pubchem.delay_sec", float, 0.25),
-            pubchem_n_retries=data.get_as("query.pubchem.n_retries", int, 1),
-            hmdb_expire_sec=data.get_as("query.pubchem.expire_sec", int, ONE_MONTH),
-            hmdb_timeout_sec=data.get_as("query.pubchem.timeout_sec", int, 1),
-            hmdb_backoff_factor=data.get_as("query.pubchem.pubchem_backoff_factor", float, 2),
-            hmdb_query_delay_min=data.get_as("query.pubchem.delay_sec", float, 0.25),
-            hmdb_query_delay_max=data.get_as("query.pubchem.delay_sec", float, 0.25),
-            archive_filename_suffix=data.get_as("cache.archive_filename_suffix", str, ".snappy"),
-            default_table_suffix=data.get_as("default_table_suffix", str, ".feather"),
-            selenium_driver=data.get_as("selenium_driver", str, "Chrome").title(),
+            is_testing=get("is_testing", bool),
+            ntp_continent=get("continent_code", _continent),
+            cache_path=Path(get("cache.path", str)).expanduser(),
+            cache_gzip=get("cache.gzip", bool),
+            chembl_expire_sec=get("query.chembl.expire_sec", int),
+            chembl_n_tries=get("query.chembl.n_tries", int),
+            chembl_fast_save=get("query.chembl.fast_save", bool),
+            chembl_timeout_sec=get("query.chembl.timeout_sec", int),
+            chembl_backoff_factor=get("query.chembl.backoff_factor", float),
+            chembl_query_delay_min=get("query.chembl.delay_sec", float),
+            chembl_query_delay_max=get("query.chembl.delay_sec", float),
+            pubchem_expire_sec=get("query.pubchem.expire_sec", int),
+            pubchem_timeout_sec=get("query.pubchem.timeout_sec", int),
+            pubchem_backoff_factor=get("query.pubchem.backoff_factor", float),
+            pubchem_query_delay_min=get("query.pubchem.delay_sec", float),
+            pubchem_query_delay_max=get("query.pubchem.delay_sec", float),
+            pubchem_n_tries=get("query.pubchem.n_tries", int),
+            hmdb_expire_sec=get("query.hmdb.expire_sec", int),
+            hmdb_timeout_sec=get("query.hmdb.timeout_sec", int),
+            hmdb_backoff_factor=get("query.hmdb.backoff_factor", float),
+            hmdb_query_delay_min=get("query.hmdb.delay_sec", float),
+            hmdb_query_delay_max=get("query.hmdb.delay_sec", float),
+            taxon_expire_sec=get("query.taxa.expire_sec", int),
+            archive_filename_suffix=get("cache.archive_filename_suffix", str),
+            default_table_suffix=get("default_table_suffix", str),
+            selenium_driver=get("selenium_driver", str).title(),
         )
+
+    @classmethod
+    def defaults(cls) -> Mapping[str, Any]:
+        return dict(defaults)
 
     def configure(self):
         """ """
@@ -143,7 +156,7 @@ class Settings:
             instance = Globals.chembl_settings
             instance.CACHING = True
             instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
-            instance.TOTAL_RETRIES = self.chembl_n_retries
+            instance.TOTAL_RETRIES = self.chembl_n_tries
             instance.FAST_SAVE = self.chembl_fast_save
             instance.TIMEOUT = self.chembl_timeout_sec
             instance.BACKOFF_FACTOR = self.chembl_backoff_factor
@@ -155,7 +168,7 @@ if Globals.settings_path.exists():
     logger.info(f"Read settings at {Globals.settings_path}")
 else:
     MANDOS_SETTINGS = Settings.empty()
-    logger.info(f"Using default settings (no file at {Globals.settings_path})")
+    logger.info(f"Using defaults (no file at {Globals.settings_path})")
 MANDOS_SETTINGS.configure()
 logger.debug(f"Setting ChEMBL cache to {MANDOS_SETTINGS.chembl_cache_path}")
 

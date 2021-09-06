@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterator, List, Sequence, Set
+from typing import Iterator, List, Set
 
 import numpy as np
 
@@ -13,7 +13,8 @@ try:
     import rdkit.Chem.inchi as Inchi
     from rdkit.Chem import AllChem
 except ImportError:
-    logger.debug("Failed importing rdkit.", exc_info=True)
+    logger.info("rdkit is not installed")
+    logger.debug("failed to import rdkit", exc_info=True)
     Chem = None
     Mol = None
     Inchi = None

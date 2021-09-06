@@ -2,7 +2,7 @@ from typing import Optional, Sequence, Set
 
 from pocketutils.tools.common_tools import CommonTools
 
-from mandos.model import MiscUtils
+from mandos.model.utils.misc_utils import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import TrialHit
@@ -10,10 +10,6 @@ from mandos.model.concrete_hits import TrialHit
 
 class TrialSearch(PubchemSearch[TrialHit]):
     """ """
-
-    @property
-    def data_source(self) -> str:
-        return "ClinicalTrials.gov :: trials"
 
     def __init__(
         self,
@@ -48,7 +44,19 @@ class TrialSearch(PubchemSearch[TrialHit]):
                         c_origin=inchikey,
                         c_matched=data.names_and_identifiers.inchikey,
                         c_name=data.name,
-                        predicate=f"trials:{dd.mapped_status}:phase{dd.mapped_phase}",
+                        data_source=self._format_source(
+                            source=dd.source,
+                            full_status=dd.status,
+                            std_status=dd.mapped_status,
+                            full_phase=dd.phase,
+                            std_phase=dd.mapped_phase,
+                        ),
+                        predicate=self._format_predicate(
+                            full_status=dd.status,
+                            std_status=dd.mapped_status,
+                            full_phase=dd.phase,
+                            std_phase=dd.mapped_phase,
+                        ),
                         object_id=did,
                         object_name=condition,
                         phase=dd.mapped_phase,

@@ -6,8 +6,10 @@ import typing
 from typing import Generic, Sequence, TypeVar
 
 from mandos import logger
-from mandos.model import CompoundNotFoundError, MiscUtils
-from mandos.model.utils import ReflectionUtils
+from mandos.model import CompoundNotFoundError
+from mandos.model.utils.misc_utils import MiscUtils
+from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.reflection_utils import ReflectionUtils
 from mandos.model.hits import AbstractHit, HitFrame
 from mandos.model.utils.hit_utils import HitUtils
 
@@ -48,13 +50,6 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     @property
     def search_name(self) -> str:
         return self.__class__.__name__.lower().replace("search", "")
-
-    @property
-    def data_source(self) -> str:
-        """
-        Where the data originally came from; e.g. ``the Human Metabolome Database (HMDB)``"
-        """
-        raise NotImplementedError()
 
     def get_params(self) -> typing.Mapping[str, typing.Any]:
         """
@@ -152,12 +147,25 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         """
         return ReflectionUtils.get_generic_arg(cls, AbstractHit)
 
+    def _format_source(self, **kwargs) -> str:
+        s = MandosResources.strings[self.search_class]["source"]
+        for k, v in kwargs.items():
+            s = s.replace(f"{{{k}}}", str(v))
+        return s
+
+    def _format_predicate(self, **kwargs) -> str:
+        s = MandosResources.strings[self.search_class]["predicate"]
+        for k, v in kwargs.items():
+            s = s.replace(f"{{{k}}}", str(v))
+        return s
+
     def _create_hit(
         self,
         c_origin: str,
         c_matched: str,
         c_id: str,
         c_name: str,
+        data_source: str,
         predicate: str,
         object_id: str,
         object_name: str,
@@ -168,7 +176,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             record_id=None,
             search_key=self.key,
             search_class=self.search_class,
-            data_source=self.data_source,
+            data_source=data_source,
             run_date=MiscUtils.utc(),
             cache_date=None,
             weight=1,

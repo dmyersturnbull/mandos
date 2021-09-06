@@ -67,31 +67,33 @@ pyarrow                        = "^5.0"
 requests                       = "^2.25"
 suretime                       = ">=0.1.1, <1.0"
 tomlkit                        = ">=0.7, <1.0"
-typeddfs                       = {version=">=0.9, <1.0", extras=["feather", "parquet", "excel"]}
+typeddfs                       = {version=">=0.11, <1.0", extras=["feather", "parquet", "excel"]}
 typer                          = ">=0.3, <1.0"
 tzdata                         = ">=2021.1"
 matplotlib                     = {version="^3.4", optional=true}
+pint                           = ">=0.17, <1.0"
 regex                          = ">=2021.8"
+joblib                         = {version="^1.0", optional=true}
 seaborn                        = {version=">=0.11, <1.0", optional=true}
 selenium                       = {version="^3", optional=true}
 scikit-learn                   = {version=">=0.24, <1.0", optional=true}
 umap-learn                     = {version=">=0.5, <1.0", optional=true}
 
 [tool.poetry.extras]
-analysis = ["scikit-learn", "umap-learn"]
-plots = ["matplotlib", "seaborn", "scikit-learn", "umap-learn"]
+analysis = ["scikit-learn", "umap-learn", "scikit-learn", "joblib"]
+plots = ["matplotlib", "seaborn"]
 web = ["selenium"]
 extras = ["matplotlib", "seaborn", "scikit-learn", "umap-learn", "selenium"]
 
 [tool.poetry.dev-dependencies]
-pre-commit               = ">=2.13, <3.0"
+pre-commit               = ">=2.14, <3.0"
 pre-commit-hooks         = ">=4.0, <5.0"
 bandit                   = ">=1.7, <2.0"
-black                    = "==21.7b0"
+black                    = "==21.8b0"
 flake8                   = "^3"
 flake8-bugbear           = ">=21"
 flake8-docstrings        = "^1"
-nbqa                     = ">=0.12, <1.0"
+nbqa                     = "^1.1"
 pytest                   = "^6"
 coverage                 = {extras = ["toml"], version = "^5"}
 pytest-cov               = "^2"
@@ -187,7 +189,7 @@ black = ["--extend-ignore=E203"]
 
 [tool.black]
 line-length = 100
-target-version = ["py38"]
+target-version = ["py39"]
 
 [mypy]
 check_untyped_defs = true

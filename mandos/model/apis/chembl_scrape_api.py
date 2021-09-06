@@ -60,6 +60,8 @@ ChemblTargetPredictionTable: TypedDf = (
     .require("confidence_70", "confidence_80", "confidence_90", dtype=SarPredictionResult)
     .require("activity_threshold", dtype=float)
     .post(_parse_conf)
+    .strict()
+    .secure()
 ).build()
 
 

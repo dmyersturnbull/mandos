@@ -11,7 +11,7 @@ class TestSettings:
         toml = NestedDotDict.read_toml(get_test_resource("settings.toml"))
         x = Settings.load(toml)
         assert str(x.chembl_cache_path) == "~"
-        assert x.chembl_n_retries == 100
+        assert x.chembl_n_tries == 100
         assert not x.chembl_fast_save
         assert x.chembl_timeout_sec == 0
 

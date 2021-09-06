@@ -1,14 +1,12 @@
-import os
 from inspect import cleandoc
 from typing import Mapping
 
 import typer
 
-from mandos.entries.common_args import CommonArgs as Ca
-from mandos.entries.common_args import Opt
+from mandos.entry._arg_utils import Opt, ArgUtils
 from mandos.model.apis.chembl_support.chembl_activity import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_targets import ConfidenceLevel, TargetType
-from mandos.search.chembl.target_traversal import TargetTraversalStrategies
+from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 
 
 def _stringify(keys: Mapping[str, str]):
@@ -16,15 +14,6 @@ def _stringify(keys: Mapping[str, str]):
 
 
 class EntryArgs:
-
-    skip: bool = Opt.flag(
-        """
-        Skip any search if the output file exists.
-
-        See also: ``--replace``
-        """
-    )
-
     @staticmethod
     def key(name: str) -> typer.Option:
         return typer.Option(
@@ -46,50 +35,9 @@ class EntryArgs:
         hidden=True,
     )
 
-    atc_level = typer.Option("1,2,3,4", help="""List of ATC levels, comma-separated.""")
-
-    min_cooccurrence_score = typer.Option(
-        0.0,
-        help=r"Minimum enrichment score, inclusive. See the docs.",
-        min=0.0,
-    )
-
-    min_cooccurring_articles = typer.Option(
-        0,
-        help=r"Minimum number of articles for both the compound and object, inclusive.",
-        min=0,
-    )
-
-    name_must_match = Opt.flag(
-        r"""
-        Require that the name of the compound(s) exactly matches those on PubChem (case-insensitive).
-        """
-    )
-
-    banned_sources = Opt.val(
-        r"""
-        Comma-separated list of sources to exclude.
-        """
-    )
-
-    min_nanomolar = Opt.val(
-        r"""
-        Minimum tissue concentration in nanomolar required to include.
-        """,
-        default=1,
-    )
-
-    acute_effect_level = typer.Option(
-        2,
-        min=1,
-        max=2,
-        help=cleandoc(
-            r"""
-            The level in the ChemIDPlus hierarchy of effect names.
-            Level 1: e.g. 'behavioral'; level 2: 'behavioral: excitement'
-            """
-        ),
-    )
+    ###############################################################################################
+    #                                         CHEMBL                                              #
+    ###############################################################################################
 
     traversal_strategy = typer.Option(
         "@null",
@@ -109,7 +57,7 @@ class EntryArgs:
             (B) The path to a ``*.strat`` file; OR
             (C) The fully qualified name of a ``TargetTraversal``
 
-            The standard traversal strategies are: {Ca.list(TargetTraversalStrategies.standard_strategies())}
+            The standard traversal strategies are: {ArgUtils.list(TargetTraversalStrategies.standard_strategies())}
 
             [default: @null] (No traversal; leave targets as-is)
             """
@@ -128,11 +76,11 @@ class EntryArgs:
             This means that this must be AT LEAST as restrictive as the traversal strategy.
 
             The ChEMBL-defined types are:
-            {Ca.list(TargetType.all_types(), "name")}
+            {ArgUtils.list(TargetType.all_types(), "name")}
 
             These special names are also accepted:
 
-            {Ca.definition_bullets(TargetType.special_type_names())}
+            {ArgUtils.definition_bullets(TargetType.special_type_names())}
             """
         ),
     )
@@ -150,7 +98,7 @@ class EntryArgs:
             This is useful to modify in only some cases.
             More important options are min_pchembl and taxa.
 
-            Values are: {Ca.list([f"{s.value} ({s.name})" for s in ConfidenceLevel])}
+            Values are: {ArgUtils.list([f"{s.value} ({s.name})" for s in ConfidenceLevel])}
 
             [default: 3] ("Target assigned is molecular non-protein target")
             """
@@ -237,15 +185,15 @@ class EntryArgs:
 
             It is rare to need to change this.
 
-            Values are: {Ca.list(DataValidityComment)}.
+            Values are: {ArgUtils.list(DataValidityComment)}.
 
             Special sets are:
 
               - @all (all flags are banned)
 
-              - @negative {Ca.list(DataValidityComment.negative_comments())})
+              - @negative {ArgUtils.list(DataValidityComment.negative_comments())})
 
-              - @positive ({Ca.list(DataValidityComment.positive_comments())})
+              - @positive ({ArgUtils.list(DataValidityComment.positive_comments())})
             """
         ),
     )
@@ -273,6 +221,55 @@ class EntryArgs:
         ),
         min=0,
         max=3,
+    )
+
+    atc_level = typer.Option("1,2,3,4", help="""List of ATC levels, comma-separated.""")
+
+    ###############################################################################################
+    #                                         PUBCHEM                                             #
+    ###############################################################################################
+
+    min_cooccurrence_score = typer.Option(
+        0.0,
+        help=r"Minimum enrichment score, inclusive. See the docs.",
+        min=0.0,
+    )
+
+    min_cooccurring_articles = typer.Option(
+        0,
+        help=r"Minimum number of articles for both the compound and object, inclusive.",
+        min=0,
+    )
+
+    name_must_match = Opt.flag(
+        r"""
+        Require that the name of the compound(s) exactly matches those on PubChem (case-insensitive).
+        """
+    )
+
+    banned_sources = Opt.val(
+        r"""
+        Comma-separated list of sources to exclude.
+        """
+    )
+
+    min_nanomolar = Opt.val(
+        r"""
+        Minimum tissue concentration in nanomolar required to include.
+        """,
+        default=1,
+    )
+
+    acute_effect_level = typer.Option(
+        2,
+        min=1,
+        max=2,
+        help=cleandoc(
+            r"""
+            The level in the ChemIDPlus hierarchy of effect names.
+            Level 1: e.g. 'behavioral'; level 2: 'behavioral: excitement'
+            """
+        ),
     )
 
     KNOWN_USEFUL_KEYS: Mapping[str, str] = {
@@ -313,6 +310,18 @@ class EntryArgs:
             """
         ),
     )
+
+    ###############################################################################################
+    #                                           G2P                                               #
+    ###############################################################################################
+
+    ###############################################################################################
+    #                                          HMDB                                               #
+    ###############################################################################################
+
+    ###############################################################################################
+    #                                          META                                               #
+    ###############################################################################################
 
 
 __all__ = ["EntryArgs"]

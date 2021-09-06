@@ -9,7 +9,6 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraph,
 )
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
-from pocketutils.tools.string_tools import StringTools
 
 from mandos import logger
 from mandos.model.taxonomy import Taxonomy, Taxon
@@ -25,7 +24,7 @@ from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.search.chembl import ChemblScrapeSearch
 from mandos.model.concrete_hits import ChemblTargetPredictionHit
-from mandos.search.chembl.target_traversal import TargetTraversalStrategies
+from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 
 P = ChemblScrapePage.target_predictions
 T = ChemblTargetPredictionTable
@@ -68,10 +67,6 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
         self.binding_score = binding_score
         self.nonbinding_score = nonbinding_score
 
-    @property
-    def data_source(self) -> str:
-        return "ChEMBL :: target predictions"
-
     def find(self, lookup: str) -> Sequence[ChemblTargetPredictionHit]:
         ch = ChemblUtils(self.api).get_compound_dot_dict(lookup)
         compound = ChemblUtils(self.api).compound_dot_dict_to_obj(ch)
@@ -100,7 +95,8 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
             for conf_t, conf_v in zip(
                 [70, 80, 90], [row.confidence_70, row.confidence_80, row.confidence_90]
             ):
-                predicate = f"binding:{conf_v.yes_no_mixed}"
+                source = self._format_source(confidence=conf_t)
+                predicate = self._format_predicate(truth=conf_v.yes_no_mixed)
                 weight = (
                     np.sqrt(thresh)
                     * abs(conf_t / (100 - conf_t) * conf_v.score)
@@ -112,10 +108,10 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
                     c_matched=compound.inchikey,
                     c_id=compound.chid,
                     c_name=compound.name,
+                    data_source=source,
                     predicate=predicate,
                     object_id=ancestor.chembl,
                     object_name=ancestor.name,
-                    data_source=self.data_source,
                     exact_target_id=row.target_chembl_id,
                     exact_target_name=row.target_pref_name,
                     weight=weight,

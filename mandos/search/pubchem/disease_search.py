@@ -7,20 +7,17 @@ from mandos.model.concrete_hits import DiseaseHit
 class DiseaseSearch(PubchemSearch[DiseaseHit]):
     """ """
 
-    @property
-    def data_source(self) -> str:
-        return "Comparative Toxicogenomics Database (CTD) :: diseases"
-
     def find(self, inchikey: str) -> Sequence[DiseaseHit]:
         data = self.api.fetch_data(inchikey)
         return [
             self._create_hit(
+                data_source=self._format_source(evidence=dd.evidence_type),
                 inchikey=inchikey,
                 c_id=str(data.cid),
                 c_origin=inchikey,
                 c_matched=data.names_and_identifiers.inchikey,
                 c_name=data.name,
-                predicate=f"disease:{dd.evidence_type}",
+                predicate=self._format_predicate(evidence=dd.evidence_type),
                 object_id=dd.disease_id,
                 object_name=dd.disease_name,
             )

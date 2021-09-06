@@ -151,6 +151,10 @@ HitFrame = (
     .reserve("compound_id", "compound_name", dtype=str)
     .reserve("chembl_id", "pubchem_id", dtype=str)
     .reserve("weight", dtype=np.float64)
+    .strict(cols=False)
+    .secure()
 ).build()
+
+df = HitFrame.read_excel()
 
 __all__ = ["AbstractHit", "HitFrame", "KeyPredObj", "KeyPredObjSource", "Triple", "HIT_FIELD_TYPE"]

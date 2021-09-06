@@ -51,6 +51,8 @@ TaxonomyDf = (
     .require("scientific_name", dtype=int)
     .require("common_name", "mnemonic", dtype=str)
     .post(_fix_tax_df)
+    .strict()
+    .secure()
 ).build()
 
 

@@ -1,6 +1,5 @@
-import abc
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, Sequence
+from typing import Any, Callable, Mapping, Optional
 
 import defusedxml.ElementTree as Xml
 import orjson

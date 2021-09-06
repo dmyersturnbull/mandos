@@ -1,0 +1,64 @@
+#### basic settings ####
+backend                        : PDF
+text.usetex                    : False
+savefig.dpi                    : 500
+savefig.transparent            : True
+savefig.pad_inches             : 0
+# Some plots might override this:
+image.cmap                     : Greys
+# We're never going to display inline:
+figure.dpi                     : 40
+
+#### figure size ####
+figure.figsize                  : 3.775,3.775
+
+#### font settings ####
+# my text font size is 11, so this seems appropriate
+# I generally don't have titles in the figures
+font.sans-serif                 : Source Sans Pro, SF Pro Display, SF Pro Text, Helvetica, Noto Sans
+font.family                     : sans-serif
+font.size                       : 9
+xtick.labelsize                 : 9
+ytick.labelsize                 : 9
+legend.fontsize                 : 9
+legend.title_fontsize           : 10
+axes.labelsize                  : 10
+axes.titlesize                  : 11
+figure.titlesize                : 11
+
+#### margins ####
+axes.autolimit_mode             : round_numbers
+axes.xmargin                    : 0
+axes.ymargin                    : 0
+
+#### legend ####
+# Likely to be overridden per plot:
+legend.loc                     : best
+legend.fancybox                : False
+# Less likely to change
+legend.framealpha              : 0
+legend.edgecolor               : none
+legend.facecolor               : none
+legend.borderaxespad           : 0.0
+legend.labelspacing            : 0.4
+legend.columnspacing           : 0.3
+legend.handlelength            : 0.7
+legend.handletextpad           : 0.4
+
+#### edges by default ####
+#patch.facecolor        : k
+#patch.force_edgecolor  : True
+
+#### other sizes ####
+# It's important for these to be visible even when printed
+lines.linewidth                 : 1.0
+axes.linewidth                  : 0.75
+errorbar.capsize                : 0
+# Likely to be overridden per plot:
+scatter.marker                  : o
+lines.markersize                : 20
+
+#### boxplots ####
+boxplot.flierprops.marker       : .
+boxplot.flierprops.markersize   : 5
+boxplot.meanprops.color         : black

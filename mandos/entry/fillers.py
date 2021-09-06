@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Set, Optional, Mapping, Tuple, Dict
+from typing import Optional, Mapping, Tuple, Dict, MutableMapping
 
 from mandos import logger
 from pocketutils.tools.common_tools import CommonTools
@@ -8,7 +8,7 @@ from typeddfs import TypedDfs
 
 from mandos.model import CompoundNotFoundError, CompoundStruct
 
-from mandos.entries.api_singletons import Apis
+from mandos.entry.api_singletons import Apis
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 
@@ -22,7 +22,8 @@ IdMatchFrame = (
     .reserve("chembl_inchikey", "pubchem_inchikey", dtype=str)
     .reserve("chembl_inchi", "pubchem_inchi", dtype=str)
     .reserve("origin_inchi", "origin_inchikey", dtype=str)
-    .strict(index=True, cols=False)
+    .strict(cols=False)
+    .secure()
 ).build()
 
 
@@ -172,7 +173,7 @@ class CompoundIdFiller:
         self,
         db_to_struct: Mapping[str, CompoundStruct],
         what: str,
-    ) -> Tuple[Optional[str], Dict[str, Db]]:
+    ) -> Tuple[Optional[str], MutableMapping[str, Db]]:
         """
         Chooses the best what="inchi" or what="inchikey".
 

@@ -1,6 +1,6 @@
 import pytest
 
-from mandos.model.utils.mappings import Mappings
+from mandos.model.mappings import Mappings
 
 
 class TestMappings:

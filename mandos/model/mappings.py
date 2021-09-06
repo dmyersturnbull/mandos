@@ -5,7 +5,7 @@ import regex
 import pandas as pd
 from typeddfs import TypedDfs
 
-from mandos.model import MandosResources
+from mandos.model.utils.resources import MandosResources
 
 MappingFrame = TypedDfs.untyped("MappingFrame")
 

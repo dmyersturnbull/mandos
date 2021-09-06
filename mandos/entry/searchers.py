@@ -4,17 +4,15 @@ Run searches and write files.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional, Sequence
+from typing import Optional, Sequence
 
-import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 
 from mandos import logger
-from mandos.entries.paths import EntryPaths
+from mandos.entry.paths import EntryPaths
 from mandos.model.searches import Search
 
 
@@ -27,7 +25,8 @@ InputFrame = (
     .require("inchikey")
     .reserve("inchi", "smiles", "compound_id", dtype=str)
     .post(_fix_cols)
-    .strict(index=True, cols=False)
+    .strict(cols=False)
+    .secure()
 ).build()
 
 

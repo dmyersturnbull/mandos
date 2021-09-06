@@ -1,5 +1,5 @@
 """
-PubChem querying API.
+PubChem caching API.
 """
 from __future__ import annotations
 

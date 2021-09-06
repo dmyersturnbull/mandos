@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Sequence, List, Type, Union, Optional
+from typing import Dict, Sequence, Type, Union, Optional, MutableMapping
 
 import pandas as pd
 import typer
@@ -14,10 +14,10 @@ from typeddfs import TypedDfs
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos import logger
-from mandos.entries.api_singletons import Apis
-from mandos.entries.entries import Entries
-from mandos.entries.abstract_entries import Entry
-from mandos.model.utils import InjectionError
+from mandos.entry.api_singletons import Apis
+from mandos.entry.entry_commands import Entries
+from mandos.entry.abstract_entries import Entry
+from mandos.model.utils.reflection_utils import InjectionError
 from mandos.model.hits import HitFrame
 from mandos.model.settings import MANDOS_SETTINGS
 
@@ -25,7 +25,7 @@ cli = typer.Typer()
 Apis.set_default()
 Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
 
-EntriesByCmd: Dict[str, Type[Entry]] = {e.cmd(): e for e in Entries}
+EntriesByCmd: MutableMapping[str, Type[Entry]] = {e.cmd(): e for e in Entries}
 
 # these are only permitted in 'meta', not individual searches
 meta_keys = {"verbose", "quiet", "check", "log", "to"}
@@ -35,6 +35,8 @@ SearchExplainDf = (
     TypedDfs.typed("SearchExplainDf")
     .require("key", "search", "source", dtype=str)
     .require("category", "desc", "args", dtype=str)
+    .strict()
+    .secure()
 ).build()
 
 
@@ -90,6 +92,9 @@ class MultiSearch:
         # build up the list of Entry classes first, and run ``test`` on each one
         # that's to check that the parameters are correct before running anything
         commands = self._build_commands()
+        # write a metadata file describing all of the searches
+        explain = self.to_table()
+        explain.write_file(self.explain_path)
         for cmd in commands:
             cmd.test()
             logger.info(f"Search {cmd.key} looks ok.")
@@ -101,9 +106,6 @@ class MultiSearch:
         df = HitFrame(pd.concat([HitFrame.read_file(cmd.output_path) for cmd in commands]))
         df.write_file(self.final_path)
         logger.notice(f"Concatenated file to {self.final_path}")
-        # write a metadata file describing all of the searches
-        explain = self.to_table()
-        explain.write_file(self.explain_path)
 
     def _build_commands(self) -> Sequence[CmdRunner]:
         commands = {}
@@ -125,7 +127,7 @@ class MultiSearch:
 @dataclass(frozen=True, repr=True)
 class CmdRunner:
     cmd: Type[Entry]
-    params: Dict[str, Union[int, str, float]]
+    params: MutableMapping[str, Union[int, str, float]]
     input_path: Path
     category: Optional[str]
 

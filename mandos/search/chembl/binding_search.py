@@ -1,4 +1,4 @@
-from typing import Sequence, Set, Tuple
+from typing import Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
@@ -12,10 +12,6 @@ class BindingSearch(_ActivitySearch[BindingHit]):
     """
     Search for ``activity`` of type "B".
     """
-
-    @property
-    def data_source(self) -> str:
-        return "ChEMBL :: binding activity"
 
     @classmethod
     def allowed_assay_types(cls) -> Set[str]:
@@ -33,12 +29,25 @@ class BindingSearch(_ActivitySearch[BindingHit]):
         from_super = self._extract(lookup, compound, data)
         rel = from_super.req_as("standard_relation", str)
         pchembl = from_super.req_as("pchembl_value", float)
-        predicate = self._predicate(pchembl, rel)
+        truth = self._truth(pchembl, rel)
+        source = self._format_source(
+            src_id=from_super.req_as("src_id", str),
+            taxon_id=from_super.get("taxon_id"),
+            taxon_name=from_super.get("taxon_name"),
+        )
+        predicate = self._format_predicate(
+            src_id=from_super.req_as("src_id", str),
+            taxon_id=from_super.get("taxon_id"),
+            taxon_name=from_super.get("taxon_name"),
+            truth=truth,
+            rel=rel,
+        )
         hit = self._create_hit(
             c_origin=lookup,
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
+            data_source=source,
             predicate=predicate,
             object_id=best_target.chembl,
             object_name=best_target.name,
@@ -53,20 +62,20 @@ class BindingSearch(_ActivitySearch[BindingHit]):
         )
         return [hit]
 
-    def _predicate(self, pchembl: float, rel: str) -> str:
+    def _truth(self, pchembl: float, rel: str) -> str:
         if (
             self.binds_cutoff is not None
             and pchembl >= self.binds_cutoff
             and rel in {"=", "~", "<", "<="}
         ):
-            return "binding:yes"
-        if (
+            return "yes"
+        elif (
             self.does_not_bind_cutoff is not None
             and pchembl <= self.does_not_bind_cutoff
             and rel in {"=", "~", ">", ">="}
         ):
-            return "binding:no"
-        return f"binding:{rel}"
+            return "no"
+        return rel
 
 
 __all__ = ["BindingSearch"]

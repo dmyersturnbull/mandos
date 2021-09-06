@@ -1,8 +1,9 @@
-import pytest
-from chembl_webresource_client.new_client import new_client as Chembl
+from collections import Sequence
 
-from mandos.cli import Commands, Searcher
-from mandos.model.apis.chembl_api import ChemblApi
+import pytest
+from mandos.model.hits import AbstractHit
+
+from mandos.entry.api_singletons import Apis
 from mandos.search.chembl.indication_search import IndicationSearch
 
 from .. import get_test_resource
@@ -10,10 +11,11 @@ from .. import get_test_resource
 
 class TestIndicationSearch:
     def test_find(self):
-        df, triples = Commands.trials(get_test_resource("inchis.txt"))
-        assert len(df) == 6
-        assert len(triples) == 6
-        assert {t.compound_name.lower() for t in triples} == {"alprazolam"}
+        search = IndicationSearch(key="indications", api=Apis.Chembl, min_phase=0)
+        inchikeys = get_test_resource("inchis.txt").read_text(encoding="utf8").splitlines()
+        hits: Sequence[AbstractHit] = search.find_all(inchikeys)
+        assert len(hits) == 6
+        assert {t.compound_name.lower() for t in hits} == {"alprazolam"}
         assert {t.object_id for t in triples} == {
             "D012559",
             "D016584",

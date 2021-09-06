@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import enum
-from json.decoder import JSONDecodeError
 
-import numpy as np
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from requests.exceptions import RequestException

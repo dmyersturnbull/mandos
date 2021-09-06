@@ -1,5 +1,7 @@
-from typing import Set, Sequence
+from pathlib import Path
+from typing import Set, Sequence, Optional, Union
 
+from mandos import logger
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.apis.chembl_support.chembl_activity import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_targets import TargetType
@@ -10,6 +12,22 @@ from mandos.model.taxonomy_caches import TaxonomyFactories
 
 class EntryUtils:
     """ """
+
+    @classmethod
+    def adjust_filename(cls, to: Optional[Path], default: Union[str, Path], replace: bool) -> Path:
+        if to is None:
+            path = Path(default)
+        elif str(to).startswith("."):
+            path = Path(default).with_suffix(str(to))
+        elif to.is_dir() or to.suffix == "":
+            path = to / default
+        else:
+            path = Path(to)
+        if path.exists() and not replace:
+            raise FileExistsError(f"File {path} already exists")
+        elif replace:
+            logger.info(f"Overwriting existing file {path}.")
+        return path
 
     @staticmethod
     def split(st: str) -> Set[str]:

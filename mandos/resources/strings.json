@@ -1,0 +1,86 @@
+{
+  "chembl:AtcSearch": {
+    "source": "chembl:atc:level-{level}",
+    "predicate": "atc"
+  },
+  "chembl:BindingSearch": {
+    "source": "chembl:binding:{src_id}",
+    "predicate": "{truth}"
+  },
+  "chembl:FunctionalSearch": {
+    "source": "chembl:functional-activity:{src_id}",
+    "predicate": "activity"
+  },
+  "chembl:GoSearch": {
+    "source": "chembl:go",
+    "predicate": "go-{type}"
+  },
+  "chembl:IndicationSearch": {
+    "source": "chembl:indication",
+    "predicate": "indication"
+  },
+  "chembl:MechanismSearch": {
+    "source": "chembl:mechanism",
+    "predicate": "{action}"
+  },
+  "chembl:TargetPredictionSearch": {
+    "source": "chembl:target-predictions",
+    "predicate": "{truth}"
+  },
+  "g2p:G2pInteractionSearch": {
+    "source": "g2p:interactions",
+    "predicate": "{action}"
+  },
+  "pubchem:AcuteEffectsSearch": {
+    "source": "chemidplus:acute-effects",
+    "predicate": "effect"
+  },
+  "pubchem:BioactivitySearch": {
+    "source": "pubchem:bioassays",
+    "predicate": "{action}"
+  },
+  "pubchem:ComputedPropertySearch": {
+    "source": "pubchem:computed-properties",
+    "predicate": "{key}"
+  },
+  "pubchem:GeneCoOccurrenceSearch": {
+    "source": "pubchem:co-occurrence",
+    "predicate": "gene"
+  },
+  "pubchem:ChemicalCoOccurrenceSearch": {
+    "source": "pubchem:co-occurrence",
+    "predicate": "chemical"
+  },
+  "pubchem:DiseaseCoOccurrenceSearch": {
+    "source": "pubchem:co-occurrence",
+    "predicate": "disease"
+  },
+  "pubchem:CtdGeneSearch": {
+    "source": "ctd:chemical-gene-interactions",
+    "predicate": "{what}:{direction}"
+  },
+  "pubchem:DgiSearch": {
+    "source": "dgidb:drug-gene-interactions",
+    "predicate": "{type}"
+  },
+  "pubchem:DiseaseSearch": {
+    "source": "ctd:diseases:{evidence}",
+    "predicate": "disease"
+  },
+  "pubchem:DrugbankDdiSearch": {
+    "source": "drugbank:ddis",
+    "predicate": "{kind}:{spec}:{direction}"
+  },
+  "pubchem:DrugbankTargetSearch": {
+    "source": "drugbank:targets",
+    "predicate": "{type}:{action}"
+  },
+  "pubchem:DrugbankGeneralFunctionSearch": {
+    "source": "drugbank:target-functions",
+    "predicate": "function:{type}:{action}"
+  },
+  "pubchem:TrialSearch": {
+    "source": "clinical-trials-dot-gov:{source}",
+    "predicate": "{std_status}:phase{std_phase}"
+  }
+}

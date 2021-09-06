@@ -27,12 +27,11 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
     def cooccurrence_type(cls) -> CoOccurrenceType:
         raise NotImplementedError()
 
-    @property
-    def data_source(self) -> str:
-        return f"PubChem :: {self.cooccurrence_type().name} co-occurrences"
+    def _source(self) -> str:
+        return self._format_source()
 
     def _predicate(self) -> str:
-        raise NotImplementedError()
+        return self._format_predicate()
 
     def _query(self, data: PubchemData):
         raise NotImplementedError()
@@ -47,18 +46,19 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
                 c_origin=inchikey,
                 c_matched=data.names_and_identifiers.inchikey,
                 c_name=data.name,
+                data_source=self._source(),
                 predicate=self._predicate(),
                 object_id=dd.neighbor_id,
                 object_name=dd.neighbor_name,
-                value=dd.calc_score,
-                score=dd.calc_score,
+                value=dd.calc_enrichment,
+                score=dd.calc_enrichment,
                 intersect_count=dd.article_count,
                 query_count=dd.query_article_count,
                 neighbor_count=dd.neighbor_article_count,
             )
             for dd in all_of_them
             if (
-                dd.calc_score >= self.min_score
+                dd.calc_enrichment >= self.min_score
                 and dd.neighbor_article_count >= self.min_articles
                 and dd.query_article_count >= self.min_articles
             )
@@ -70,9 +70,6 @@ class GeneCoOccurrenceSearch(CoOccurrenceSearch[GeneCoOccurrenceHit]):
     def cooccurrence_type(cls) -> CoOccurrenceType:
         return CoOccurrenceType.gene
 
-    def _predicate(self) -> str:
-        return "co-occurrence:gene"
-
     def _query(self, data: PubchemData):
         return data.literature.gene_cooccurrences
 
@@ -82,9 +79,6 @@ class ChemicalCoOccurrenceSearch(CoOccurrenceSearch[ChemicalCoOccurrenceHit]):
     def cooccurrence_type(cls) -> CoOccurrenceType:
         return CoOccurrenceType.chemical
 
-    def _predicate(self) -> str:
-        return "co-occurrence:chemical"
-
     def _query(self, data: PubchemData):
         return data.literature.chemical_cooccurrences
 
@@ -93,9 +87,6 @@ class DiseaseCoOccurrenceSearch(CoOccurrenceSearch[DiseaseCoOccurrenceHit]):
     @classmethod
     def cooccurrence_type(cls) -> CoOccurrenceType:
         return CoOccurrenceType.disease
-
-    def _predicate(self) -> str:
-        return "co-occurrence:disease"
 
     def _query(self, data: PubchemData):
         return data.literature.disease_cooccurrences

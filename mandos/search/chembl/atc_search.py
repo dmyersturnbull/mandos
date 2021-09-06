@@ -34,16 +34,6 @@ class AtcSearch(ChemblSearch[AtcHit]):
         return hits
 
     def process(self, lookup: str, compound: ChemblCompound, atc: str) -> Sequence[AtcHit]:
-        """
-
-        Args:
-            lookup:
-            compound:
-            atc:
-
-        Returns:
-
-        """
         dots = NestedDotDict(self.api.atc_class.get(atc))
         found = []
         for level in sorted(self.levels):
@@ -58,16 +48,18 @@ class AtcSearch(ChemblSearch[AtcHit]):
             object_name = compound.name.lower()
         else:
             object_name = dots.get(f"level{level}_description")
+        source = self._format_source(level=level)
+        predicate = self._format_predicate(level=level)
         return self._create_hit(
             c_origin=lookup,
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
-            predicate="atc",
+            data_source=source,
+            predicate=predicate,
             object_id=dots.get(f"level{level}"),
             object_name=object_name,
             level=level,
-            data_source=f"{self.data_source} :: level {level}",
         )
 
 

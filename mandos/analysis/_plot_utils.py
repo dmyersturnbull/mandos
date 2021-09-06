@@ -1,25 +1,219 @@
 """
 
 """
+from __future__ import annotations
+
+import enum
+from pathlib import Path
+from typing import Union, Optional, Tuple, Mapping, Any, Generator, Sequence, Set
+
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, Colormap, ListedColormap, to_hex
+from matplotlib.figure import Figure
+from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.full import Tools
+
+# noinspection PyProtectedMember
+from seaborn.palettes import SEABORN_PALETTES
+from typeddfs import TypedDfs
+
+from mandos import logger
+from mandos.model.utils import CleverEnum
+from mandos.model.utils.misc_utils import MiscUtils
+from mandos.model.utils.resources import MandosResources
+
+try:
+    import seaborn as sns
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+except ImportError:
+    sns = None
+    Axes = None
+    Figure = None
 
 
-class PlotUtils:
-    def _markers(self, df: pd.DataFrame, col: Optional[str]) -> Optional[pd.Series]:
-        from matplotlib.markers import MarkerStyle
+class DataType(CleverEnum):
+    qualitative = enum.auto()
+    sequential = enum.auto()
+    divergent = enum.auto()
 
+
+class _Wut:
+    def __init__(self):
+        self.override_settings = MandosResources.json("viz", "style_override.json")
+        self.dims = MandosResources.json("viz", "page_dims.json")
+        palettes = MandosResources.json("palettes.json")
+        self.named_palettes = palettes["named"]
+        self.default_palettes = palettes["defaults"]
+        self.named_cmaps = self._get_named_cmaps()
+
+    def _get_named_cmaps(self) -> Mapping[str, Colormap]:
+        cmaps = {}
+        for name, cmap in self.named_palettes.items():
+            cmap = NestedDotDict(cmap)
+            seq = cmap.req_list_as("sequence", str)
+            seq = [to_hex(c) for c in seq]
+            cat = cmap.req_as("categorical", bool)
+            if cat:
+                cmaps[name] = ListedColormap(seq)
+            else:
+                nan, under, over = cmap.get("nan"), cmap.get("under"), cmap.get("over")
+                cmap = LinearSegmentedColormap.from_list(name, seq)
+                cmap.set_extremes(nan, under, over)
+        return cmaps
+
+
+WUT = _Wut()
+
+
+class MandosPlotStyling:
+    @classmethod
+    def list_named_palettes(cls) -> Set[str]:
+        return {
+            *WUT.named_palettes.keys(),
+            *SEABORN_PALETTES,
+            *plt.colormaps(),
+        }
+
+    @classmethod
+    def choose_palette(
+        cls,
+        data: pd.DataFrame,
+        col: Optional[str],
+        palette: Optional[str],
+    ) -> Union[None, Colormap, Mapping[str, str]]:
         if col is None:
             return None
-        known = MarkerStyle.markers.keys()
-        uniques = df[col].unique()
-        if all((v in known for v in uniques)):
-            return df[col]
-        if len(uniques) > len(known):
-            logger.error(f"{len(uniques)} unique markers > {len(known)} available. Cycling.")
-        cycler = cycle(known)
-        dct = {k: next(cycler) for k in uniques}
-        return df[col].map(dct.get)
+        unique = data[col].unique()
+        dtype = cls.guess_data_type(data)
+        if palette is None:
+            palette = cls.get_palette(None, dtype)
+        if dtype is DataType.qualitative:
+            if not isinstance(palette, ListedColormap):
+                raise TypeError(f"{palette} is not a valid choice for {dtype}")
+            if len(unique) > len(palette.colors):
+                raise ValueError(
+                    f"Palette (N={len(palette.colors)}) too small for {len(unique)} items"
+                )
+            return {i: j for i, j in Tools.zip_strict(unique, map(to_hex, palette.colors))}
+        return palette
 
-    def _colors(df: pd.DataFrame, col: Optional[str]) -> Optional[pd.Series]:
-        if col is None:
+    @classmethod
+    def get_palette(cls, name: Optional[str], data_type: Union[DataType, str]) -> Colormap:
+        data_type = DataType.of(data_type)
+        if name is None:
+            name = WUT.default_palettes.req_as(data_type.name, str)
+        if name in WUT.named_cmaps:
+            return WUT.named_cmaps[name]
+        return sns.color_palette(name, as_cmap=True)
+
+    @classmethod
+    def guess_data_type(cls, data: Sequence[Union[str, float]]) -> DataType:
+        numerical = cls._to_numerical(data)
+        if numerical is None:
+            return DataType.qualitative
+        is_divergent = cls._are_floats_divergent(data)
+        if is_divergent:
+            return DataType.divergent
+        return DataType.sequential
+
+    @classmethod
+    def _to_colors(cls, data: Sequence[Union[float, str]]) -> Optional[Sequence[str]]:
+        if not all((isinstance(d, str)) for d in data):
             return None
-        return df[col]
+        try:
+            return [to_hex(c) for c in data]
+        except ValueError:
+            return None
+
+    @classmethod
+    def _to_numerical(cls, data: Sequence[Union[str, float]]) -> Optional[Sequence[float]]:
+        try:
+            [float(d) for d in data]
+        except ValueError:
+            return None
+
+    @classmethod
+    def _are_floats_divergent(cls, data: Sequence[float]):
+        signs = {np.sign(d) for d in data if d != 0 and not np.isnan(d) and not np.isinf(d)}
+        return len(signs) == 2
+
+    @classmethod
+    def context(
+        cls, style: Union[None, str, Path], kwargs: Optional[Mapping[str, Any]]
+    ) -> Generator[None, None, None]:
+        """
+        Override these from the default style.
+        This will be called once, at startup.
+        """
+        new_kwargs = dict(WUT.override_settings["allow_change"])
+        if kwargs is not None:
+            new_kwargs.update(kwargs)
+        with plt.rc_context(new_kwargs, style):
+            yield
+
+    @classmethod
+    def fig_width_and_height(cls, size: str) -> Tuple[float, float]:
+        if size is None:
+            return plt.rcParams["figure.figsize"]
+        axis_to_str = {
+            i: d.strip() for i, d in enumerate(size.replace(" × ", " by ").split(" by "))
+        }
+        try:
+            default_inch = plt.rcParams["figure.figsize"]
+            width = cls._to_inch(axis_to_str.get(0), WUT.dims["widths"], default_inch[0])
+            height = cls._to_inch(axis_to_str.get(1), WUT.dims["heights"], default_inch[1])
+        except ValueError:
+            raise ValueError(f"Strange --size format in '{size}'")
+        return width, height
+
+    @classmethod
+    def _to_inch(
+        cls, s: Optional[str], standards: Mapping[str, float], default_inch: float
+    ) -> float:
+        if s is None or len(s) == "":
+            return default_inch
+        try:
+            return float(s)
+        except ValueError:
+            pass
+        x = standards.get(s, s)
+        return MiscUtils.canonicalize_quantity(x, "[length]").to("inch").magnitude
+
+
+class MandosPlotUtils:
+    @classmethod
+    def save(cls, figure: Figure, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(str(path))
+        figure.clear()
+
+
+CompoundStyleDf = (
+    TypedDfs.typed("CompoundStyleDf").require("inchikey", dtype=str).strict(cols=False).secure()
+).build()
+
+PredicateObjectStyleDf = (
+    TypedDfs.typed("PredicateObjectStyleDf")
+    .require("predicate", "object", dtype=str)
+    .strict(cols=False)
+    .secure()
+).build()
+
+PhiPsiStyleDf = (
+    TypedDfs.typed("PhiPsiStyleDf").require("phi", "psi", dtype=str).strict(cols=False).secure()
+).build()
+
+
+__all__ = [
+    "sns",
+    "plt",
+    "Figure",
+    "Axes",
+    "MandosPlotStyling",
+    "MandosPlotUtils",
+    "CompoundStyleDf",
+    "PredicateObjectStyleDf",
+]

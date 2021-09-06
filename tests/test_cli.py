@@ -1,7 +1,7 @@
 import pytest
 from typer.testing import CliRunner
 
-from mandos.cli import Commands, cli
+from mandos.cli import cli
 
 from . import get_test_resource
 

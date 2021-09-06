@@ -1,0 +1,21 @@
+{
+  "widths": {
+    "pnas.2-col": "8.5-0.35*2 in",
+    "pnas.1-col": "8.5-0.35*2-0.25 in",
+    "nature.2-col": "183 mm",
+    "nature.1-col": "89 mm",
+    "ieee.2-col": "7.16 in",
+    "ieee.1-col": " 3.5 in",
+    "science.1-col": "5.5 cm",
+    "science.2-col": "12.0 cm",
+    "plos.2-col": "19.05 cm",
+    "plos.1-col": "13.2 cm"
+  },
+  "heights": {
+    "pnas.full-page": "11-0.35-0.55 in",
+    "nature.full-page": "247 mm",
+    "ieee.full-page": "10 in",
+    "science.full-page": "10 in",
+    "plos.full-page": "8.75 in"
+  }
+}

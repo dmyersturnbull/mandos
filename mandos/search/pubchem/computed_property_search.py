@@ -13,10 +13,6 @@ class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
         self.api = api
         self.descriptors = descriptors
 
-    @property
-    def data_source(self) -> str:
-        return "PubChem :: computed properties"
-
     def find(self, inchikey: str) -> Sequence[ComputedPropertyHit]:
         data = self.api.fetch_data(inchikey)
         results = []
@@ -25,6 +21,8 @@ class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
         descriptors = {self._standardize_key(s) for s in self.descriptors}
         for dd in data.chemical_and_physical_properties.computed:
             if self._standardize_key(dd.key) in descriptors:
+                source = self._format_source(key=dd.key.lower())
+                predicate = self._format_predicate(key=dd.key.lower())
                 results.append(
                     self._create_hit(
                         inchikey=inchikey,
@@ -32,7 +30,8 @@ class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
                         c_origin=inchikey,
                         c_matched=data.names_and_identifiers.inchikey,
                         c_name=data.name,
-                        predicate="property:" + dd.key.lower(),
+                        data_source=source,
+                        predicate=predicate,
                         object_id=dd.value,
                         object_name=dd.value,
                     )

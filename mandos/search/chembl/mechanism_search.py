@@ -14,10 +14,6 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     Search for ``mechanisms``.
     """
 
-    @property
-    def data_source(self) -> str:
-        return "ChEMBL :: mechanisms"
-
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         return list(self.api.mechanism.filter(parent_molecule_chembl_id=parent_form.chid))
 
@@ -38,12 +34,14 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
     ) -> Sequence[MechanismHit]:
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
-        predicate = "moa:" + data.req_as("action_type", str).lower()
+        source = self._format_source()
+        predicate = self._format_predicate(action=data.req_as("action_type", str).lower())
         hit = self._create_hit(
             c_origin=lookup,
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
+            data_source=source,
             predicate=predicate,
             object_id=best_target.chembl,
             object_name=best_target.name,

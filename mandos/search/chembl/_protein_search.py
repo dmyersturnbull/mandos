@@ -16,7 +16,7 @@ from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.taxonomy import Taxonomy
 from mandos.search.chembl import ChemblSearch
-from mandos.search.chembl.target_traversal import TargetTraversalStrategies
+from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 
 H = TypeVar("H", bound=ProteinHit, covariant=True)
 

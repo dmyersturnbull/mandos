@@ -13,7 +13,7 @@ from typeddfs.df_errors import UnsupportedOperationError
 
 from mandos import logger
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
-from mandos.entries.searcher import InputFrame
+from mandos.entry.searchers import InputFrame
 from mandos.model.utils.rdkit_utils import RdkitUtils
 
 T = TypeVar("T", bound=BaseDf)
@@ -31,8 +31,7 @@ class MatrixPrep:
         for p in paths:
             key = p.with_suffix("").name
             try:
-                mx = SimilarityDfShortForm.read_file(p)
-                dct[key] = mx
+                dct[key] = SimilarityDfShortForm.read_file(p)
             except (OSError, UnsupportedOperationError, ValueError):
                 logger.error(f"Failed to load matrix at {str(p)}")
                 raise

@@ -30,6 +30,8 @@ LigandDf = (
     TypedDfs.typed("LigandDf")
     .require("Ligand id", dtype=int)
     .require("Name", "Type", "Approved", "PubChem CID", "InChIKey", dtype=str)
+    .strict()
+    .secure()
 ).build()
 
 
@@ -44,6 +46,8 @@ InteractionDf = (
     .require("selectivity", "endogenous", "primary_target", dtype=str)
     .require("affinity_units", dtype=str)
     .require("affinity_median", dtype=np.float64)
+    .strict()
+    .secure()
 ).build()
 
 

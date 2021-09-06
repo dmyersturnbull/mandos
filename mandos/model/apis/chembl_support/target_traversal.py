@@ -4,14 +4,14 @@ import abc
 import enum
 import sre_compile
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Sequence, Set
+from typing import Dict, Mapping, Optional, Sequence, Set, MutableMapping
 from typing import Tuple as Tup
 from typing import Type
 
 import regex
 
-from mandos.model import MandosResources
-from mandos.model.utils import ReflectionUtils
+from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.reflection_utils import ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraph,
@@ -125,7 +125,7 @@ class StandardStrategyParser:
             "$": Acceptance.at_end,
         }
         edges = set()
-        edge_to_acceptance: Dict[TargetEdgeReqs, Acceptance] = {}
+        edge_to_acceptance: MutableMapping[TargetEdgeReqs, Acceptance] = {}
         for line in lines:
             match = pat.fullmatch(line)
             if match is None:

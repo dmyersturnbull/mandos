@@ -1,7 +1,6 @@
 from typing import Mapping
 
 import pytest
-from chembl_webresource_client.new_client import new_client as Chembl
 
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraphFactory,
@@ -9,10 +8,11 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
     TargetNode,
     TargetRelType,
 )
+from mandos.entry.api_singletons import Apis
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory, TargetType
 
-factory = TargetFactory(Chembl)
-graph_factory = ChemblTargetGraphFactory.create(Chembl, factory)
+factory = TargetFactory(Apis.Chembl)
+graph_factory = ChemblTargetGraphFactory.create(Apis.Chembl, factory)
 
 
 class TestTargets:

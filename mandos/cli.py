@@ -9,12 +9,15 @@ from typing import Type
 import typer
 from typer.models import CommandInfo
 
-from mandos import MandosLogging, logger
+from mandos.model.utils.setup import MandosLogging, logger
 
-# noinspection PyUnresolvedReferences
-from mandos.commands import MiscCommands, _InsertedCommandListSingleton
-from mandos.entries.api_singletons import Apis
-from mandos.entries.entries import Entries
+from mandos.entry.calc_commands import CalcCommands
+
+# noinspection PyProtectedMember
+from mandos.entry.misc_commands import MiscCommands, _InsertedCommandListSingleton
+from mandos.entry.api_singletons import Apis
+from mandos.entry.entry_commands import Entries
+from mandos.entry.plot_commands import PlotCommands
 from mandos.model.settings import MANDOS_SETTINGS
 
 cli = typer.Typer()
@@ -39,8 +42,10 @@ def _init_commands():
         setattr(SearchCommands, cmd, entry.run)
 
     cli.registered_commands += [
+        CommandInfo(":document", callback=MiscCommands.document),
         CommandInfo(":search", callback=MiscCommands.search),
-        CommandInfo(":describe", callback=MiscCommands.describe),
+        CommandInfo(":detail-search", callback=MiscCommands.detail_search),
+        CommandInfo(":defaults", callback=MiscCommands.list_default_settings, hidden=True),
         CommandInfo(":fill", callback=MiscCommands.fill),
         CommandInfo(":cache:data", callback=MiscCommands.cache_data),
         CommandInfo(":cache:taxa", callback=MiscCommands.cache_taxa),
@@ -53,18 +58,19 @@ def _init_commands():
         CommandInfo(":export:state", callback=MiscCommands.export_state),
         CommandInfo(":export:reify", callback=MiscCommands.export_reify),
         CommandInfo(":export:db", callback=MiscCommands.export_db, hidden=True),
+        CommandInfo(":init-db", callback=MiscCommands.init_db, hidden=True),
         CommandInfo(":serve", callback=MiscCommands.serve, hidden=True),
-        CommandInfo(":calc:analysis", callback=MiscCommands.calc_analysis),
-        CommandInfo(":calc:score", callback=MiscCommands.calc_score),
-        CommandInfo(":format:phi", callback=MiscCommands.format_phi),
-        CommandInfo(":calc:ecfp", callback=MiscCommands.calc_ecfp),
-        CommandInfo(":calc:psi", callback=MiscCommands.calc_psi),
-        CommandInfo(":calc:project", callback=MiscCommands.calc_project),
-        CommandInfo(":calc:tau", callback=MiscCommands.calc_tau),
-        CommandInfo(":plot:score", callback=MiscCommands.plot_score),
-        CommandInfo(":plot:phi-psi", callback=MiscCommands.plot_phi_psi),
-        CommandInfo(":plot:project", callback=MiscCommands.plot_project),
-        CommandInfo(":plot:tau", callback=MiscCommands.plot_tau),
+        CommandInfo(":calc:enrichment", callback=CalcCommands.calc_enrichment),
+        CommandInfo(":calc:phi", callback=CalcCommands.calc_phi),
+        CommandInfo(":calc:psi", callback=CalcCommands.calc_psi),
+        CommandInfo(":calc:ecfp", callback=CalcCommands.calc_ecfp, hidden=True),
+        CommandInfo(":calc:psi-projection", callback=CalcCommands.calc_projection),
+        CommandInfo(":calc:tau", callback=CalcCommands.calc_tau),
+        CommandInfo(":plot:enrichment", callback=PlotCommands.plot_enrichment),
+        CommandInfo(":plot:psi-projection", callback=PlotCommands.plot_projection),
+        CommandInfo(":plot:psi-heatmap", callback=PlotCommands.plot_heatmap),
+        CommandInfo(":plot:phi-vs-psi", callback=PlotCommands.plot_phi_psi),
+        CommandInfo(":plot:tau", callback=PlotCommands.plot_tau),
     ]
 
 

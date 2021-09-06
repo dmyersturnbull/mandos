@@ -1,0 +1,54 @@
+{
+  "named": {
+    "qualitative_26": {
+      "categorical": true,
+      "sequence": [
+        "#367c7d",
+        "#daca00",
+        "#44337e",
+        "#bc1805",
+        "#32699a",
+        "#cc6016",
+        "#719f23",
+        "#b70b63",
+        "#816161",
+        "#7e007e",
+        "#ff9000",
+        "#c2aa00",
+        "#11e022",
+        "#0000ff",
+        "#00bb00",
+        "#fb9a99",
+        "#ff0000",
+        "#cc8700",
+        "#006400",
+        "#554411",
+        "#191970",
+        "#00aa66",
+        "#dd6666",
+        "#2288ee",
+        "#009900",
+        "#c71588"
+      ]
+    },
+    "white_to_black": {
+      "categorical": false,
+      "nan": "#ff000000",
+      "under": "#ffffff",
+      "over": "#000000",
+      "sequence": ["#ffffff", "#000000"]
+    },
+    "blue_to_red": {
+      "categorical": false,
+      "nan": "#000000ff",
+      "under": "#0000ff",
+      "over": "#ff0000",
+      "sequence": ["#0000ff", "#ff0000"]
+    }
+  },
+  "defaults": {
+    "qualitative": "qualitative_26",
+    "sequential": "white_to_black",
+    "divergent": "blue_to_red"
+  }
+}

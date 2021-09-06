@@ -12,11 +12,10 @@ from typing import Iterable, Optional, Sequence, Union, Mapping
 
 import pandas as pd
 import requests
-from pocketutils.core.hashers import Hasher
 from typeddfs import TypedDfs
 
 from mandos import logger
-from mandos.model import MandosResources
+from mandos.model.utils.resources import MandosResources
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy
 

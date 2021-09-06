@@ -9,19 +9,16 @@ from pathlib import Path
 from typing import Optional, TypeVar
 
 from mandos import logger
-from mandos.entries._entry_args import EntryArgs
-from mandos.entries._entry_utils import EntryUtils
-from mandos.entries.abstract_entries import Entry
-from mandos.entries.api_singletons import Apis
-from mandos.entries.common_args import CommonArgs
-from mandos.entries.searcher import Searcher
-from mandos.model.utils import ReflectionUtils, InjectionError
+from mandos.entry._entry_args import EntryArgs
+from mandos.entry._entry_utils import EntryUtils
+from mandos.entry.abstract_entries import Entry
+from mandos.entry.api_singletons import Apis
+from mandos.entry._common_args import CommonArgs
+from mandos.entry.searchers import Searcher
+from mandos.model.utils.reflection_utils import InjectionError
+from mandos.model.utils.reflection_utils import ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.pubchem_support.pubchem_models import (
-    CoOccurrenceType,
-    DrugbankTargetType,
-)
-from mandos.model.searches import Search
+from mandos.model.apis.pubchem_support.pubchem_models import CoOccurrenceType, DrugbankTargetType
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.binding_search import BindingSearch
 from mandos.search.chembl.go_search import GoSearch
@@ -55,9 +52,9 @@ class EntryChemblBinding(Entry[BindingSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:binding"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
         traversal: str = EntryArgs.traversal_strategy,
         target_types: str = EntryArgs.target_types,
@@ -69,9 +66,8 @@ class EntryChemblBinding(Entry[BindingSearch]):
         banned_flags: str = EntryArgs.banned_flags,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -97,25 +93,24 @@ class EntryChemblBinding(Entry[BindingSearch]):
             binds_cutoff=binding,
             does_not_bind_cutoff=nonbinding,
         )
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryChemblMechanism(Entry[MechanismSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:mechanism"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: Optional[str] = CommonArgs.taxa,
         traversal: str = EntryArgs.traversal_strategy,
         target_types: str = EntryArgs.target_types,
         min_confidence: Optional[int] = EntryArgs.min_confidence,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -133,25 +128,24 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
             allowed_target_types=EntryUtils.get_target_types(target_types),
             min_confidence_score=min_confidence,
         )
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:predictions"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
         traversal: str = EntryArgs.traversal_strategy,
         target_types: str = EntryArgs.target_types,
         min_threshold: float = EntryArgs.min_threshold,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -174,22 +168,21 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
             target_types=EntryUtils.get_target_types(target_types),
             min_threshold=min_threshold,
         )
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryChemblTrials(Entry[IndicationSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:trial"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         min_phase: Optional[int] = EntryArgs.chembl_trial,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -198,22 +191,21 @@ class EntryChemblTrials(Entry[IndicationSearch]):
         OBJECT: The name of the disease (in MeSH)
         """
         built = IndicationSearch(key=key, api=Apis.Chembl, min_phase=min_phase)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryChemblAtc(Entry[AtcSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:atc"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         levels: str = EntryArgs.atc_level,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -224,7 +216,7 @@ class EntryChemblAtc(Entry[AtcSearch]):
         built = AtcSearch(
             key=key, api=Apis.Chembl, levels={int(x.strip()) for x in levels.split(",")}
         )
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
@@ -240,9 +232,9 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("<see above>"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: Optional[str] = CommonArgs.taxa,
         traversal_strategy: str = EntryArgs.traversal_strategy,
         target_types: str = EntryArgs.target_types,
@@ -253,9 +245,8 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -284,7 +275,7 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         except (TypeError, ValueError):
             raise InjectionError(f"Failed to build {binding_clazz.__qualname__}")
         built = GoSearch(key, api, cls.go_type(), binding_search)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryGoFunction(_EntryChemblGo):
@@ -295,9 +286,9 @@ class EntryGoFunction(_EntryChemblGo):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:go.function"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: Optional[str] = CommonArgs.taxa,
         traversal_strategy: str = EntryArgs.traversal_strategy,
         target_types: str = EntryArgs.target_types,
@@ -308,9 +299,8 @@ class EntryGoFunction(_EntryChemblGo):
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -335,8 +325,7 @@ class EntryGoFunction(_EntryChemblGo):
             as_of=as_of,
             check=check,
             log=log,
-            quiet=quiet,
-            verbose=verbose,
+            stderr=stderr,
         )
 
 
@@ -348,9 +337,9 @@ class EntryGoProcess(_EntryChemblGo):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:go.process"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: Optional[str] = CommonArgs.taxa,
         traversal_strategy: str = EntryArgs.traversal_strategy,
         target_types: str = EntryArgs.target_types,
@@ -361,9 +350,8 @@ class EntryGoProcess(_EntryChemblGo):
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -388,8 +376,7 @@ class EntryGoProcess(_EntryChemblGo):
             as_of=as_of,
             check=check,
             log=log,
-            quiet=quiet,
-            verbose=verbose,
+            stderr=stderr,
         )
 
 
@@ -401,9 +388,9 @@ class EntryGoComponent(_EntryChemblGo):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:go.component"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: Optional[str] = CommonArgs.taxa,
         traversal_strategy: str = EntryArgs.traversal_strategy,
         target_types: str = EntryArgs.target_types,
@@ -414,9 +401,8 @@ class EntryGoComponent(_EntryChemblGo):
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -441,8 +427,7 @@ class EntryGoComponent(_EntryChemblGo):
             as_of=as_of,
             check=check,
             log=log,
-            quiet=quiet,
-            verbose=verbose,
+            stderr=stderr,
         )
 
 
@@ -450,14 +435,13 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("disease.ctd:mesh"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -469,7 +453,7 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
 
         """
         built = DiseaseSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
@@ -486,40 +470,36 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("<see above>"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log_path,
+        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """See the docstrings for the individual entries."""
         clazz = cls.get_search_type()
         built = clazz(key, Apis.Pubchem, min_score=min_score, min_articles=min_articles)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSearch]):
-    """ """
-
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key(f"lit.pubchem:{CoOccurrenceType.gene.name.lower()}"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log_path,
+        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -540,27 +520,24 @@ class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSea
             as_of=as_of,
             log=log,
             check=check,
-            quiet=quiet,
+            stderr=stderr,
             no_setup=no_setup,
         )
 
 
 class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurrenceSearch]):
-    """ """
-
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key(f"lit.pubchem:{CoOccurrenceType.disease.name.lower()}"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log_path,
+        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -581,27 +558,24 @@ class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurre
             as_of=as_of,
             log=log,
             check=check,
-            quiet=quiet,
+            stderr=stderr,
             no_setup=no_setup,
         )
 
 
 class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccurrenceSearch]):
-    """ """
-
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key(f"lit.pubchem:{CoOccurrenceType.chemical.name.lower()}"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log_path,
+        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -622,7 +596,7 @@ class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccur
             as_of=as_of,
             log=log,
             check=check,
-            quiet=quiet,
+            stderr=stderr,
             no_setup=no_setup,
         )
 
@@ -631,14 +605,13 @@ class EntryPubchemDgi(Entry[DgiSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.dgidb:gene"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log_path,
+        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -652,21 +625,20 @@ class EntryPubchemDgi(Entry[DgiSearch]):
         PREDICATE: "interaction:generic" or "interaction:<type>"
         """
         built = DgiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryPubchemCgi(Entry[CtdGeneSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.ctd:gene"),
         as_of: Optional[str] = CommonArgs.as_of,
-        to: Optional[Path] = CommonArgs.to_single,
-        log: Optional[Path] = CommonArgs.log_path,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
+        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -680,21 +652,20 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
         PREDICATE: derived from the interaction type (e.g. "downregulation")
         """
         built = CtdGeneSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:targ"),
         as_of: Optional[str] = CommonArgs.as_of,
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -705,21 +676,20 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
         PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankTargetSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:targ-fn"),
         as_of: Optional[str] = CommonArgs.as_of,
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -730,21 +700,20 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:pk"),
         as_of: Optional[str] = CommonArgs.as_of,
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -760,21 +729,20 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
             DrugbankTargetType.enzyme,
         }
         built = DrugbankTargetSearch(key, Apis.Pubchem, target_types)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:pk-fn"),
         as_of: Optional[str] = CommonArgs.as_of,
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -790,21 +758,20 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
             DrugbankTargetType.enzyme,
         }
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, target_types)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:ddi"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -818,23 +785,22 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
         PREDICATE: typically increase/decrease/change followed by risk/activity/etc.
         """
         built = DrugbankDdiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryPubchemAssay(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("assay.pubchem:act"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         name_must_match: bool = EntryArgs.name_must_match,
         ban_sources: Optional[str] = EntryArgs.banned_sources,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -851,21 +817,20 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
         WEIGHT: 2 for confirmatory; 1 otherwise
         """
         built = BioactivitySearch(key, Apis.Pubchem, compound_name_must_match=name_must_match)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryDeaSchedule(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("drug.dea:schedule"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -880,14 +845,13 @@ class EntryDeaClass(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("drug.dea:class"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -902,15 +866,14 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("tox.chemidplus:acute"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         level: int = EntryArgs.acute_effect_level,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -923,21 +886,20 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
             Apis.Pubchem,
             top_level=level == 1,
         )
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryChemidPlusLd50(Entry[Ld50Search]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("tox.chemidplus:ld50"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -948,21 +910,20 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
         PREDICATE: "LD50:<route>" (e.g. "LD50:intravenous")
         """
         built = Ld50Search(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryG2pInteractions(Entry[G2pInteractionSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("g2p:interactions"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -975,22 +936,21 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
         WEIGHT: 1.0
         """
         built = G2pInteractionSearch(key, Apis.G2p)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryHmdbTissue(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("hmdb:tissue"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         min_nanomolar: Optional[float] = EntryArgs.min_nanomolar,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -1007,15 +967,14 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("hmdb:computed"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         min_nanomolar: Optional[float] = None,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -1034,15 +993,14 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chem.pubchem:computed"),
         keys: str = EntryArgs.pubchem_computed_keys,
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -1064,21 +1022,20 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         }
         keys = {known.get(s.strip(), s) for s in keys.split(",")}
         built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys)
-        return cls._run(built, path, to, check, log, quiet, verbose, no_setup)
+        return cls._run(built, path, to, check, log, stderr, no_setup)
 
 
 class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("drugbank.admet:properties"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -1094,14 +1051,13 @@ class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("drugbank.admet:metabolites"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -1117,14 +1073,13 @@ class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("drugbank.admet:dosage"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
@@ -1144,14 +1099,13 @@ class EntryMetaRandom(Entry[BioactivitySearch]):
     @classmethod
     def run(
         cls,
-        path: Path = CommonArgs.compounds,
+        path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("meta:random"),
-        to: Optional[Path] = CommonArgs.to_single,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log_path,
-        quiet: bool = CommonArgs.quiet,
-        verbose: bool = CommonArgs.verbose,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
         no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """

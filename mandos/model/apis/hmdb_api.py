@@ -4,7 +4,6 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Union, Sequence, Optional
 
-import defusedxml.ElementTree as Xml
 import orjson
 from pocketutils.tools.common_tools import CommonTools
 

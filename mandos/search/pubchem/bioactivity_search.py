@@ -2,7 +2,7 @@ from typing import Sequence
 
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
-from mandos.model.apis.pubchem_support.pubchem_models import Activity, Bioactivity
+from mandos.model.apis.pubchem_support.pubchem_models import Bioactivity
 from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import BioactivityHit
 
@@ -34,19 +34,28 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
     def process(self, inchikey: str, data: PubchemData, dd: Bioactivity) -> BioactivityHit:
         target_name, target_abbrev, species = dd.target_name_abbrev_species
         data_source = f"{self.data_source}: {dd.assay_ref} ({dd.assay_type})"
-        predicate = f"bioactivity:{dd.activity.name.lower()}"
+        action = dd.activity.name.lower()
+        source = self._format_source(
+            assay_type=dd.assay_type,
+            species=species,
+        )
+        predicate = self._format_predicate(
+            action=action,
+            assay_type=dd.assay_type,
+            species=species,
+        )
         return self._create_hit(
             inchikey=inchikey,
             c_id=str(data.cid),
             c_origin=inchikey,
             c_matched=data.names_and_identifiers.inchikey,
             c_name=data.name,
+            data_source=source,
             predicate=predicate,
             object_id=dd.gene_id,
             object_name=target_name,
-            data_source=data_source,
             target_abbrev=target_abbrev,
-            activity=dd.activity.name.lower(),
+            activity=action,
             assay_type=dd.assay_type,
             micromolar=dd.activity_value,
             relation=dd.activity_name,

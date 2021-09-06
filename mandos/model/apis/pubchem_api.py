@@ -4,7 +4,7 @@ PubChem querying API.
 from __future__ import annotations
 
 import abc
-from typing import FrozenSet, Optional, Union
+from typing import FrozenSet, Union
 
 from mandos.model import Api, CompoundNotFoundError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
@@ -28,4 +28,4 @@ class PubchemApi(Api, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 
-__all__ = ["PubchemApi", "PubchemCompoundLookupError", "PubchemCompoundUmatchedError"]
+__all__ = ["PubchemApi", "PubchemCompoundLookupError"]

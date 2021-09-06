@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence
 
 import regex
 
@@ -15,17 +15,15 @@ def _re(s: str) -> regex.Pattern:
 class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
     """ """
 
-    @property
-    def data_source(self) -> str:
-        return "DrugBank :: drug/drug interactions"
-
     def find(self, inchikey: str) -> Sequence[DrugbankDdiHit]:
         data = self.api.fetch_data(inchikey)
         hits = []
         for dd in data.biomolecular_interactions_and_pathways.drugbank_ddis:
             kind = self._guess_type(dd.description)
-            up_or_down = self._guess_up_down(dd.description)
-            spec, predicate = self._guess_predicate(dd, kind, up_or_down)
+            direction = self._guess_direction(dd.description)
+            spec = self._guess_spec(dd, kind)
+            source = self._format_source(kind=kind, spec=spec)
+            predicate = self._format_predicate(kind=kind, spec=spec, direction=direction)
             hits.append(
                 self._create_hit(
                     inchikey=inchikey,
@@ -33,44 +31,37 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
                     c_origin=inchikey,
                     c_matched=data.names_and_identifiers.inchikey,
                     c_name=data.name,
+                    data_source=source,
                     predicate=predicate,
                     object_id=dd.drug_drugbank_id,
                     object_name=dd.drug_drugbank_id,
                     type=kind,
                     effect_target=spec,
-                    change=up_or_down,
+                    change=direction,
                     description=dd.description,
                 )
             )
         return hits
 
-    def _guess_predicate(
-        self, dd: DrugbankDdi, kind: str, up_or_down: str
-    ) -> Optional[Tuple[str, str]]:
-        spec, predicate = None, None
+    def _guess_spec(self, dd: DrugbankDdi, kind: str) -> Optional[str]:
         if kind == "risk":
-            spec = self._guess_adverse(dd.description)
-            predicate = f"interaction:{kind}:risk:{up_or_down}:{spec}"
+            return self._guess_adverse(dd.description)
         elif kind == "activity":
-            spec = self._guess_activity(dd.description)
-            predicate = f"interaction:{kind}:activity:{up_or_down}:{spec}"
+            return self._guess_activity(dd.description)
         elif kind == "PK":
-            spec = self._guess_pk(dd.description)
-            predicate = f"interaction:{kind}:pk:{up_or_down}:{spec}"
+            return self._guess_pk(dd.description)
         elif kind == "efficacy":
-            spec = self._guess_efficacy(dd.description)
-            predicate = f"interaction:{kind}:efficacy:{up_or_down}:{spec}"
-        if spec is None:
-            logger.info(f"Did not extract info from '{dd.description}'")
-            return None
-        return spec, predicate
+            return self._guess_efficacy(dd.description)
+        else:
+            logger.debug(f"Did not extract info from '{dd.description}'")
+        return None
 
-    def _guess_up_down(self, desc: str) -> str:
+    def _guess_direction(self, desc: str) -> str:
         if "increase" in desc:
-            return "increase"
+            return "up"
         elif "decrease" in desc:
-            return "decrease"
-        return "change"
+            return "down"
+        return "neutral"
 
     def _guess_efficacy(self, desc: str) -> Optional[str]:
         match = _re("efficacy of (.+)").search(desc)

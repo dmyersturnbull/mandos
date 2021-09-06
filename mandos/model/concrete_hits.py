@@ -4,7 +4,7 @@ import enum
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from mandos.model.utils import ReflectionUtils
+from mandos.model.utils.reflection_utils import ReflectionUtils
 from mandos.model.hits import AbstractHit
 
 

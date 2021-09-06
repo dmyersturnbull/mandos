@@ -3,7 +3,6 @@ from chembl_webresource_client.new_client import new_client as _Chembl
 
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.search.chembl.atc_search import AtcSearch
-from mandos.model.concrete_hits import AtcHit
 
 from .. import get_test_resource
 

@@ -18,10 +18,6 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
         super().__init__(key, api)
         self.min_phase = min_phase
 
-    @property
-    def data_source(self) -> str:
-        return "ChEMBL :: indications"
-
     def find(self, lookup: str) -> Sequence[IndicationHit]:
         # 'atc_classifications': ['S01HA01', 'N01BC01', 'R02AD03', 'S02DA02']
         # 'indication_class': 'Anesthetic (topical)'
@@ -38,12 +34,15 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
         self, lookup: str, compound: ChemblCompound, indication: NestedDotDict
     ) -> IndicationHit:
         phase = indication.req_as("max_phase_for_ind", int)
+        source = self._format_source(phase=phase)
+        predicate = self._format_predicate(phase=phase)
         return self._create_hit(
             c_origin=lookup,
             c_matched=compound.inchikey,
             c_id=compound.chid,
             c_name=compound.name,
-            predicate="trial",
+            data_source=source,
+            predicate=predicate,
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
             max_phase=phase,

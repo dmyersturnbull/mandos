@@ -13,7 +13,7 @@ try:
     import selenium
 except ImportError:
     selenium = None
-    logger.info("Selenium not installed")
+    logger.info("Selenium is not installed")
 
 
 # noinspection PyBroadException

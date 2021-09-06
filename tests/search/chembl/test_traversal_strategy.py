@@ -1,9 +1,9 @@
 import pytest
 from chembl_webresource_client.new_client import new_client as Chembl
 
-from mandos.model.apis.chembl_support import ChemblTargetGraphFactory
+from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraphFactory
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
-from mandos.search.chembl.target_traversal import TargetTraversalStrategies
+from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 
 factory = TargetFactory(Chembl)
 graph_factory = ChemblTargetGraphFactory.create(Chembl, factory)

@@ -3,6 +3,8 @@ from typing import Sequence, Set, TypeVar
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankInteraction, DrugbankTargetType
 from mandos.search.pubchem import PubchemSearch
+
+# noinspection PyProtectedMember
 from mandos.model.concrete_hits import _DrugbankInteractionHit
 
 T = TypeVar("T", bound=_DrugbankInteractionHit, covariant=True)
@@ -27,7 +29,11 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
                 c_origin=inchikey,
                 c_matched=data.names_and_identifiers.inchikey,
                 c_name=data.name,
-                predicate=self._get_predicate(dd),
+                data_source=self._format_source(type=dd.target_type.name),
+                predicate=self._format_predicate(
+                    type=dd.target_type.name,
+                    action="generic" if dd.action is None else dd.action,
+                ),
                 object_id=self._get_obj(dd),
                 object_name=self._get_obj(dd),
                 gene_symbol=dd.gene_symbol,
@@ -40,18 +46,9 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
             if dd.target_type in self.target_types
         ]
 
-    @classmethod
-    def _get_predicate(cls, dd: DrugbankInteraction) -> str:
-        action = "generic" if dd.action is None else dd.action
-        return dd.target_type.name + ":" + action
-
 
 class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
     """ """
-
-    @property
-    def data_source(self) -> str:
-        return "DrugBank :: target interactions"
 
     @classmethod
     def _get_obj(cls, dd: DrugbankInteraction) -> str:
@@ -60,10 +57,6 @@ class DrugbankTargetSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
 
 class DrugbankGeneralFunctionSearch(_DrugbankInteractionSearch[_DrugbankInteractionHit]):
     """ """
-
-    @property
-    def data_source(self) -> str:
-        return "DrugBank :: non-target interactions"
 
     @classmethod
     def _get_obj(cls, dd: DrugbankInteraction) -> str:

@@ -1,0 +1,14 @@
+{
+  "interactive": false,
+  "backend": "pdf",
+  "pdf.fonttype": 42,
+  "ps.fonttype": 42,
+  "svg.fonttype": "none",
+  "figure.constrained_layout.use": true,
+  "savefig.format": "pdf",
+  "savefig.transparent": true,
+  "savefig.pad_inches": 0,
+  "text.usetex": false,
+  "image.cmap": "Grays",
+  "axes.autolimit_mode": "round_numbers"
+}

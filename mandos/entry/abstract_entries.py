@@ -5,11 +5,11 @@ from typing import Generic, Type, Optional, Mapping, Union, TypeVar
 import typer
 from typer.models import OptionInfo
 
-from mandos import MANDOS_SETUP, logger
-from mandos.entries.searcher import Searcher
+from mandos import logger
+from mandos.model.utils.setup import MANDOS_SETUP
+from mandos.entry.searchers import Searcher
 from mandos.model.searches import Search
-from mandos.model.utils import ReflectionUtils
-
+from mandos.model.utils.reflection_utils import ReflectionUtils
 
 S = TypeVar("S", bound=Search, covariant=True)
 
@@ -51,12 +51,10 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         to: Optional[Path],
         check: bool,
         log: Optional[Path],
-        quiet: bool,
-        verbose: bool,
+        level: str,
         no_setup: bool,
     ):
-        if not no_setup:
-            MANDOS_SETUP(verbose, quiet, log, no_setup)
+        MANDOS_SETUP(level, log, no_setup)
         searcher = cls._get_searcher(built, path, to)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
         out = searcher.output_paths[built.key]

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import abc
 from datetime import date, datetime
-from typing import Any, Dict, FrozenSet, Mapping, Optional, Sequence
+from typing import Any, Dict, FrozenSet, Mapping, Optional, Sequence, MutableMapping
 from typing import Tuple as Tup
 from typing import Union
 from urllib.parse import unquote as url_unescape
@@ -297,7 +297,7 @@ class ChemicalAndPhysicalProperties(PubchemMiniDataView):
             dot["TOCHeading"]: dot["Information"]
             for dot in (self._mini / "Computed Properties" / "Section").get
         }
-        results: Dict[Tup[str, str], ComputedProperty] = {}
+        results: MutableMapping[Tup[str, str], ComputedProperty] = {}
         for heading, info in props.items():
             for dot in info:
                 try:

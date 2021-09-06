@@ -13,6 +13,9 @@ class UmapCalc:
     Calculates UMAP.
     """
 
+    def __init__(self, params):
+        self.params = params
+
     def calc(self, df: SimilarityDfLongForm) -> PsiProjectedDf:
         """"""
 

@@ -11,7 +11,7 @@ import regex
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.string_tools import StringTools
 
-from mandos.model import MandosResources
+from mandos.model.utils.resources import MandosResources
 from mandos.model.apis.pubchem_support._nav_fns import Mapx
 
 

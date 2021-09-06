@@ -3,7 +3,7 @@ Calculations.
 """
 import math
 from collections import defaultdict
-from typing import Collection, Dict, Sequence, Tuple
+from typing import Collection, Dict, Sequence, Tuple, MutableMapping
 
 from mandos.model.hits import AbstractHit, KeyPredObj
 
@@ -23,7 +23,7 @@ class AnalysisUtils:
     @classmethod
     def weights_of_pairs(
         cls, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]
-    ) -> Dict[KeyPredObj, Tuple[float, float]]:
+    ) -> MutableMapping[KeyPredObj, Tuple[float, float]]:
         """
         Calculates the sum of
         """

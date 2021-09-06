@@ -8,10 +8,6 @@ from mandos.search.g2p import G2pSearch
 class G2pInteractionSearch(G2pSearch[G2pInteractionHit]):
     """ """
 
-    @property
-    def data_source(self) -> str:
-        return "G2P :: interactions"
-
     def find(self, inchikey: str) -> Sequence[G2pInteractionHit]:
         ligand = self.api.fetch(inchikey)
         results = []
@@ -20,12 +16,21 @@ class G2pInteractionSearch(G2pSearch[G2pInteractionHit]):
         return results
 
     def process(self, inchikey: str, ligand: G2pData, inter: G2pInteraction) -> G2pInteractionHit:
+        source = self._format_source(species=inter.target_species)
+        predicate = self._format_predicate(
+            primary=inter.primary_target,
+            species=inter.target_species,
+            endogenous=inter.endogenous,
+            selective=inter.selectivity,
+            action=inter.action,
+        )
         return self._create_hit(
             c_origin=inchikey,
             c_matched=ligand.inchikey,
             c_id=str(ligand.g2pid),
             c_name=ligand.name,
-            predicate=f"interaction:{inter.action}",
+            data_source=source,
+            predicate=predicate,
             object_id=inter.target_id,
             object_name=inter.target,
             action=inter.action,

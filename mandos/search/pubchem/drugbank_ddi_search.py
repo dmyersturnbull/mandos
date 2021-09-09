@@ -2,7 +2,7 @@ from typing import Optional, Sequence
 
 import regex
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankDdi
 from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import DrugbankDdiHit

@@ -13,13 +13,13 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Colormap, ListedColormap, to_hex
 from matplotlib.figure import Figure
 from pocketutils.core.dot_dict import NestedDotDict
-from pocketutils.full import Tools
+from pocketutils.tools.common_tools import CommonTools
 
 # noinspection PyProtectedMember
 from seaborn.palettes import SEABORN_PALETTES
 from typeddfs import TypedDfs
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.utils import CleverEnum
 from mandos.model.utils.misc_utils import MiscUtils
 from mandos.model.utils.resources import MandosResources
@@ -40,11 +40,11 @@ class DataType(CleverEnum):
     divergent = enum.auto()
 
 
-class _Wut:
+class VizResources:
     def __init__(self):
-        self.override_settings = MandosResources.json("viz", "style_override.json")
-        self.dims = MandosResources.json("viz", "page_dims.json")
-        palettes = MandosResources.json("palettes.json")
+        self.override_settings = MandosResources.json_dict("viz", "style_override.json")
+        self.dims = MandosResources.json_dict("viz", "page_dims.json")
+        palettes = MandosResources.json_dict("viz", "palettes.json")
         self.named_palettes = palettes["named"]
         self.default_palettes = palettes["defaults"]
         self.named_cmaps = self._get_named_cmaps()
@@ -61,18 +61,18 @@ class _Wut:
             else:
                 nan, under, over = cmap.get("nan"), cmap.get("under"), cmap.get("over")
                 cmap = LinearSegmentedColormap.from_list(name, seq)
-                cmap.set_extremes(nan, under, over)
+                cmap.set_extremes(bad=nan, under=under, over=over)
         return cmaps
 
 
-WUT = _Wut()
+VIZ_RESOURCES = VizResources()
 
 
 class MandosPlotStyling:
     @classmethod
     def list_named_palettes(cls) -> Set[str]:
         return {
-            *WUT.named_palettes.keys(),
+            *VIZ_RESOURCES.named_palettes.keys(),
             *SEABORN_PALETTES,
             *plt.colormaps(),
         }
@@ -97,16 +97,16 @@ class MandosPlotStyling:
                 raise ValueError(
                     f"Palette (N={len(palette.colors)}) too small for {len(unique)} items"
                 )
-            return {i: j for i, j in Tools.zip_strict(unique, map(to_hex, palette.colors))}
+            return {i: j for i, j in CommonTools.zip_strict(unique, map(to_hex, palette.colors))}
         return palette
 
     @classmethod
     def get_palette(cls, name: Optional[str], data_type: Union[DataType, str]) -> Colormap:
         data_type = DataType.of(data_type)
         if name is None:
-            name = WUT.default_palettes.req_as(data_type.name, str)
-        if name in WUT.named_cmaps:
-            return WUT.named_cmaps[name]
+            name = VIZ_RESOURCES.default_palettes[data_type.name]
+        if name in VIZ_RESOURCES.named_cmaps:
+            return VIZ_RESOURCES.named_cmaps[name]
         return sns.color_palette(name, as_cmap=True)
 
     @classmethod
@@ -148,7 +148,7 @@ class MandosPlotStyling:
         Override these from the default style.
         This will be called once, at startup.
         """
-        new_kwargs = dict(WUT.override_settings["allow_change"])
+        new_kwargs = dict(VIZ_RESOURCES.override_settings["allow_change"])
         if kwargs is not None:
             new_kwargs.update(kwargs)
         with plt.rc_context(new_kwargs, style):
@@ -163,8 +163,10 @@ class MandosPlotStyling:
         }
         try:
             default_inch = plt.rcParams["figure.figsize"]
-            width = cls._to_inch(axis_to_str.get(0), WUT.dims["widths"], default_inch[0])
-            height = cls._to_inch(axis_to_str.get(1), WUT.dims["heights"], default_inch[1])
+            width = cls._to_inch(axis_to_str.get(0), VIZ_RESOURCES.dims["widths"], default_inch[0])
+            height = cls._to_inch(
+                axis_to_str.get(1), VIZ_RESOURCES.dims["heights"], default_inch[1]
+            )
         except ValueError:
             raise ValueError(f"Strange --size format in '{size}'")
         return width, height
@@ -216,4 +218,5 @@ __all__ = [
     "MandosPlotUtils",
     "CompoundStyleDf",
     "PredicateObjectStyleDf",
+    "VIZ_RESOURCES",
 ]

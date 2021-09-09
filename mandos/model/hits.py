@@ -155,6 +155,5 @@ HitFrame = (
     .secure()
 ).build()
 
-df = HitFrame.read_excel()
 
 __all__ = ["AbstractHit", "HitFrame", "KeyPredObj", "KeyPredObjSource", "Triple", "HIT_FIELD_TYPE"]

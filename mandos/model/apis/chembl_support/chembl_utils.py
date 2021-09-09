@@ -7,7 +7,7 @@ from pocketutils.tools.common_tools import CommonTools
 from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model import CompoundNotFoundError
 from mandos.model.utils import CleverEnum
 from mandos.model.apis.chembl_api import ChemblApi

@@ -27,6 +27,7 @@ from mandos.analysis._plot_utils import (
     PredicateObjectStyleDf,
     CompoundStyleDf,
     PhiPsiStyleDf,
+    VIZ_RESOURCES,
 )
 from mandos.analysis.plots import (
     TauPlotter,
@@ -47,7 +48,6 @@ from mandos.entry._arg_utils import Opt
 from mandos.model.settings import MANDOS_SETTINGS
 
 DEF_SUFFIX = MANDOS_SETTINGS.default_table_suffix
-_page_dims = MandosResources.json("viz", "page_dims.json")
 
 
 T = TypeVar("T", bound=TypedDf)
@@ -75,9 +75,9 @@ class Pa:
 
         Example formats: "8.5 in", "8.5 in x 11 in", "2 cm + 5 in", "pnas.1-col x pnas.full-page".
 
-        Registered widths: {", ".join(_page_dims["heights"])}
+        Registered widths: {", ".join(VIZ_RESOURCES.dims["heights"])}
 
-        Registered heights: {", ".join(_page_dims["widths"])}
+        Registered heights: {", ".join(VIZ_RESOURCES.dims["widths"])}
 
         [default: matplotlib style default]
         """,

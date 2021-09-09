@@ -11,7 +11,7 @@ import pandas as pd
 from typeddfs import BaseDf
 from typeddfs.df_errors import UnsupportedOperationError
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.entry.searchers import InputFrame
 from mandos.model.utils.rdkit_utils import RdkitUtils

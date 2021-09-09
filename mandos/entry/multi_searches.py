@@ -13,7 +13,7 @@ import typer
 from typeddfs import TypedDfs
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.entry.api_singletons import Apis
 from mandos.entry.entry_commands import Entries
 from mandos.entry.abstract_entries import Entry

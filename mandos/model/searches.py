@@ -5,7 +5,7 @@ import dataclasses
 import typing
 from typing import Generic, Sequence, TypeVar
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model import CompoundNotFoundError
 from mandos.model.utils.misc_utils import MiscUtils
 from mandos.model.utils.resources import MandosResources

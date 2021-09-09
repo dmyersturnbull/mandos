@@ -2,10 +2,9 @@
 Plots.
 """
 import enum
-from collections import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, Mapping
 
 import numpy as np
 from typeddfs import TypedDf, AffinityMatrixDf

@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Mapping, Tuple, Dict, MutableMapping
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 

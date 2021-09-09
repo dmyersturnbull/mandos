@@ -13,7 +13,7 @@ from mandos.model.taxonomy import TaxonomyDf
 from mandos.entry._entry_utils import EntryUtils
 from mandos.entry.docs import Documenter
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.entry.searchers import InputFrame
 from mandos.model.utils.setup import MANDOS_SETUP
 from typeddfs.utils import Utils as TypedDfsUtils

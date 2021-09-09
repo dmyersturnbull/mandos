@@ -6,7 +6,7 @@ from pocketutils.core.query_utils import QueryExecutor
 
 from mandos.model.settings import MANDOS_SETTINGS
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 
 
 try:

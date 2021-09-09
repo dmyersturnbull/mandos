@@ -11,7 +11,7 @@ import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData

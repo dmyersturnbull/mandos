@@ -11,7 +11,7 @@ import pandas as pd
 from mandos.model import MultipleMatchesError
 from typeddfs import TypedDfs
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.utils import CleverEnum
 
 

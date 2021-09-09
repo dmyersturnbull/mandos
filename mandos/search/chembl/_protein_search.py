@@ -4,7 +4,7 @@ from typing import Optional, Sequence, Set, TypeVar, Union
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.concrete_hits import ProteinHit
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound

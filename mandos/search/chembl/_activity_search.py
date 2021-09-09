@@ -3,7 +3,7 @@ from typing import Optional, Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph

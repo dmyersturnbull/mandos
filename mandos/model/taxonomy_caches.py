@@ -14,7 +14,7 @@ import pandas as pd
 import requests
 from typeddfs import TypedDfs
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.utils.resources import MandosResources
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.taxonomy import Taxonomy

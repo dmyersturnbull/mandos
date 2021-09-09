@@ -14,7 +14,7 @@ from pocketutils.core.query_utils import QueryExecutor
 from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 
 defaults = MandosResources.path("default_settings.json").read_text(encoding="utf8")
 defaults = orjson.loads(defaults)

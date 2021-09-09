@@ -1,7 +1,8 @@
 import typing
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, MutableMapping
 
+import orjson
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.hashers import Hasher
 from pocketutils.tools.common_tools import CommonTools
@@ -16,6 +17,7 @@ class MandosResources:
     start_timestamp = start_time.isoformat(timespec="milliseconds")
     start_timestamp_filesys = start_time_local.strftime("%Y-%m-%d_%H-%M-%S")
     hasher: Hasher = Hasher("sha256", buffer_size=16 * 1024)
+    resource_dir = Path(__file__).parent.parent.parent
 
     @classmethod
     def contains(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> bool:
@@ -25,13 +27,13 @@ class MandosResources:
     @classmethod
     def path(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> Path:
         """Gets a path of a test resource file under ``resources/``."""
-        path = Path(Path(__file__).parent.parent, "resources", *nodes)
+        path = Path(cls.resource_dir, "resources", *nodes)
         return path.with_suffix(path.suffix if suffix is None else suffix)
 
     @classmethod
     def a_path(cls, *nodes: Union[Path, str], suffixes: Optional[typing.Set[str]] = None) -> Path:
         """Gets a path of a test resource file under ``resources/``, ignoring suffix."""
-        path = Path(Path(__file__).parent.parent, "resources", *nodes)
+        path = Path(cls.resource_dir, "resources", *nodes)
         return CommonTools.only(
             [
                 p
@@ -43,9 +45,23 @@ class MandosResources:
     @classmethod
     def json(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> NestedDotDict:
         """Reads a JSON file under ``resources/``."""
-        return NestedDotDict.read_json(cls.path(*nodes, suffix=suffix))
+        path = cls.path(*nodes, suffix=suffix)
+        data = orjson.loads(Path(path).read_text(encoding="utf8"))
+        return NestedDotDict(data)
 
-    strings = {k.partition(":")[0]: v for k, v in json("strings.json").items()}
+    @classmethod
+    def json_dict(cls, *nodes: Union[Path, str], suffix: Optional[str] = None) -> MutableMapping:
+        """Reads a JSON file under ``resources/``."""
+        path = cls.path(*nodes, suffix=suffix)
+        data = orjson.loads(Path(path).read_text(encoding="utf8"))
+        return data
+
+    strings = None
+
+
+MandosResources.strings = {
+    k.partition(":")[0]: v for k, v in MandosResources.json("strings.json").items()
+}
 
 
 __all__ = ["MandosResources"]

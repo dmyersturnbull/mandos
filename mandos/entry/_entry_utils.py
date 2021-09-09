@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Set, Sequence, Optional, Union
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.apis.chembl_support.chembl_activity import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_targets import TargetType

@@ -11,7 +11,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.entry.paths import EntryPaths
 from mandos.model.searches import Search
 

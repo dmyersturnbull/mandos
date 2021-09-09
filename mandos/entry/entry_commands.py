@@ -8,7 +8,7 @@ import abc
 from pathlib import Path
 from typing import Optional, TypeVar
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.entry._entry_args import EntryArgs
 from mandos.entry._entry_utils import EntryUtils
 from mandos.entry.abstract_entries import Entry

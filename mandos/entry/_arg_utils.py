@@ -1,12 +1,13 @@
 import enum
 import os
 from inspect import cleandoc
-from typing import Optional, Iterable, Any, Mapping, Union, Callable, Sequence, Type
+from typing import Optional, Iterable, Any, Mapping, Union, Callable, Sequence, Type, TypeVar
 
 import typer
 from typeddfs import TypedDf
 
-from mandos.entry._common_args import T
+
+T = TypeVar("T", covariant=True)
 
 
 class _Args:

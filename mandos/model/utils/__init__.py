@@ -1,7 +1,7 @@
 import enum
 from typing import Optional, Union
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 
 
 class TrueFalseUnknown(enum.Enum):

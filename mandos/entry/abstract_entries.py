@@ -5,7 +5,7 @@ from typing import Generic, Type, Optional, Mapping, Union, TypeVar
 import typer
 from typer.models import OptionInfo
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.utils.setup import MANDOS_SETUP
 from mandos.entry.searchers import Searcher
 from mandos.model.searches import Search

@@ -9,7 +9,7 @@ import pandas as pd
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDf, TypedDfs
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model import Api, CompoundNotFoundError
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.apis.g2p_support.g2p_data import G2pData, G2pInteraction

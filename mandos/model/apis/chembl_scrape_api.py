@@ -53,7 +53,7 @@ def _parse_conf(df: pd.DataFrame):
         df[f"confidence_{t}"] = df[f"confidence_{t}"].map(SarPredictionResult.of)
 
 
-ChemblTargetPredictionTable: TypedDf = (
+ChemblTargetPredictionTable = (
     TypedDfs.typed("ChemblTargetPredictionTable")
     .subclass(ChemblScrapeTable)
     .require("target_chembl_id", "target_pref_name", "target_organism", dtype=str)

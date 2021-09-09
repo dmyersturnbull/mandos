@@ -16,7 +16,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 
 # noinspection PyProtectedMember
 from mandos.model import MultipleMatchesError, CompoundStruct

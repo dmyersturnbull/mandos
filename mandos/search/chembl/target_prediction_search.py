@@ -10,7 +10,7 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
 )
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 from mandos.model.taxonomy import Taxonomy, Taxon
 from typeddfs import TypedDf
 

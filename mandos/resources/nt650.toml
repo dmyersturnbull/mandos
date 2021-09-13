@@ -1,0 +1,110 @@
+[[search]]
+key = "core.chembl.moa"
+source = "chembl:mechanism"
+
+[[search]]
+key = "core.binding"
+source = "chembl:binding"
+min_pchembl = 6
+min_confidence = 5
+target_types = "@protein"
+taxa = "euteleostomi"
+
+[[search]]
+key = "core.chembl.process"
+source = "chembl:go-process"
+min_pchembl = 6
+min_confidence = 5
+target_types = "@protein"
+taxa = "euteleostomi"
+
+[[search]]
+key = "core.chembl.function"
+source = "chembl:go-function"
+min_pchembl = 6
+min_confidence = 5
+taxa = "euteleostomi"
+
+[[search]]
+key = "extra.chembl.component"
+source = "chembl:component"
+min_pchembl = 6
+min_confidence = 5
+target_types = "@protein"
+taxa = "euteleostomi"
+
+[[search]]
+key = "extra.chembl.predictions"
+source = "chembl:predictions"
+taxa = "euteleostomi"
+
+[[search]]
+key = "core.chembl.trials"
+source = "chembl:trials"
+
+[[search]]
+key = "core.chembl.atc"
+source = "chembl:atc"
+
+[[search]]
+key = "core.ctd.mesh"
+source = "disease.ctd:mesh"
+
+[[search]]
+key = "core.lit.disease"
+source = "lit.pubchem:disease"
+
+[[search]]
+key = "core.lit.gene"
+source = "lit.pubchem:gene"
+
+[[search]]
+key = "core.lit.gene"
+source = "lit.pubchem:gene"
+
+[[search]]
+key = "extra.lit.chemical"
+source = "lit.pubchem:chemical"
+
+[[search]]
+key = "core.dgidb.genes"
+source = "inter.dgidb:gene"
+
+[[search]]
+key = "core.ctd.genes"
+source = "inter.ctd:gene"
+
+[[search]]
+key = "core.drugbank.targets"
+source = "inter.drugbank:targ"
+
+[[search]]
+key = "core.drugbank.target-functions"
+source = "inter.drugbank:targ-fn"
+
+[[search]]
+key = "extra.drugbank.pk"
+source = "inter.drugbank:pk"
+
+[[search]]
+key = "extra.drugbank.pk-functions"
+source = "inter.drugbank:pk-fn"
+
+[[search]]
+key = "extra.drugbank.pk-ddis"
+source = "inter.drugbank:ddi"
+
+[[search]]
+key = "core.pubchem.activity"
+source = "assay.pubchem:act"
+name_must_match = false
+
+[[search]]
+key = "core.chemidplus.effects"
+source = "tox.chemidplus:acute"
+level = 1
+
+[[search]]
+key = "extra.chemidplus.specific-effects"
+source = "tox.chemidplus:acute"
+level = 2

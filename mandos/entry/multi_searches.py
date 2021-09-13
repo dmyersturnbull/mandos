@@ -28,7 +28,7 @@ Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
 EntriesByCmd: MutableMapping[str, Type[Entry]] = {e.cmd(): e for e in Entries}
 
 # these are only permitted in 'meta', not individual searches
-meta_keys = {"verbose", "quiet", "check", "log", "to"}
+meta_keys = {}
 forbidden_keys = {"dir", "out-dir", "out_dir"}
 
 SearchExplainDf = (
@@ -48,33 +48,28 @@ class MultiSearch:
     toml_path: Path
     input_path: Path
     out_dir: Path
+    suffix: str
 
     @property
     def final_path(self) -> Path:
-        if "to" in self.meta:
-            fmt = Path(self.meta["to"]).suffix
-        else:
-            fmt = MANDOS_SETTINGS.default_table_suffix
-        return self.out_dir / ("search_" + self.input_path.name + "_" + self.toml_path.name + fmt)
+        name = "search_" + self.input_path.name + "_" + self.toml_path.name + self.suffix
+        return self.out_dir / name
 
     @property
     def explain_path(self) -> Path:
         return Path(str(self.final_path.with_suffix("")) + "_explain.tsv")
 
     def __post_init__(self):
-        to = self.meta.get_as("to", str)
-        if to is not None and not to.startswith("."):
-            raise ValueError(f"Argument 'to' ({to})' must start with '.'.")
         for key, value in self.meta.items():
             if key not in meta_keys:
                 raise ValueError(f"{key} in 'meta' not supported.")
 
     @classmethod
-    def build(cls, input_path: Path, out_dir: Path, toml_path: Path) -> MultiSearch:
+    def build(cls, input_path: Path, out_dir: Path, suffix: str, toml_path: Path) -> MultiSearch:
         toml = NestedDotDict.read_toml(toml_path)
         searches = toml.get_as("search", list, [])
         meta = toml.sub("meta")
-        return MultiSearch(meta, searches, toml_path, input_path, out_dir)
+        return MultiSearch(meta, searches, toml_path, input_path, out_dir, suffix)
 
     def to_table(self) -> SearchExplainDf:
         rows = []
@@ -111,7 +106,7 @@ class MultiSearch:
         commands = {}
         skipping = []
         for search in self.searches:
-            cmd = CmdRunner.build(search, self.meta, self.input_path, self.out_dir)
+            cmd = CmdRunner.build(search, self.meta, self.input_path, self.out_dir, self.suffix)
             if cmd.was_run:
                 skipping += [cmd]
             else:
@@ -154,10 +149,11 @@ class CmdRunner:
         self.cmd.run(self.input_path, **{**self.params, **dict(no_setup=True, check=False)})
 
     @classmethod
-    def build(cls, e: NestedDotDict, meta: NestedDotDict, input_path: Path, out_dir: Path):
+    def build(
+        cls, e: NestedDotDict, meta: NestedDotDict, input_path: Path, out_dir: Path, suffix: str
+    ):
         cmd = e.req_as("source", str)
         key = e.get_as("key", str, cmd)
-        to = meta.get_as("to", str, MANDOS_SETTINGS.default_table_suffix)
         try:
             cmd = EntriesByCmd[cmd]
         except KeyError:
@@ -176,7 +172,7 @@ class CmdRunner:
         params["key"] = key
         params["path"] = e.req_as("path", Path)
         params["out_dir"] = out_dir
-        params.setdefault("to", to)
+        params.setdefault("to", suffix)
         # now add the params we got for this command's section
         params.update({k: v for k, v in e.items() if k != "source" and k != "category"})
         del params["check"]

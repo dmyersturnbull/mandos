@@ -141,6 +141,7 @@ class Ld50Hit(PubchemHit):
 
     organism: str
     human: bool
+    route: str
 
 
 @dataclass(frozen=True, order=True, repr=True)

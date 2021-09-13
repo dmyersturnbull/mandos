@@ -46,6 +46,7 @@ class IndicationSearch(ChemblSearch[IndicationHit]):
             object_id=indication.req_as("mesh_id", str),
             object_name=indication.req_as("mesh_heading", str).strip("\n"),
             max_phase=phase,
+            weight=phase,
         )
 
 

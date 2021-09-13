@@ -133,9 +133,9 @@ class MandosSetup:
         if skip:
             return
         level = MandosSetup.ALIASES.get(level.lower(), level).upper()
-        if level not in MandosSetup.LEVELS:
+        if level.lower() not in MandosSetup.LEVELS:
             _permitted = ", ".join([*MandosSetup.LEVELS, *MandosSetup.ALIASES.keys()])
-            raise ValueError(f"{level} not a permitted log level (allowed: {_permitted}")
+            raise ValueError(f"{level.lower()} not a permitted log level (allowed: {_permitted}")
         if level == "OFF":
             MandosLogging.disable_main()
         else:

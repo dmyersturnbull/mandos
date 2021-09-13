@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from typeddfs import FileFormat
+
 from mandos.model.taxonomy import TaxonomyDf
 
 from mandos.entry._entry_utils import EntryUtils
@@ -159,14 +161,28 @@ class MiscCommands:
             """
         ),
         out_dir: Path = Ca.out_misc_dir,
+        suffix: str = Opt.val(
+            rf"""
+            Output file format as a filename suffix.
+
+            {Ca.output_formats}
+            """,
+            "--format",
+        ),
         log: Optional[Path] = Ca.log,
         stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Run multiple searches.
         """
+        if path is None:
+            raise ValueError("Specify path")
+        if config is None:
+            raise ValueError("Specify config")
+        fmt = FileFormat.from_suffix(suffix)  # make sure it's ok
+        logger.notice(f"Will write to {fmt} ({suffix})")
         MANDOS_SETUP(log, stderr)
-        MultiSearch.build(path, out_dir, config).run()
+        MultiSearch.build(path, out_dir, suffix, config).run()
 
     @staticmethod
     def detail_search(

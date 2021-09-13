@@ -57,10 +57,6 @@ class AcuteEffectSearch(PubchemSearch[AcuteEffectHit]):
 
 
 class Ld50Search(PubchemSearch[Ld50Hit]):
-    @property
-    def data_source(self) -> str:
-        return "ChemIDplus"
-
     def find(self, inchikey: str) -> Sequence[Ld50Hit]:
         data = self.api.fetch_data(inchikey)
         results = []
@@ -70,15 +66,19 @@ class Ld50Search(PubchemSearch[Ld50Hit]):
             weight = -np.log10(dd.mg_per_kg)
             results.append(
                 self._create_hit(
-                    Ld50Hit,
                     inchikey=inchikey,
-                    data=data,
+                    c_id=str(data.cid),
+                    c_origin=inchikey,
+                    c_matched=data.names_and_identifiers.inchikey,
+                    c_name=data.name,
+                    data_source="ChemIDplus",
                     predicate="has LD50",
                     object_id=str(dd.mg_per_kg),
                     object_name=str(dd.mg_per_kg),
+                    weight=weight,
                     organism=dd.organism,
                     human=dd.organism.is_human,
-                    weight=weight,
+                    route=dd.route,
                 )
             )
         return results

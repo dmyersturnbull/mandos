@@ -67,7 +67,7 @@ pyarrow                        = "^5.0"
 requests                       = "^2.25"
 suretime                       = ">=0.1.1, <1.0"
 tomlkit                        = ">=0.7, <1.0"
-typeddfs                       = {version=">=0.12, <1.0", extras=["feather", "parquet", "excel"]}
+typeddfs                       = {version=">=0.13, <1.0", extras=["feather", "parquet", "excel"]}
 typer                          = ">=0.4, <1.0"
 click                          = ">=8"
 tzdata                         = ">=2021.1"

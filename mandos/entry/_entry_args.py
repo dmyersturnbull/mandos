@@ -106,7 +106,7 @@ class EntryArgs:
     )
 
     relations = typer.Option(
-        "<,<=,=,>=,>",
+        "<,<=,=",
         "--relations",
         help=cleandoc(
             """

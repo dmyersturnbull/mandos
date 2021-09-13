@@ -19,6 +19,8 @@ class EntryUtils:
             path = Path(default)
         elif str(to).startswith("."):
             path = Path(default).with_suffix(str(to))
+        elif str(to).startswith("*."):
+            path = Path(default).with_suffix(str(to)[1:])
         elif to.is_dir() or to.suffix == "":
             path = to / default
         else:

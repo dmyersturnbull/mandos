@@ -11,10 +11,9 @@ from typer.models import CommandInfo
 
 from mandos.model.utils.setup import MandosLogging, logger
 
-from mandos.entry.calc_commands import CalcCommands
-
 # noinspection PyProtectedMember
 from mandos.entry.misc_commands import MiscCommands, _InsertedCommandListSingleton
+from mandos.entry.calc_commands import CalcCommands
 from mandos.entry.api_singletons import Apis
 from mandos.entry.entry_commands import Entries
 from mandos.entry.plot_commands import PlotCommands

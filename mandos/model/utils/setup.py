@@ -62,6 +62,10 @@ class MandosLogging:
         """
         Sets an initial configuration.
         """
+        # we warn the user about this in the docs!
+        sys.stderr.reconfigure(encoding="utf-8")
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stdin.reconfigure(encoding="utf-8")
         cls._init()
         cls.redirect_std_logging()
         cls.set_main_level(MandosLogging.DEFAULT_LEVEL)
@@ -84,7 +88,7 @@ class MandosLogging:
     @classmethod
     def redirect_std_logging(cls, level: int = 10) -> None:
         # 10 b/c we're really never going to want trace output
-        logging.basicConfig(handlers=[InterceptHandler()], level=level)
+        logging.basicConfig(handlers=[InterceptHandler()], level=level, encoding="utf-8")
 
     @classmethod
     def set_main_level(cls, level: str) -> None:
@@ -107,6 +111,7 @@ class MandosLogging:
             backtrace=True,
             diagnose=True,
             enqueue=True,
+            encoding="utf-8",
         )
 
 

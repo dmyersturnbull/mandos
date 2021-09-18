@@ -53,44 +53,43 @@ Download = "https://pypi.org/project/mandos/"
 [tool.poetry.scripts]
 mandos = "mandos.cli:cli"
 
-
 [tool.poetry.dependencies]
-python                         = ">=3.9, <4"
 chembl-webresource-client      = "^0.10"
+click                          = ">=8"
 defusedxml                     = ">=0.7, <1.0"
 loguru                         = ">=0.5, <1.0"
 numpy                          = "^1.21"
 orjson                         = "^3.5"
 pandas                         = "^1.3"
+pint                           = ">=0.17, <1.0"
 pocketutils                    = ">=0.5.2, <0.7"
 pyarrow                        = "^5.0"
+python                         = ">=3.9, <4"
+regex                          = ">=2021.8"
 requests                       = "^2.25"
 suretime                       = ">=0.1.1, <1.0"
 tomlkit                        = ">=0.7, <1.0"
-typeddfs                       = {version=">=0.13, <1.0", extras=["feather", "parquet", "excel"]}
 typer                          = ">=0.4, <1.0"
-click                          = ">=8"
 tzdata                         = ">=2021.1"
-matplotlib                     = {version="^3.4", optional=true}
-pint                           = ">=0.17, <1.0"
-regex                          = ">=2021.8"
 joblib                         = {version="^1.0", optional=true}
-seaborn                        = {version=">=0.11, <1.0", optional=true}
+matplotlib                     = {version="^3.4", optional=true}
 selenium                       = {version="^3", optional=true}
 scikit-learn                   = {version=">=0.24, <1.0", optional=true}
+seaborn                        = {version=">=0.11, <1.0", optional=true}
+typeddfs                       = {version=">=0.13, <1.0", extras=["feather", "parquet", "excel"]}
 umap-learn                     = {version=">=0.5, <1.0", optional=true}
 
 [tool.poetry.extras]
-analysis = ["scikit-learn", "umap-learn", "scikit-learn", "joblib"]
+analysis = ["joblib", "scikit-learn", "umap-learn"]
 plots = ["matplotlib", "seaborn"]
 web = ["selenium"]
-extras = ["matplotlib", "seaborn", "scikit-learn", "umap-learn", "selenium"]
+extras = ["matplotlib", "scikit-learn", "seaborn", "selenium", "umap-learn"]
 
 [tool.poetry.dev-dependencies]
 pre-commit               = ">=2.15, <3.0"
 pre-commit-hooks         = ">=4.0, <5.0"
 bandit                   = ">=1.7, <2.0"
-black                    = "==21.8b0"
+black                    = "==21.9b0"
 flake8                   = "^3"
 flake8-bugbear           = ">=21"
 flake8-docstrings        = "^1"

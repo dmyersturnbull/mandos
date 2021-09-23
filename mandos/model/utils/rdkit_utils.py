@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Iterator, List, Set
 
 import numpy as np
+from pocketutils.core.exceptions import DataIntegrityError
 
 from mandos.model.utils.setup import logger
 
@@ -22,7 +23,7 @@ except ImportError:
     AllChem = None
 
 
-class MoleculeError(Exception):
+class MoleculeError(DataIntegrityError):
     pass
 
 

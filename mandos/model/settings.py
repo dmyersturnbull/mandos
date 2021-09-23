@@ -4,25 +4,29 @@ import os
 from collections import Set
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Type, TypeVar, Any, Mapping
+from typing import Type, TypeVar, Any, Mapping, Optional, Collection, Union
 
 import orjson
 from chembl_webresource_client.settings import Settings as ChemblSettings
 from mandos.model.utils.resources import MandosResources
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
+from pocketutils.core.exceptions import DirDoesNotExistError, FileDoesNotExistError, ConfigError
 from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
 
 from mandos.model.utils.setup import logger
 
-defaults = MandosResources.path("default_settings.json").read_text(encoding="utf8")
-defaults = orjson.loads(defaults)
+defaults: Mapping[str, Any] = orjson.loads(
+    MandosResources.path("default_settings.json").read_text(encoding="utf8")
+)
 T = TypeVar("T")
 
 
 class Globals:
     chembl_settings = ChemblSettings.Instance()
+    cwd = os.getcwd()
+    where_am_i_installed = Path(__file__).parent.parent.parent
     is_in_ci = CommonTools.parse_bool(os.environ.get("IS_IN_CI", "false"))
     if is_in_ci:
         mandos_path = Path(__file__).parent.parent.parent / "tests" / "resources" / ".mandos-cache"
@@ -65,6 +69,7 @@ class Settings:
     archive_filename_suffix: str
     default_table_suffix: str
     selenium_driver: str
+    selenium_driver_path: Optional[Path]
 
     def __post_init__(self):
         pass
@@ -78,6 +83,10 @@ class Settings:
             self.hmdb_cache_path,
             self.taxonomy_cache_path,
         }
+
+    @property
+    def driver_path(self) -> Path:
+        return self.cache_path / "driver"
 
     @property
     def chembl_cache_path(self) -> Path:
@@ -114,7 +123,10 @@ class Settings:
     @classmethod
     def load(cls, data: NestedDotDict) -> Settings:
         def get(s: str, t: Type[T]) -> T:
-            return data.get_as(s, t, defaults[s])
+            try:
+                return data.get_as(s, t, defaults[s])
+            except TypeError:
+                raise ConfigError(f"Key {s}={data.get(s), defaults[s]} is not of type {t}")
 
         _continent = Suretime.Types.NtpContinents.of
         return cls(
@@ -144,6 +156,7 @@ class Settings:
             archive_filename_suffix=get("cache.archive_filename_suffix", str),
             default_table_suffix=get("default_table_suffix", str),
             selenium_driver=get("selenium_driver", str).title(),
+            selenium_driver_path=get("selenium_driver_path", Path),
         )
 
     @classmethod
@@ -161,6 +174,23 @@ class Settings:
             instance.TIMEOUT = self.chembl_timeout_sec
             instance.BACKOFF_FACTOR = self.chembl_backoff_factor
             instance.CACHE_EXPIRE = self.chembl_expire_sec
+
+    @classmethod
+    def set_path_for_selenium(cls) -> None:
+        cls.add_to_path(
+            [MANDOS_SETTINGS.driver_path, MandosResources.dir(), Globals.where_am_i_installed]
+        )
+
+    @classmethod
+    def add_to_path(cls, paths: Collection[Union[None, str, Path]]) -> None:
+        paths = {Path(p) for p in paths if p is not None}
+        for path in paths:
+            if path.exists() and not path.is_dir() and not path.is_mount():
+                raise DirDoesNotExistError(f"Path {path} is not a directory or mount")
+        paths = os.pathsep.join({str(p) for p in paths})
+        if len(paths) > 0:
+            os.environ["PATH"] += os.pathsep + paths
+        logger.debug(f"Added to PATH: {paths}")
 
 
 if Globals.settings_path.exists():

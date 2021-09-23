@@ -7,6 +7,12 @@ from pathlib import Path
 from typing import Any, Optional, Tuple, Union, Mapping
 
 import numpy as np
+from pocketutils.core.exceptions import (
+    BadCommandError,
+    ImmutableError,
+    MissingResourceError,
+    XValueError,
+)
 from typeddfs import TypedDf, AffinityMatrixDf
 from matplotlib.colors import Colormap
 
@@ -63,12 +69,12 @@ class MandosPlotter:
 
     def __post_init__(self):
         if sns is None or plt is None:
-            raise ImportError(
+            raise MissingResourceError(
                 "Seaborn and matplotlib required for plotting. Install the 'plots' extra."
             )
         bad_kwargs = set(self.__dict__.keys()).intersection(self.rc.extra.keys())
         if len(bad_kwargs) > 0:
-            raise ValueError(f"Overlapping args in extra: {bad_kwargs}")
+            raise XValueError(f"Overlapping args in extra: {bad_kwargs}")
 
     def _figure(self):
         width, height = self.rc.width_and_height
@@ -140,7 +146,7 @@ class _HeatPlotter(MandosPlotter):
 
     def __post_init__(self):
         if self.rc.extra.get("mask") is not None:
-            raise ValueError(f"Cannot set mask in {self.__class__.__name__}")
+            raise ImmutableError(f"Cannot set mask in {self.__class__.__name__}")
 
     def get_kwargs(self, data: AffinityMatrixDf, more: Mapping[str, Any]) -> Mapping[str, Any]:
         vmin = np.quantile(data.flatten(), self.vmin_percentile / 100)

@@ -20,7 +20,6 @@ class EntryPaths:
     @classmethod
     def default_path_of(cls, what: Search, input_path: Path) -> Path:
         parent = input_path.parent / (input_path.stem + "-output")
-        parent.mkdir(exist_ok=True)
         child = what.key + ".csv"
         node = PathTools.sanitize_path_node(child)
         if (parent / node).resolve() != (parent / child).resolve():

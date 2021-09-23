@@ -3,7 +3,9 @@ from __future__ import annotations
 import abc
 import dataclasses
 import typing
-from typing import Generic, Sequence, TypeVar
+from typing import Generic, Sequence, TypeVar, AbstractSet
+
+from pocketutils.core.exceptions import XTypeError
 
 from mandos.model.utils.setup import logger
 from mandos.model import CompoundNotFoundError
@@ -43,13 +45,18 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     def __init__(self, key: str):
         self.key = key
 
+    @classmethod
+    def primary_data_source(cls) -> str:
+        z = MandosResources.strings[cls.__name__]["source"]
+        return z.split(":")[0]
+
     @property
     def search_class(self) -> str:
         return self.__class__.__name__
 
-    @property
-    def search_name(self) -> str:
-        return self.__class__.__name__.lower().replace("search", "")
+    @classmethod
+    def search_name(cls) -> str:
+        return cls.__name__.lower().replace("search", "")
 
     def get_params(self) -> typing.Mapping[str, typing.Any]:
         """
@@ -98,13 +105,13 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
                     search_class=self.search_class,
                 )
             lst.extend(x)
-            logger.debug(f"Found {len(x)} {self.search_name} annotations for {compound}")
+            logger.debug(f"Found {len(x)} {self.search_name()} annotations for {compound}")
             if i % 10 == 9:
                 logger.notice(
-                    f"Found {len(lst)} {self.search_name} annotations for {i+1} of {len(inchikeys)} compounds"
+                    f"Found {len(lst)} {self.search_name()} annotations for {i+1} of {len(inchikeys)} compounds"
                 )
         logger.notice(
-            f"Found {len(lst)} {self.search_name} annotations for {i+1} of {len(inchikeys)} compounds"
+            f"Found {len(lst)} {self.search_name()} annotations for {i+1} of {len(inchikeys)} compounds"
         )
         return lst
 
@@ -208,7 +215,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             TypeError: If ``other`` is not a :py:class:`Search`
         """
         if not isinstance(other, Search):
-            raise TypeError(f"{type(other)} not comparable")
+            raise XTypeError(f"{type(other)} not comparable")
         return repr(self) == repr(other)
 
 

@@ -8,6 +8,7 @@ from typing import Collection, Dict, Generator, Sequence, Set, Tuple, Union, Typ
 
 import numpy as np
 import pandas as pd
+from pocketutils.core.exceptions import MismatchedDataError
 
 from mandos.analysis.io_defns import ConcordanceDf, SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.model.utils import CleverEnum
@@ -31,7 +32,7 @@ class ConcordanceCalculator(metaclass=abc.ABCMeta):
     ) -> ConcordanceDf:
         phi_cols, psi_cols = phi.columns.tolist(), psi.columns.tolist()
         if phi_cols != psi_cols:
-            raise ValueError(f"Mismatched compounds: {phi_cols} != {psi_cols}")
+            raise MismatchedDataError(f"Mismatched compounds: {phi_cols} != {psi_cols}")
         df = pd.DataFrame(data=self.generate(phi, psi), columns=["score"])
         df = df.reset_index()
         df["phi"] = phi_name

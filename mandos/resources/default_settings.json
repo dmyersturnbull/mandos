@@ -21,5 +21,6 @@
   "query.taxa.expire_sec": 2629756,
   "cache.archive_filename_suffix": ".snappy",
   "default_table_suffix": ".feather",
-  "selenium_driver": "Chrome"
+  "selenium_driver": "Chrome",
+  "selenium_driver_path": null
 }

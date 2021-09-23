@@ -4,6 +4,7 @@ from typing import Any, Callable, Mapping, Optional
 import defusedxml.ElementTree as Xml
 import orjson
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import LookupFailedError, XValueError
 from pocketutils.core.query_utils import QueryExecutor
 
 
@@ -17,7 +18,9 @@ class _Source:
             txt = getter()
             if txt is not None:
                 return txt
-            raise ValueError(f"Nothing found for {self._name} {self.__class__.__name__} source")
+            raise LookupFailedError(
+                f"Nothing found for {self._name} {self.__class__.__name__} source"
+            )
 
     @classmethod
     def cached_from_url(
@@ -47,7 +50,7 @@ class _Source:
 
             # noinspection PyArgumentList
             return cls(load, save, name=f"Cache({path}, {url})")
-        raise ValueError(f"Cannot create source from path {path}, url {url}, and query {query}")
+        raise XValueError(f"Cannot create source from path {path}, url {url}, and query {query}")
 
     @classmethod
     def from_path(cls, path: Path):

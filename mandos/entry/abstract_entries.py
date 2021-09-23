@@ -41,7 +41,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
     # noinspection PyUnusedLocal
     @classmethod
     def test(cls, path: Path, **params) -> None:
-        cls.run(path, **{**params, **dict(check=True)})
+        cls.run(path, **{**params, **dict(check=True, log=None, stderr="ERROR")})
 
     @classmethod
     def _run(
@@ -54,7 +54,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         level: str,
         no_setup: bool,
     ):
-        MANDOS_SETUP(level, log, no_setup)
+        MANDOS_SETUP(log, level, no_setup)
         searcher = cls._get_searcher(built, path, to)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
         out = searcher.output_paths[built.key]

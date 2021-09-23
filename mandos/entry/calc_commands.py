@@ -4,8 +4,11 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional, List
+
+from pocketutils.core.exceptions import ResourceError
 
 from mandos.entry._entry_utils import EntryUtils
 from mandos.entry.searchers import InputFrame
@@ -63,6 +66,10 @@ class Aa:
         rf"""
         Path to write enrichment info.
 
+        Use the format "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz").
+        If no suffix is provided, will interpret the path as a directory.
+
         {Ca.output_formats}
 
         One row will be included per predicate/object pair (or list of them), per bootstrap sample.
@@ -96,6 +103,10 @@ class Aa:
         rf"""
         The path to a file with compound/compound similarity matrices.
 
+        Use the format "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz").
+        If no suffix is provided, will interpret the path as a directory.
+
         {Ca.output_formats}
 
         The matrix is "long-form" so that multiple matrices can be included.
@@ -125,6 +136,10 @@ class Aa:
         rf"""
         Output file.
 
+        Use the format "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz").
+        If no suffix is provided, will interpret the path as a directory.
+
         {Ca.output_formats}
 
         {ArgUtils.df_description(ConcordanceDf)}
@@ -134,6 +149,12 @@ class Aa:
     out_projection: Optional[Path] = Opt.out_file(
         rf"""
         Path to the output table.
+
+        Use the format "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz").
+        If no suffix is provided, will interpret the path as a directory.
+
+        {Ca.output_formats}
 
         {ArgUtils.df_description(PsiProjectedDf)}
 
@@ -145,11 +166,13 @@ class Aa:
 
     boot = Opt.val(
         r"""
-        Also generate results for <b> bootstrapped samples.
+        Generate results for <b> bootstrapped samples.
 
         Number of bootstrap samples (positive integer).
+        If 0, will not perform a bootstrap.
 
-        If set, will still include the non-bootstrapped results (sample=0 in the output).
+        If set, will still include the non-bootstrapped results
+        (sample=0 in the output).
         """,
         min=1,
         max=1000000,
@@ -165,7 +188,7 @@ class CalcCommands:
         scores: Path = Aa.in_scores_table,
         seed: int = Aa.seed,
         samples: int = Aa.boot,
-        to: Optional[Path] = Ca.out_misc_dir,
+        to: Optional[Path] = Ca.out_wildcard,
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
         stderr: bool = CommonArgs.stderr,
@@ -249,7 +272,7 @@ class CalcCommands:
         scores = ScoreDf.read_file(scores)
         calculator = EnrichmentCalculation(bool_alg, real_alg, boot, seed)
         df = calculator.calculate(hits, scores)
-        df.write_file(to)
+        df.write_file(to, mkdirs=True)
 
     @staticmethod
     def calc_psi(
@@ -341,6 +364,10 @@ class CalcCommands:
             rf"""
             The path to a table for output.
 
+            Use the format "<path>{os.sep}*<suffix>" to set the output format.
+            (e.g. "output/*.csv.gz").
+            If no suffix is provided, will interpret the path as a directory.
+
             {Ca.output_formats}
 
             [default: <input-path.parent>/<algorithm>-concordance.{DEF_SUFFIX}]
@@ -407,7 +434,11 @@ class CalcCommands:
             Path to write a table of the projection coordinates.
             Will contain columns "x", "y", "inchikey", "key", and "data_source".
 
-            {CommonArgs.output_formats}
+            Use the format "<path>{os.sep}*<suffix>" to set the output format.
+            (e.g. "output/*.csv.gz").
+            If no suffix is provided, will interpret the path as a directory.
+
+            {Ca.output_formats}
             """
         ),
         replace: bool = Ca.replace,
@@ -421,7 +452,7 @@ class CalcCommands:
         Saves a table of the UMAP coordinates.
         """
         if algorithm == "umap" and UMAP is None:
-            raise ImportError(f"UMAP is not available")
+            raise ResourceError(f"UMAP is not available")
 
     @staticmethod
     def calc_phi(

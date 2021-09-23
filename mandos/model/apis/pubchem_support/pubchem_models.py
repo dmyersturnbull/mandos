@@ -9,6 +9,7 @@ from typing import FrozenSet, Mapping, Optional, Sequence, Set, Union
 import orjson
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import XTypeError, XValueError
 from pocketutils.tools.string_tools import StringTools
 
 from mandos.model.utils.resources import MandosResources
@@ -29,7 +30,7 @@ class ComputedProperty:
 
     def req_is(self, type_) -> Union[int, str, float, bool]:
         if not isinstance(self.value, type_):
-            raise TypeError(f"{self.key}->{self.value} has {type(self.value)}, not {type_}")
+            raise XTypeError(f"{self.key}->{self.value} has {type(self.value)}, not {type_}")
         return self.value
 
     @property
@@ -214,7 +215,7 @@ class ClinicalTrialsGovUtils:
             elif s in cls.known_statuses():
                 match = {s}
             else:
-                raise ValueError(s)
+                raise XValueError(f"Invalid status {s}")
             for m in match:
                 found.add(m)
         return found
@@ -304,7 +305,7 @@ class AcuteEffectEntry:
         # TODO: Could it ever start with just a dot; e.g. '.175'?
         match = regex.compile(r".+?\((\d+(?:.\d+)?) *mg/kg\)").fullmatch(self.dose, flags=regex.V1)
         if match is None:
-            raise ValueError(f"Dose {self.dose} (acute effect {self.gid}) could not be parsed")
+            raise XValueError(f"Dose {self.dose} (acute effect {self.gid}) could not be parsed")
         return float(match.group(1))
 
 

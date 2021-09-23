@@ -10,6 +10,7 @@ from typing import FrozenSet, Optional, Union, Set
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import XValueError
 
 from mandos.model.utils.setup import logger
 from mandos.model.settings import MANDOS_SETTINGS
@@ -74,7 +75,7 @@ class CachingPubchemApi(PubchemApi):
 
     def similarity_path(self, inchi: str, min_tc: float) -> Path:
         if not (min_tc * 100).is_integer():
-            raise ValueError(f"min_tc {min_tc} is not an increment of 1%")
+            raise XValueError(f"min_tc {min_tc} is not an increment of 1%")
         percent = int(min_tc * 100)
         path = self._cache_dir / "similarity" / f"{inchi}_{percent}"
         return path.with_suffix(MANDOS_SETTINGS.archive_filename_suffix)

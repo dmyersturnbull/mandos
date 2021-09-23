@@ -1,24 +1,30 @@
 """
 Common argument processing and arguments for Typer.
 """
+import os
 from typing import Optional, TypeVar
 
-from mandos.model.hits import HitFrame
+from typeddfs.cli_help import DfCliHelp
 
+from mandos.model.hits import HitFrame
 from mandos.entry._arg_utils import Arg, Opt, ArgUtils
 from mandos.entry.searchers import InputFrame
 from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.utils.setup import MandosLogging, MANDOS_SETUP
 
 T = TypeVar("T", covariant=True)
+DEF_SUFFIX = MANDOS_SETTINGS.default_table_suffix
 
 
 class CommonArgs:
 
-    output_formats = r"""
-        The filename extension must be one of: .feather; .snappy/.parquet; or
+    output_formats = fr"""\
+
+        The filename suffix will set the output format (default: {DEF_SUFFIX}).
+        The suffix must be one of: .feather; .snappy/.parquet; or
         .csv, .tsv, .tab (with optional .gz/.bz2/.zip/.xz).
         Feather (.feather) and Parquet (.snappy) are recommended.
+
         If only a filename suffix is provided, only sets the format and suffix.
         If no suffix is provided, interprets that path as a directory and uses Feather.
         Will fail if the file exists, unless `--replace` is passed.
@@ -106,16 +112,23 @@ class CommonArgs:
         """
     )
 
-    out_misc_dir = Opt.val(
+    out_misc_dir = Opt.out_dir(
         rf"""
         Choose the output directory.
 
-        You can set alongside ``--to``.
-        If ``--to`` is set to a relative path, this value is prepended.
-
-        [default: none]
+        [default: .]
         """,
-        "--dir",
+        "--to",
+    )
+
+    out_wildcard = Opt.val(
+        rf"""
+        The output directory.
+
+        Use the format "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz").
+        {output_formats}
+        """
     )
 
     taxa = Opt.val(
@@ -169,12 +182,14 @@ class CommonArgs:
         """
     )
 
-    log = Opt.out_path(
-        r"""
+    log = Opt.val(
+        rf"""
         Log to a file as well as stderr.
 
         The suffix can be .log, .log.gz, .log.zip, .json, .json.gz, or .json.gz.
         Prefix the path with :LEVEL: to control the level for this file (e.g. ``:INFO:out.log``).
+        The level can be, from least to most verbose: {", ".join(MANDOS_SETUP.LEVELS)}
+        (Aliases: {MANDOS_SETUP.ALIASES}.)
         """,
     )
 

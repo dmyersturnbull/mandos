@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set, Union
 
 import pandas as pd
+from pocketutils.core.exceptions import LookupFailedError, DataIntegrityError
+
 from mandos.model import MultipleMatchesError
 from typeddfs import TypedDfs
 
@@ -40,17 +42,10 @@ class NameType(CleverEnum):
     mnemonic = enum.auto()
 
 
-def _fix_tax_df(df):
-    df = df.rename(columns={c.replace(" ", "_").lower() for c in df.columns})
-    df["parent"] = df["parent"].fillna(0).astype(int)
-
-
 TaxonomyDf = (
     TypedDfs.typed("TaxonomyDf")
     .require("taxon", "parent", dtype=int)
-    .require("scientific_name", dtype=int)
-    .require("common_name", "mnemonic", dtype=str)
-    .post(_fix_tax_df)
+    .require("mnemonic", "scientific_name", "common_name", dtype=str)
     .strict()
     .secure()
 ).build()
@@ -254,7 +249,7 @@ class Taxonomy:
         tax = Taxonomy(by_id, by_name)
         # catch duplicate values
         if len(tax._by_id) != len(taxa):
-            raise AssertionError(f"{len(tax._by_id)} != {len(taxa)}")
+            raise DataIntegrityError(f"{len(tax._by_id)} != {len(taxa)}")
         return tax
 
     @classmethod
@@ -292,7 +287,9 @@ class Taxonomy:
                 parent.add_child(child)
         bad = [t for t in tax.values() if t.scientific_name.strip() == ""]
         if len(bad) > 0:
-            raise ValueError(f"{len(bad)} taxa with missing or empty scientific names: {bad}.")
+            raise DataIntegrityError(
+                f"{len(bad)} taxa with missing or empty scientific names: {bad}."
+            )
         for v in tax.values():
             v.__class__ = Taxon
         by_name = cls._build_by_name(tax.values())
@@ -415,7 +412,7 @@ class Taxonomy:
         """
         one = self.get_one_by_name(item)
         if one is None:
-            raise LookupError(f"No taxa for {item}")
+            raise LookupFailedError(f"No taxa for {item}")
         return one
 
     def req_only_by_name(self, item: str) -> Taxon:
@@ -435,7 +432,7 @@ class Taxonomy:
         if len(taxa) > 1:
             raise MultipleMatchesError(f"Got multiple results for {item}: {ids}")
         elif len(taxa) == 0:
-            raise LookupError(f"No taxa for {item}")
+            raise LookupFailedError(f"No taxa for {item}")
         return next(iter(taxa))
 
     def get_one_by_name(self, item: str) -> Optional[Taxon]:
@@ -486,7 +483,7 @@ class Taxonomy:
         elif isinstance(item, str):
             return self._by_name.get(item, frozenset(set()))
         else:
-            raise TypeError(f"Unknown type {type(item)} of {item}")
+            raise XTypeError(f"Unknown type {type(item)} of {item}")
 
     def req(self, item: int) -> Taxon:
         """
@@ -512,7 +509,7 @@ class Taxonomy:
         if isinstance(item, int):
             return self._by_id.get(item)
         else:
-            raise TypeError(f"Type {type(item)} of {item} not applicable")
+            raise XTypeError(f"Type {type(item)} of {item} not applicable")
 
     def __getitem__(self, item: int) -> Taxon:
         """
@@ -529,7 +526,7 @@ class Taxonomy:
         """
         got = self.get(item)
         if got is None:
-            raise KeyError(f"{item} not found in {self}")
+            raise LookupFailedError(f"{item} not found in {self}")
         return got
 
     def contains(self, item: Union[Taxon, int, str]):

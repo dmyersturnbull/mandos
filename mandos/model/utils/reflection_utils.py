@@ -3,11 +3,12 @@ import sys
 import typing
 from typing import Type, Optional, Mapping, Any
 
+from pocketutils.core.exceptions import LookupFailedError
 
 T = typing.TypeVar("T")
 
 
-class InjectionError(LookupError):
+class InjectionError(LookupFailedError):
     """ """
 
 

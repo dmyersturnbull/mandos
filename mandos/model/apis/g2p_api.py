@@ -6,6 +6,7 @@ from typing import Optional, Type
 import numpy as np
 import orjson
 import pandas as pd
+from pocketutils.core.exceptions import UnsupportedOpError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDf, TypedDfs
 
@@ -32,6 +33,7 @@ LigandDf = (
     .require("Name", "Type", "Approved", "PubChem CID", "InChIKey", dtype=str)
     .strict()
     .secure()
+    .hash(file=True)
 ).build()
 
 
@@ -48,6 +50,7 @@ InteractionDf = (
     .require("affinity_median", dtype=np.float64)
     .strict()
     .secure()
+    .hash(file=True)
 ).build()
 
 
@@ -78,7 +81,7 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
             g2pid=g2pid,
             name=basic["ligand"],
             type=basic["Type"],
-            approved=TrueFalseUnknown.parse(basic["Approved"]),
+            approved=TrueFalseUnknown.of(basic["Approved"]),
             pubchem_id=_oint(basic["PubChem ID"]),
             interactions=interactions,
         )
@@ -128,8 +131,8 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
             "Not Determined": TrueFalseUnknown.unknown,
         }
         d["selectivity"] = sel_map.get(d["selectivity"], TrueFalseUnknown.unknown)
-        d["primary_target"] = TrueFalseUnknown.parse(d["primary_target"])
-        d["endogenous"] = TrueFalseUnknown.parse(d["endogenous"])
+        d["primary_target"] = TrueFalseUnknown.of(d["primary_target"])
+        d["endogenous"] = TrueFalseUnknown.of(d["endogenous"])
         return G2pInteraction(**d)
 
     def __repr__(self):
@@ -140,7 +143,7 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
         return repr(self)
 
     def __eq__(self, other):
-        raise NotImplementedError(f"Cannot compare {self.__class__.__name__}")
+        raise UnsupportedOpError(f"Cannot compare {self.__class__.__name__}")
 
 
 _all__ = ["G2pApi", "CachedG2pApi"]

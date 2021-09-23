@@ -1,16 +1,17 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import regex
 from loguru import logger
 
 from loguru._logger import Logger
+from pocketutils.core.exceptions import BadCommandError, XValueError
 from typeddfs import FileFormat
+from typeddfs.file_formats import CompressionFormat
 
-
-_LOGGER_ARG_PATTERN = regex.compile(r"(?:[A-Z]+:)??(.*)", flags=regex.V1)
+_LOGGER_ARG_PATTERN = regex.compile(r"(?:([a-zA-Z]+):)?(.*)", flags=regex.V1)
 
 
 class InterceptHandler(logging.Handler):
@@ -101,8 +102,21 @@ class MandosLogging:
 
     @classmethod
     def add_path_logger(cls, path: Path, level: str) -> None:
-        serialize = FileFormat.from_path(path) is FileFormat.json
-        compression = FileFormat.compression_from_path(path).name.lstrip(".")
+        cls.get_log_suffix(path)
+        compressions = [
+            ".xz",
+            ".lzma",
+            ".gz",
+            ".zip",
+            ".bz2",
+            ".tar",
+            ".tar.gz",
+            ".tar.bz2",
+            ".tar.xz",
+        ]
+        compressions = {c: c.lstrip(".") for c in compressions}
+        serialize = path.with_suffix("").name.endswith(".json")
+        compression = compressions.get(path.suffix)
         logger.add(
             str(path),
             level=level,
@@ -114,6 +128,22 @@ class MandosLogging:
             encoding="utf-8",
         )
 
+    @classmethod
+    def get_log_suffix(cls, path: Path) -> str:
+        valid_log_suffixes = {
+            *{f".log{c.suffix}" for c in CompressionFormat.list()},
+            *{f".txt{c.suffix}" for c in CompressionFormat.list()},
+            *{f".json{c.suffix}" for c in CompressionFormat.list()},
+        }
+        # there's no overlap, right? pretty sure
+        matches = {s for s in valid_log_suffixes if path.name.endswith(s)}
+        if len(matches) == 0:
+            raise XValueError(
+                f"{path} is not a valid logging path; use one of {', '.join(valid_log_suffixes)}"
+            )
+        suffix = next(iter(matches))
+        return suffix
+
 
 class MandosSetup:
 
@@ -122,8 +152,8 @@ class MandosSetup:
 
     def __call__(
         self,
-        log: Optional[Path] = None,
-        level: str = MandosLogging.DEFAULT_LEVEL,
+        log: Union[None, str, Path] = None,
+        level: Optional[str] = MandosLogging.DEFAULT_LEVEL,
         skip: bool = False,
     ) -> None:
         """
@@ -137,26 +167,29 @@ class MandosSetup:
         """
         if skip:
             return
+        if level is None or len(str(level)) == 0:
+            level = MandosLogging.DEFAULT_LEVEL
         level = MandosSetup.ALIASES.get(level.lower(), level).upper()
         if level.lower() not in MandosSetup.LEVELS:
             _permitted = ", ".join([*MandosSetup.LEVELS, *MandosSetup.ALIASES.keys()])
-            raise ValueError(f"{level.lower()} not a permitted log level (allowed: {_permitted}")
+            raise XValueError(f"{level.lower()} not a permitted log level (allowed: {_permitted}")
         if level == "OFF":
             MandosLogging.disable_main()
         else:
             MandosLogging.set_main_level(level)
-        match = _LOGGER_ARG_PATTERN.match(str(log))
-        if log is not None:
+        if log is not None or len(str(log)) == 0:
+            match = _LOGGER_ARG_PATTERN.match(str(log))
             path_level = "DEBUG" if match.group(1) is None else match.group(1)
             path = Path(match.group(2))
             MandosLogging.add_path_logger(path, path_level)
             logger.info(f"Added logger to {path} at level {path_level}")
-        logger.notice(f"Ready. Set log level to {level}")
+        logger.info(f"Set log level to {level}")
 
 
 # weird as hell, but it works
 # noinspection PyTypeChecker
 logger: MyLogger = logger
+MandosLogging.init()
 
 
 MANDOS_SETUP = MandosSetup()

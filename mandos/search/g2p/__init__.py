@@ -1,5 +1,7 @@
 import abc
-from typing import TypeVar
+from typing import TypeVar, Sequence
+
+from pocketutils.core.exceptions import XValueError
 
 from mandos.model.apis.g2p_api import G2pApi
 from mandos.model.hits import AbstractHit
@@ -17,7 +19,7 @@ class G2pSearch(Search[H], metaclass=abc.ABCMeta):
             api:
         """
         if api is None:
-            raise ValueError(self.__class__.__name__)
+            raise XValueError(f"{self.__class__.__name__} got a null API")
         super().__init__(key)
         self.api = api
 

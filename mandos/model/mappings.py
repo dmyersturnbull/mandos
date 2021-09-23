@@ -3,6 +3,7 @@ from typing import Sequence
 
 import regex
 import pandas as pd
+from pocketutils.core.exceptions import ParsingError
 from typeddfs import TypedDfs
 
 from mandos.model.utils.resources import MandosResources
@@ -23,7 +24,7 @@ def _get(self: pd.DataFrame, s: str) -> Sequence[str]:
         try:
             match: regex.Match = pattern.fullmatch(s)
         except AttributeError:
-            raise ValueError(f"Failed on regex {pattern}") from None
+            raise ParsingError(f"Failed on regex {pattern}") from None
         if match is not None:
             return [pattern.sub(t, s.strip()) for t in self.T[irow] if isinstance(t, str)]
     return s
@@ -65,7 +66,7 @@ class _Compiler:
         try:
             return regex.compile("^" + s.strip() + "$", flags=regex.V1 | regex.IGNORECASE)
         except Exception:
-            raise ValueError(
+            raise ParsingError(
                 f"Failed to parse '{s}' on line {self._i} (excluding comments and blank lines)"
             ) from None
 
@@ -78,7 +79,7 @@ class Mappings:
 
     @classmethod
     def from_resource(cls, name: str) -> MappingFrame:
-        path = MandosResources.a_path("mappings", name)
+        path = MandosResources.a_file("mappings", name)
         return cls.from_path(path)
 
     @classmethod

@@ -8,6 +8,7 @@ from typing import TypeVar, Mapping, Sequence, List
 
 import numpy as np
 import pandas as pd
+from pocketutils.core.exceptions import LoadError
 from typeddfs import BaseDf
 from typeddfs.df_errors import UnsupportedOperationError
 
@@ -33,8 +34,7 @@ class MatrixPrep:
             try:
                 dct[key] = SimilarityDfShortForm.read_file(p)
             except (OSError, UnsupportedOperationError, ValueError):
-                logger.error(f"Failed to load matrix at {str(p)}")
-                raise
+                raise LoadError(f"Failed to load matrix at {str(p)}")
         return self.create(dct)
 
     def create(self, key_to_mx: Mapping[str, SimilarityDfShortForm]) -> SimilarityDfLongForm:

@@ -31,7 +31,7 @@
     "source": "g2p:interactions",
     "predicate": "{action}"
   },
-  "pubchem:AcuteEffectsSearch": {
+  "pubchem:AcuteEffectSearch": {
     "source": "chemidplus:acute-effects",
     "predicate": "effect"
   },

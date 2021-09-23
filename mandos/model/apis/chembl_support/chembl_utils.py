@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import XTypeError
 from pocketutils.tools.common_tools import CommonTools
 from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
@@ -102,7 +103,7 @@ class ChemblUtils:
     def _get_compound(self, inchikey: str) -> NestedDotDict:
         # saves a slow query
         if CommonTools.is_null(inchikey) or str(inchikey) == "nan":
-            raise TypeError(f"Cannot get ChEMBL compound from {inchikey} (type {type(inchikey)}")
+            raise XTypeError(f"Cannot get ChEMBL compound from {inchikey} (type {type(inchikey)}")
         # noinspection PyBroadException
         try:
             result = self.api.molecule.get(inchikey)

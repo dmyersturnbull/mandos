@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Sequence, Optional, Tuple, Set
 
 import numpy as np
+from pocketutils.core.exceptions import BadCommandError, OutOfRangeError
 
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraphFactory,
@@ -52,16 +53,16 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
     ):
         super().__init__(key, api, scrape)
         self.taxa = taxa
-        self.traversal_strategy = TargetTraversalStrategies.by_name(traversal, self.api)
+        self.traversal = TargetTraversalStrategies.by_name(traversal, self.api)
         self.target_types = target_types
         if required_level not in [70, 80, 90]:
-            raise ValueError(f"required_level must be 70, 80, or 90, not {required_level}")
+            raise OutOfRangeError(f"required_level must be 70, 80, or 90, not {required_level}")
         if min_threshold <= 0:
-            raise ValueError(f"min_threshold must be positive, not {min_threshold}")
+            raise OutOfRangeError(f"min_threshold must be positive, not {min_threshold}")
         if binding_score <= 0:
-            raise ValueError(f"binding_score must be positive, not {binding_score}")
+            raise OutOfRangeError(f"binding_score must be positive, not {binding_score}")
         if nonbinding_score <= 0:
-            raise ValueError(f"nonbinding_score must be positive, not {nonbinding_score}")
+            raise OutOfRangeError(f"nonbinding_score must be positive, not {nonbinding_score}")
         self.required_level = required_level
         self.min_threshold = min_threshold
         self.binding_score = binding_score
@@ -89,7 +90,7 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
         target_obj = factory.find(row.target_chembl_id)
         graph_factory = ChemblTargetGraphFactory.create(self.api, factory)
         graph = graph_factory.at_target(target_obj)
-        ancestors: Sequence[ChemblTargetGraph] = self.traversal_strategy(graph)
+        ancestors: Sequence[ChemblTargetGraph] = self.traversal(graph)
         lst = []
         for ancestor in ancestors:
             for conf_t, conf_v in zip(

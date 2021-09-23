@@ -152,6 +152,7 @@ HitFrame = (
     .reserve("chembl_id", "pubchem_id", dtype=str)
     .reserve("weight", dtype=np.float64)
     .strict(cols=False)
+    .hash(directory=True)
     .secure()
 ).build()
 

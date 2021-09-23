@@ -7,7 +7,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+import regex
 import typer
+from pocketutils.core.exceptions import BadCommandError, XValueError
 from typeddfs import FileFormat
 
 from mandos.model.taxonomy import TaxonomyDf
@@ -160,29 +162,21 @@ class MiscCommands:
             TOML config file. See docs.
             """
         ),
-        out_dir: Path = Ca.out_misc_dir,
-        suffix: str = Opt.val(
-            rf"""
-            Output file format as a filename suffix.
-
-            {Ca.output_formats}
-            """,
-            "--format",
-        ),
+        to: Path = Ca.out_wildcard,
         log: Optional[Path] = Ca.log,
         stderr: str = CommonArgs.stderr,
+        replace: bool = Opt.flag(r"""Overwrite files if they exist."""),
     ) -> None:
         r"""
         Run multiple searches.
         """
-        if path is None:
-            raise ValueError("Specify path")
-        if config is None:
-            raise ValueError("Specify config")
-        fmt = FileFormat.from_suffix(suffix)  # make sure it's ok
-        logger.notice(f"Will write to {fmt} ({suffix})")
         MANDOS_SETUP(log, stderr)
-        MultiSearch.build(path, out_dir, suffix, config).run()
+        default = "search-" + MandosResources.start_timestamp_filesys
+        out_dir, suffix = EntryUtils.adjust_dir_name(to, default)
+        if config is None:
+            raise BadCommandError("Specify config")
+        logger.notice(f"Will write as {suffix} to {out_dir}")
+        MultiSearch.build(path, out_dir, suffix, config, replace, log).run()
 
     @staticmethod
     def detail_search(
@@ -430,6 +424,7 @@ class MiscCommands:
         Then applies fixes and reduces the file size, creating a new file alongside.
         Puts both the raw data and fixed data in the cache under ``~/.mandos/taxonomy/``.
         """
+        MANDOS_SETUP(log, stderr)
         if taxa == "":
             logger.info("No taxa were specified. No data downloaded.")
             return
@@ -437,10 +432,9 @@ class MiscCommands:
             taxa not in ["all", "vertebrata"]
             and not taxa.replace(",", "").replace(" ", "").isdigit()
         ):
-            raise ValueError(f"Use either 'all', 'vertebrata', or a UniProt taxon ID")
+            raise XValueError(f"Use either 'all', 'vertebrata', or a UniProt taxon ID")
         if taxa == "all" and not replace:
-            raise ValueError(f"Use --replace with taxon 'all'")
-        MANDOS_SETUP(log, stderr)
+            raise XValueError(f"Use --replace with taxon 'all'")
         factory = TaxonomyFactories.from_uniprot()
         if taxa == "all" and replace:
             listed = TaxonomyFactories.list_cached_files()

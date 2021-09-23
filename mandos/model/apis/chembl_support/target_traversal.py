@@ -9,6 +9,7 @@ from typing import Tuple as Tup
 from typing import Type
 
 import regex
+from pocketutils.core.exceptions import ParsingError
 
 from mandos.model.utils.resources import MandosResources
 from mandos.model.utils.reflection_utils import ReflectionUtils
@@ -129,7 +130,7 @@ class StandardStrategyParser:
         for line in lines:
             match = pat.fullmatch(line)
             if match is None:
-                raise AssertionError(f"Could not parse line '{line}'")
+                raise ParsingError(f"Could not parse line '{line}'")
             try:
                 sources = TargetType.resolve(match.group(1))
                 rel = to_rel[match.group(2)]

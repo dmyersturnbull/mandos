@@ -31,13 +31,13 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         key: str,
         api: ChemblApi,
         taxa: Sequence[Taxonomy],
-        traversal_strategy: str,
+        traversal: str,
         allowed_target_types: Set[str],
         min_confidence_score: Optional[int],
     ):
         super().__init__(key, api)
         self.taxa = taxa
-        self.traversal_strategy = TargetTraversalStrategies.by_name(traversal_strategy, self.api)
+        self.traversal = TargetTraversalStrategies.by_name(traversal, self.api)
         self.allowed_target_types = allowed_target_types
         self.min_confidence_score = min_confidence_score
 
@@ -138,7 +138,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         # traverse() will return the source target if it's a non-traversable type (like DNA)
         # and the subclass decided whether to filter those
         # so don't worry about that here
-        ancestors = self.traversal_strategy(graph)
+        ancestors = self.traversal(graph)
         lst = []
         for ancestor in ancestors:
             lst.extend(self.to_hit(lookup, compound, data, ancestor))

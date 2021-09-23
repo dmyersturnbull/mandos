@@ -20,7 +20,7 @@ The “kitchen sink” preprocessing tool for chemical screens:
 
 Mandos extracts ~30 annotation types, including:
 
-- mechanisms of action (MoAs), binding activity, classifications, pathways involved, gene expression effects,
+- mechanisms of action (MOAs), binding activity, classifications, pathways involved, gene expression effects,
 - disease indications, clinical trials, drug–drug interactions, co-occurring literature terms,
 - legal statuses, LD50, health hazards, acute exposure effects, physical properties, ...
 

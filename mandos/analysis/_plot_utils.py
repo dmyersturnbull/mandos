@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, Colormap, ListedColormap, to_hex
 from matplotlib.figure import Figure
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import BadCommandError, LengthError, LookupFailedError
 from pocketutils.tools.common_tools import CommonTools
 
 # noinspection PyProtectedMember
@@ -92,9 +93,9 @@ class MandosPlotStyling:
             palette = cls.get_palette(None, dtype)
         if dtype is DataType.qualitative:
             if not isinstance(palette, ListedColormap):
-                raise TypeError(f"{palette} is not a valid choice for {dtype}")
+                raise LookupFailedError(f"{palette} is not a valid choice for {dtype}")
             if len(unique) > len(palette.colors):
-                raise ValueError(
+                raise LengthError(
                     f"Palette (N={len(palette.colors)}) too small for {len(unique)} items"
                 )
             return {i: j for i, j in CommonTools.zip_strict(unique, map(to_hex, palette.colors))}
@@ -168,7 +169,7 @@ class MandosPlotStyling:
                 axis_to_str.get(1), VIZ_RESOURCES.dims["heights"], default_inch[1]
             )
         except ValueError:
-            raise ValueError(f"Strange --size format in '{size}'")
+            raise BadCommandError(f"Strange --size format in '{size}'") from None
         return width, height
 
     @classmethod

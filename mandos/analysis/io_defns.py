@@ -6,12 +6,13 @@ from typing import Sequence, Optional
 
 import numpy as np
 import pandas as pd
+from pocketutils.core.exceptions import XValueError
 from typeddfs import TypedDfs, AffinityMatrixDf, FileFormat, UntypedDf
 
 
 def _to_long_form(self: pd.DataFrame, kind: str, key: str):
     if kind not in ["phi", "psi"]:
-        raise ValueError(f"'type' should be 'phi' or 'psi', not {kind}")
+        raise XValueError(f"'type' should be 'phi' or 'psi', not {kind}")
     df = AffinityMatrixDf(self).long_form()
     df = df.rename(columns=dict(row="inchikey_1", column="inchikey_2"))
     df["type"] = kind
@@ -121,4 +122,5 @@ PsiProjectedDf = (
     .reserve("color", "marker", dtype=str)
     .strict()
     .secure()
+    .hash(file=True)
 ).build()

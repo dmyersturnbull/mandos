@@ -13,6 +13,7 @@ from textwrap import wrap
 
 import pandas as pd
 import typer
+from pocketutils.core.exceptions import BadCommandError, ContradictoryRequestError
 from typeddfs import TypedDfs, FileFormat
 from typeddfs.utils import Utils as TypedDfsUtils
 from typer.models import CommandInfo
@@ -38,12 +39,12 @@ class Documenter:
 
     def __post_init__(self):
         if self.main and self.search:
-            raise ValueError("Cannot provide both --only-main and --only-search")
+            raise ContradictoryRequestError("Cannot provide both --only-main and --only-search")
 
     def document(self, commands: Sequence[CommandInfo], to: Path, style: str) -> None:
         fmt = FileFormat.from_path_or_none(to)
         if fmt is not None and not fmt.is_text and style != "table":
-            raise ValueError(f"Cannot write binary {fmt} with style {style}")
+            raise ContradictoryRequestError(f"Cannot write binary {fmt} with style {style}")
         cmds = [c for c in commands if (self.hidden or not c.hidden)]
         if self.main:
             cmds = [c for c in cmds if c.name.startswith(":")]

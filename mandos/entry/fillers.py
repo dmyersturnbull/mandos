@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Mapping, Tuple, Dict, MutableMapping
 
+from pocketutils.core.exceptions import XValueError
+
 from mandos.model.utils.setup import logger
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
@@ -24,6 +26,7 @@ IdMatchFrame = (
     .reserve("origin_inchi", "origin_inchikey", dtype=str)
     .strict(cols=False)
     .secure()
+    .hash(file=True)
 ).build()
 
 
@@ -193,7 +196,7 @@ class CompoundIdFiller:
     def _prep(self, df: IdMatchFrame) -> IdMatchFrame:
         bad_cols = [c for c in df.columns if c.startswith("origin_")]
         if len(bad_cols) > 0:
-            raise ValueError(f"Columns {', '.join(bad_cols)} start with 'origin_'")
+            raise XValueError(f"Columns {', '.join(bad_cols)} start with 'origin_'")
         rename_cols = {c: "origin_" + c for c in FILL_IDS if c in df.columns}
         if len(rename_cols) > 0:
             logger.notice(f"Renaming columns: {', '.join(rename_cols.keys())}")

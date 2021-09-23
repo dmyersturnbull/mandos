@@ -13,8 +13,10 @@ import orjson
 import regex
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import LookupFailedError, DataIntegrityError, DownloadError
 from pocketutils.core.query_utils import QueryExecutor
 
+from mandos.model import DownloadTimeoutError
 from mandos.model.utils.setup import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
@@ -113,7 +115,7 @@ class QueryingPubchemApi(PubchemApi):
             resp = NestedDotDict(orjson.loads(resp))
             if resp.get("IdentifierList.CID") is not None:
                 return frozenset(resp.req_list_as("IdentifierList.CID", int))
-        raise TimeoutError(f"Search for {inchi} using key {key} timed out")
+        raise DownloadTimeoutError(f"Search for {inchi} using key {key} timed out")
 
     def _scrape_cid(self, inchikey: str) -> int:
         # This is awful
@@ -149,7 +151,9 @@ class QueryingPubchemApi(PubchemApi):
             )
         match = pat.search(html)
         if match is None:
-            raise ValueError(f"Something is wrong with the HTML from {url}; og:url not found")
+            raise DataIntegrityError(
+                f"Something is wrong with the HTML from {url}; og:url not found"
+            )
         return int(match.group(1))
 
     def _get_parent(self, cid: int, inchikey: str, data: PubchemData) -> PubchemData:
@@ -261,7 +265,7 @@ class QueryingPubchemApi(PubchemApi):
         # underneath Hierarchies is a list of Hierarchy
         logger.debug(f"Found data for classifier {hid}, compound {cid}")
         if len(data) == 0:
-            raise LookupError(f"Failed getting hierarchy {hid}")
+            raise LookupFailedError(f"Failed getting hierarchy {hid}")
         return data
 
     @property
@@ -342,7 +346,9 @@ class QueryingPubchemApi(PubchemApi):
         data = self._executor(url)
         data = NestedDotDict(orjson.loads(data))
         if "Fault" in data:
-            raise ValueError(f"Request failed ({data.get('Code')}) on {url}: {data.get('Message')}")
+            raise DownloadError(
+                f"Request failed ({data.get('Code')}) on {url}: {data.get('Message')}"
+            )
         return data
 
     def _strip_by_key_in_place(self, data: Union[dict, list], bad_key: str) -> None:

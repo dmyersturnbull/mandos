@@ -9,6 +9,7 @@ from typing import Tuple as Tup
 from typing import Type
 
 import regex
+from pocketutils.core.exceptions import XTypeError
 
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetFactory, TargetType
@@ -169,7 +170,7 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
 
     def __init__(self, node: TargetNode):
         if not isinstance(node, TargetNode):
-            raise TypeError(f"Bad type {type(node)} for {node}")
+            raise XTypeError(f"Bad type {type(node)} for {node}")
         self.node = node
 
     def __repr__(self):
@@ -183,25 +184,25 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
 
     def __eq__(self, target):
         if not isinstance(target, ChemblTargetGraph):
-            raise TypeError(f"Bad type {type(target)} for {target}")
+            raise XTypeError(f"Bad type {type(target)} for {target}")
         return self.node == target.node
 
     def __lt__(self, target):
         if not isinstance(target, ChemblTargetGraph):
-            raise TypeError(f"Bad type {type(target)} for {target}")
+            raise XTypeError(f"Bad type {type(target)} for {target}")
         return self.node.__lt__(target.node)
 
     @classmethod
     def at_node(cls, target: TargetNode) -> ChemblTargetGraph:
         if not isinstance(target, TargetNode):
-            raise TypeError(f"Bad type {type(target)} for {target}")
+            raise XTypeError(f"Bad type {type(target)} for {target}")
         return cls(target)
 
     @classmethod
     def at_target(cls, target: ChemblTarget) -> ChemblTargetGraph:
         # lie and fill in None -- we don't know because we haven't traversed
         if not isinstance(target, ChemblTarget):
-            raise TypeError(f"Bad type {type(target)} for {target}")
+            raise XTypeError(f"Bad type {type(target)} for {target}")
         # noinspection PyTypeChecker
         return cls(TargetNode(0, None, target, None, None))
 

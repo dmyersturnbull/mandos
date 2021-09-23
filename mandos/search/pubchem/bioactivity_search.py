@@ -19,10 +19,6 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
         super().__init__(key, api)
         self.compound_name_must_match = compound_name_must_match
 
-    @property
-    def data_source(self) -> str:
-        return "PubChem :: bioassays"
-
     def find(self, inchikey: str) -> Sequence[BioactivityHit]:
         data = self.api.fetch_data(inchikey)
         results = []
@@ -33,7 +29,6 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
 
     def process(self, inchikey: str, data: PubchemData, dd: Bioactivity) -> BioactivityHit:
         target_name, target_abbrev, species = dd.target_name_abbrev_species
-        data_source = f"{self.data_source}: {dd.assay_ref} ({dd.assay_type})"
         action = dd.activity.name.lower()
         source = self._format_source(
             assay_type=dd.assay_type,

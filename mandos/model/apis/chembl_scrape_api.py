@@ -62,6 +62,7 @@ ChemblTargetPredictionTable = (
     .post(_parse_conf)
     .strict()
     .secure()
+    .hash(directory=True)
 ).build()
 
 
@@ -132,8 +133,7 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
         elif self._query is None:
             return ChemblScrapeTable.new_empty()
         data = self._query._fetch_page(cid, page, table_type)
-        path.parent.mkdir(exist_ok=True, parents=True)
-        data.write_file(path)
+        data.write_file(path, mkdirs=True)
         return data
 
     def path(self, cid: str, page: ChemblScrapePage):

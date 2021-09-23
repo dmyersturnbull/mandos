@@ -12,12 +12,13 @@ from typing import Iterable, Optional, Sequence, Union, Mapping
 
 import pandas as pd
 import requests
+from pocketutils.core.exceptions import LookupFailedError, XValueError
 from typeddfs import TypedDfs
 
 from mandos.model.utils.setup import logger
 from mandos.model.utils.resources import MandosResources
 from mandos.model.settings import MANDOS_SETTINGS
-from mandos.model.taxonomy import Taxonomy
+from mandos.model.taxonomy import Taxonomy, TaxonomyDf
 
 
 class TaxonomyFactory(metaclass=abc.ABCMeta):
@@ -57,7 +58,7 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         if vertebrate is not None:
             logger.info(f"Taxon {taxon} found in the vertebrata cache")
             return vertebrate
-        raise LookupError(f"Could not find taxon {taxon}; try passing an ID instead")
+        raise LookupFailedError(f"Could not find taxon {taxon}; try passing an ID instead")
 
     def load_exact(self, taxon: int) -> Optional[Taxonomy]:
         path = self._resolve_non_vertebrate_final(taxon)
@@ -69,20 +70,21 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         return vertebrate if vertebrate.n_taxa() > 0 else None
 
     def load_dl(self, taxon: Union[int, str]) -> Taxonomy:
+        path = self._resolve_non_vertebrate_final(taxon)
         raw_path = self._resolve_non_vertebrate_raw(taxon)
-        if raw_path.exists():
-            logger.warning(f"Converting temp file for taxon {taxon} at {raw_path} .")
+        if path.exists():
             # getting the mod date because creation dates are iffy cross-platform
             # (in fact the Linux kernel doesn't bother to expose them)
-            when = datetime.fromtimestamp(raw_path.stat().st_mtime).strftime("%Y-%m-%d")
+            when = datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d")
             logger.warning(f"It may be out of date. (File mod date: {when})")
+            return Taxonomy.from_path(path)
         else:
             logger.notice(f"Downloading new taxonomy file for taxon {taxon} .")
             self._download(raw_path, taxon)
-        path = self._resolve_non_vertebrate_final(taxon)
-        self._fix(raw_path, taxon, path)
-        logger.notice(f"Cached taxonomy at {path} .")
-        return Taxonomy.from_path(path)
+            path = self._resolve_non_vertebrate_final(taxon)
+            df = self._fix(raw_path, taxon, path)
+            logger.notice(f"Cached taxonomy at {path} .")
+            return df
 
     def rebuild_vertebrata(self) -> None:
         self.delete_exact(7742)
@@ -115,9 +117,8 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         with requests.get(url, stream=True) as r:
             with raw_path.open("wb") as f:
                 shutil.copyfileobj(r.raw, f)
-        MandosResources.hasher.to_write(raw_path).write()
 
-    def _fix(self, raw_path: Path, taxon: int, final_path: Path) -> None:
+    def _fix(self, raw_path: Path, taxon: int, final_path: Path) -> TaxonomyDf:
         # now process it!
         # unfortunately it won't include an entry for the root ancestor (`taxon`)
         # so, we'll add it in (in ``df.append`` below)
@@ -127,22 +128,24 @@ class UniprotTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         # find the scientific name of the parent
         scientific_name = self._determine_name(df, taxon)
         # now fix the columns
-        df = df[["Taxon", "Scientific name", "Common name", "Parent"]]
-        df.columns = ["taxon", "scientific_name", "common_name", "parent"]
+        df = df[["Taxon", "Mnemonic", "Scientific name", "Common name", "Parent"]]
+        df.columns = ["taxon", "mnemonic", "scientific_name", "common_name", "parent"]
         # now add the ancestor back in
         df = df.append(
             pd.Series(dict(taxon=taxon, scientific_name=scientific_name, parent=0)),
             ignore_index=True,
         )
+        df["parent"] = df["parent"].fillna(0).astype(int)
         # write it to a feather / csv / whatever
-        df["parent"] = df["parent"].astype(int)
-        df = raw_type.convert(df)
-        df.write_file(final_path)
+        df = TaxonomyDf.convert(df)
+        df.write_file(final_path, dir_hash=True)
+        raw_path.unlink()
+        return df
 
     def _determine_name(self, df: pd.DataFrame, taxon: int) -> str:
         got = df[df["Parent"] == taxon]
         if len(got) == 0:
-            raise ValueError(f"Could not infer scientific name for {taxon}")
+            raise XValueError(f"Could not infer scientific name for {taxon}")
         z = str(list(got["Lineage"])[0])
         return z.split("; ")[-1].strip()
 

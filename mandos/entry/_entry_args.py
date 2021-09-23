@@ -39,7 +39,7 @@ class EntryArgs:
     #                                         CHEMBL                                              #
     ###############################################################################################
 
-    traversal_strategy = typer.Option(
+    traversal = typer.Option(
         "@null",
         "--traversal",
         show_default=False,

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import IllegalStateError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 
@@ -32,20 +33,11 @@ InputFrame = (
 
 class Searcher:
     """
-    Executes one or more searches and saves the results to CSV files.
+    Executes one or more searches and saves the results.
     Create and use once.
     """
 
     def __init__(self, searches: Sequence[Search], to: Sequence[Path], input_path: Path):
-        """
-        Constructor.
-
-        Args:
-            searches:
-            input_path: Path to the input file of one of the formats:
-                - .txt containing one InChI Key per line
-                - .csv, .tsv, .tab, csv.gz, .tsv.gz, .tab.gz, or .feather containing a column called inchikey
-        """
         self.what = searches
         self.input_path: Optional[Path] = input_path
         self.input_df: InputFrame = None
@@ -59,7 +51,7 @@ class Searcher:
         Performs the search, and writes data.
         """
         if self.input_df is not None:
-            raise ValueError(f"Already ran a search")
+            raise IllegalStateError(f"Already ran a search")
         self.input_df = InputFrame.read_file(self.input_path)
         logger.info(f"Read {len(self.input_df)} input compounds")
         inchikeys = self.input_df["inchikey"].unique()
@@ -76,8 +68,8 @@ class Searcher:
         for extra_col in [c for c in self.input_df.columns if c != "inchikey"]:
             extra_mp = self.input_df.set_index("inchikey")[extra_col].to_dict()
             df[extra_col] = df["lookup"].map(extra_mp.get)
-        # write the (intermediate) file
-        df.write_file(output_path)
+        # write the file
+        df.write_file(output_path, mkdirs=True, dir_hash=True)
         # write metadata
         params = {k: str(v) for k, v in what.get_params().items() if k not in {"key", "api"}}
         metadata = NestedDotDict(dict(key=what.key, search=what.search_class, params=params))

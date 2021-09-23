@@ -9,6 +9,7 @@ from typing import Optional, Tuple, Mapping, Any, TypeVar
 
 # noinspection PyProtectedMember
 import pandas as pd
+from pocketutils.core.exceptions import XValueError
 from typeddfs import TypedDf
 
 from mandos.entry._arg_utils import Arg
@@ -280,7 +281,7 @@ class Pa:
             return type_, dict(logistic=True)
         order = cls.get_arity(order)
         if order is None:
-            raise ValueError(f"Unknown kind {kind}")
+            raise XValueError(f"Unknown plot kind {kind}")
         return type_, dict(order=order)
 
     @classmethod

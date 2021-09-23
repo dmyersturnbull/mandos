@@ -16,8 +16,10 @@ from typing import (
 )
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import XValueError
 from pocketutils.tools.base_tools import BaseTools
 
+from mandos.model import MultipleMatchesError
 from mandos.model.apis.pubchem_support._nav_model import FilterFn
 
 T = TypeVar("T", covariant=True)
@@ -52,7 +54,7 @@ def _request_only(things: Iterable[str]) -> Optional[str]:
     # TODO: Did I mean to excludeNone here?
     things = [s.strip() for s in things if s is not None]
     if len(things) > 1:
-        raise ValueError(f"{len(things)} items in {things}")
+        raise MultipleMatchesError(f"{len(things)} items in {things}")
     elif len(things) == 0:
         return None
     else:
@@ -107,7 +109,7 @@ class JsonNavigator(AbstractJsonNavigator):
         new = {}
         for z in self.contents:
             if z[key] in new:
-                raise ValueError(f"{key} found twice")
+                raise MultipleMatchesError(f"{key} found twice")
             new[z[key]] = z
         return JsonNavigator([NestedDotDict(new)])
 
@@ -145,7 +147,7 @@ class JsonNavigator(AbstractJsonNavigator):
                 elif isinstance(z.get(key), dict):
                     new.append(NestedDotDict(dict(**z[key])))
                 else:
-                    raise ValueError(f"{key} value is {type(z[key])}: {z[key]}")
+                    raise XValueError(f"{key} value is {type(z[key])}: {z[key]}")
         return JsonNavigator(new)
 
 

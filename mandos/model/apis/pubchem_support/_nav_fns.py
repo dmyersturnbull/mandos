@@ -7,6 +7,7 @@ from datetime import date, datetime
 from typing import Any, Callable, FrozenSet, Iterable, Optional, Set, Type, TypeVar, Union
 
 import regex
+from pocketutils.core.exceptions import XValueError, XTypeError
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools
 
@@ -65,7 +66,7 @@ class Flatmap:
             # TODO: Did I mean to excludeNone here?
             things = [s.strip() for s in things if s is not None]
             if len(things) > 1:
-                raise ValueError(f"{len(things)} items in {things}")
+                raise XValueError(f"{len(things)} items in {things}")
             elif len(things) == 0:
                 return None
             else:
@@ -165,7 +166,7 @@ class Mapx:
             if nullable and value is None:
                 return None
             elif not isinstance(value, (int, float, str)):
-                raise TypeError(f"{value} is a {type(value)}, not int-like")
+                raise XTypeError(f"{value} is a {type(value)}, not int-like")
             return str(value)
 
         return get_str
@@ -176,7 +177,7 @@ class Mapx:
             if nullable and value is None:
                 return None
             elif not isinstance(value, (int, float, str)):
-                raise TypeError(f"{value} is a {type(value)}, not int-like")
+                raise XTypeError(f"{value} is a {type(value)}, not int-like")
             return float(value)
 
         return get_float
@@ -187,7 +188,7 @@ class Mapx:
             if nullable and value is None:
                 return None
             elif not isinstance(value, (int, float, str)):
-                raise TypeError(f"{value} is a {type(value)}, not int-like")
+                raise XTypeError(f"{value} is a {type(value)}, not int-like")
             return int(value)
 
         return get_int
@@ -198,7 +199,7 @@ class Mapx:
             if nullable and value is None:
                 pass
             elif not isinstance(value, type_):
-                raise TypeError(f"{value} is a {type(value)}, not {type_}")
+                raise XTypeError(f"{value} is a {type(value)}, not {type_}")
             return value if then_convert is None else then_convert(value)
 
         req_is.__name__ = f"req_is_{type_}" + ("_or_null" if nullable else "")
@@ -212,9 +213,9 @@ class Mapx:
             if value is None and nullable:
                 return None
             elif value is None:
-                raise ValueError(f"Value for type {type_} is None")
+                raise XValueError(f"Value for type {type_} is None")
             if type_ is not None and not flex_type and not isinstance(value, str):
-                raise TypeError(f"{value} is a {type(value)}, not str")
+                raise XTypeError(f"{value} is a {type(value)}, not str")
             return type_(str(value).strip())
 
         str_to.__name__ = f"req_is_{type_}" + ("_or_null" if nullable else "")
@@ -235,7 +236,7 @@ class Mapx:
             if value is None and nullable:
                 return empty_frozenset
             elif value is None:
-                raise ValueError(f"Value is None")
+                raise XValueError(f"Value is None")
             return frozenset([s.strip() for s in str(value).split(sep)])
 
         return split

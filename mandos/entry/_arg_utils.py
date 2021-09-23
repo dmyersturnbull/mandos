@@ -4,6 +4,7 @@ from inspect import cleandoc
 from typing import Optional, Iterable, Any, Mapping, Union, Callable, Sequence, Type, TypeVar
 
 import typer
+from pocketutils.core.exceptions import BadCommandError, XValueError, XTypeError
 from typeddfs import TypedDf
 
 
@@ -192,14 +193,14 @@ class ArgUtils:
             return taxon
         elif isinstance(taxon, str) and taxon.isdigit():
             return int(taxon)
-        raise ValueError(f"Taxon {taxon} must be an ID or name")
+        raise XTypeError(f"Taxon {taxon} must be an ID or name")
 
     @classmethod
     def parse_taxon_id(cls, taxon: Union[int, str]) -> int:
         try:
             return int(taxon)
         except ValueError:
-            raise ValueError(f"Taxon {taxon} must be an exact ID") from None
+            raise XTypeError(f"Taxon {taxon} must be an exact ID") from None
 
     @classmethod
     def parse_taxa(cls, taxa: str) -> Sequence[Union[int, str]]:

@@ -1,46 +1,51 @@
 [[search]]
 key = "core.chembl.moa"
 source = "chembl:mechanism"
+traversal = "@null"
 
 [[search]]
 key = "core.binding"
 source = "chembl:binding"
 min_pchembl = 6
-min_confidence = 5
+confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
+traversal = "@null"
 
 [[search]]
 key = "core.chembl.process"
-source = "chembl:go-process"
+source = "chembl:go.process"
 min_pchembl = 6
-min_confidence = 5
+confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
+traversal = "@null"
 
 [[search]]
 key = "core.chembl.function"
-source = "chembl:go-function"
+source = "chembl:go.function"
 min_pchembl = 6
-min_confidence = 5
+confidence = 5
 taxa = "euteleostomi"
+traversal = "@null"
 
 [[search]]
 key = "extra.chembl.component"
-source = "chembl:component"
+source = "chembl:go.component"
 min_pchembl = 6
-min_confidence = 5
+confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
+traversal = "@null"
 
-[[search]]
-key = "extra.chembl.predictions"
-source = "chembl:predictions"
-taxa = "euteleostomi"
+#[[search]]
+#key = "extra.chembl.predictions"
+#source = "chembl:predictions"
+#taxa = "euteleostomi"
 
 [[search]]
 key = "core.chembl.trials"
-source = "chembl:trials"
+source = "chembl:trial"
 
 [[search]]
 key = "core.chembl.atc"
@@ -53,10 +58,6 @@ source = "disease.ctd:mesh"
 [[search]]
 key = "core.lit.disease"
 source = "lit.pubchem:disease"
-
-[[search]]
-key = "core.lit.gene"
-source = "lit.pubchem:gene"
 
 [[search]]
 key = "core.lit.gene"

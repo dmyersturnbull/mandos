@@ -8,13 +8,14 @@ from dataclasses import dataclass
 from typing import Mapping, Optional, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import LookupFailedError
 from urllib3.util.retry import MaxRetryError
 
 from mandos.model.utils import CleverEnum
 from mandos.model.apis.chembl_api import ChemblApi
 
 
-class TargetNotFoundError(ValueError):
+class TargetNotFoundError(LookupFailedError):
     """ """
 
 

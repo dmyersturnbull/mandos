@@ -13,6 +13,7 @@ from urllib.parse import unquote as url_unescape
 import orjson
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.exceptions import DataIntegrityError, XValueError
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
@@ -85,7 +86,7 @@ class PubchemDataView(metaclass=abc.ABCMeta):
     @property
     def cid(self) -> int:
         if self._data["record.RecordType"] != "CID":
-            raise ValueError(
+            raise DataIntegrityError(
                 "RecordType for {} is {}".format(
                     self._data["record.RecordNumber"], self._data["record.RecordType"]
                 )
@@ -267,14 +268,14 @@ class ChemicalAndPhysicalProperties(PubchemMiniDataView):
     def mol_weight(self) -> str:
         weight = self.single_property("Molecular Weight")
         if weight.unit != "g/mol":
-            raise ValueError(f"Expected g/mol for weight; got {weight.unit}")
+            raise DataIntegrityError(f"Expected g/mol for weight; got {weight.unit}")
         return weight.req_is(float)
 
     @property
     def tpsa(self) -> str:
         weight = self.single_property("Topological Polar Surface Area")
         if weight.unit != "Å²":
-            raise ValueError(f"Expected Å² for weight; got {weight.unit}")
+            raise DataIntegrityError(f"Expected Å² for weight; got {weight.unit}")
         return weight.req_is(float)
 
     @property
@@ -761,7 +762,7 @@ class Literature(PubchemMiniDataView):
             try:
                 neighbor_id = str(link["ID_2"][kind.id_name])
             except KeyError:
-                raise KeyError(f"Could not find ${kind.id_name} in ${link['ID_2']}")
+                raise DataIntegrityError(f"Could not find ${kind.id_name} in ${link['ID_2']}")
             neighbor_id = self._guess_neighbor(kind, neighbor_id)
             evidence = link["Evidence"][kind.x_name]
             neighbor_name = evidence["NeighborName"]
@@ -805,7 +806,7 @@ class Literature(PubchemMiniDataView):
         elif kind is CoOccurrenceType.disease:
             return Codes.MeshCode(neighbor_id)
         else:
-            raise ValueError(f"Could not find ID type for {kind} ID {neighbor_id}")
+            raise XValueError(f"Could not find ID type for {kind} ID {neighbor_id}")
 
 
 class Patents(PubchemMiniDataView):

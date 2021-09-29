@@ -1,10 +1,9 @@
-from typing import Any, Mapping, Optional, Sequence
+from typing import Optional, Sequence
 
 import regex
 
-from mandos.model.utils.misc_utils import MiscUtils
-from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import CtdGeneHit
+from mandos.search.pubchem import PubchemSearch
 
 
 class CtdGeneSearch(PubchemSearch[CtdGeneHit]):

@@ -3,11 +3,12 @@ from typing import Optional, Sequence, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.utils.setup import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
+from mandos.model.apis.chembl_support.chembl_activity import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.taxonomy import Taxonomy
+from mandos.model.utils.setup import logger
 from mandos.search.chembl._protein_search import H, ProteinSearch
 
 
@@ -20,22 +21,18 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         self,
         key: str,
         api: ChemblApi,
-        taxa: Sequence[Taxonomy],
+        taxa: Taxonomy,
         traversal: str,
         target_types: Set[str],
         min_conf_score: Optional[int],
-        allowed_relations: Set[str],
+        relations: Set[str],
         min_pchembl: Optional[float],
-        banned_flags: Set[str],
         binds_cutoff: Optional[float] = None,
-        does_not_bind_cutoff: Optional[float] = None,
     ):
         super().__init__(key, api, taxa, traversal, target_types, min_conf_score)
-        self.allowed_relations = allowed_relations
+        self.allowed_relations = relations
         self.min_pchembl = min_pchembl
-        self.banned_flags = banned_flags
         self.binds_cutoff = binds_cutoff
-        self.does_not_bind_cutoff = does_not_bind_cutoff
 
     @classmethod
     def allowed_assay_types(cls) -> Set[str]:
@@ -56,14 +53,17 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
     def should_include(
         self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> bool:
+        bad_flags = {
+            DataValidityComment.potential_missing_data,
+            DataValidityComment.potential_transcription_error,
+            DataValidityComment.outside_typical_range,
+            DataValidityComment.author_confirmed_error,
+        }
         if (
-            (
-                data.get_as("data_validity_comment", lambda s: s.lower())
-                in {s.lower() for s in self.banned_flags}
-            )
+            (data.get_as("data_validity_comment", lambda s: s.lower()) in bad_flags)
             or (data.req_as("standard_relation", str) not in self.allowed_relations)
             or (data.req_as("assay_type", str) not in self.allowed_assay_types())
-            or (len(self.taxa) > 0 and not self.is_in_taxa(data.get_as("target_tax_id", int)))
+            or (self.taxa is not None and data.get_as("target_tax_id", int) not in self.taxa)
             or (self.min_pchembl is not None and data.get("pchembl_value") is None)
             or (
                 self.min_pchembl is not None

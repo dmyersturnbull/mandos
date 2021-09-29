@@ -2,9 +2,10 @@
 X.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TypeVar, Mapping, Sequence, List
+from typing import List, Mapping, Sequence, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -12,9 +13,8 @@ from pocketutils.core.exceptions import LoadError
 from typeddfs import BaseDf
 from typeddfs.df_errors import UnsupportedOperationError
 
-from mandos.model.utils.setup import logger
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
-from mandos.entry.searchers import InputFrame
+from mandos.entry.searchers import InputCompoundsDf
 from mandos.model.utils.rdkit_utils import RdkitUtils
 
 T = TypeVar("T", bound=BaseDf)
@@ -57,7 +57,7 @@ class MatrixPrep:
         return SimilarityDfLongForm.convert(df)
 
     @classmethod
-    def ecfp_matrix(cls, df: InputFrame, radius: int, n_bits: int) -> SimilarityDfShortForm:
+    def ecfp_matrix(cls, df: InputCompoundsDf, radius: int, n_bits: int) -> SimilarityDfShortForm:
         # TODO: This is inefficient and long
         indices = range(len(df))
         keys = df["inchikey"]

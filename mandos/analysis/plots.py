@@ -4,30 +4,27 @@ Plots.
 import enum
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union, Mapping
+from typing import Any, Mapping, Optional, Tuple, Union
 
 import numpy as np
+from matplotlib.colors import Colormap
+from pocketutils.core.chars import Chars
 from pocketutils.core.exceptions import (
-    BadCommandError,
     ImmutableError,
     MissingResourceError,
     XValueError,
 )
-from typeddfs import TypedDf, AffinityMatrixDf
-from matplotlib.colors import Colormap
+from typeddfs import AffinityMatrixDf, TypedDf
 
-from mandos.analysis._plot_utils import MandosPlotStyling, plt, sns, Figure
-from mandos.model.utils import CleverEnum
+from mandos.analysis._plot_utils import Figure, MandosPlotStyling, plt, sns
 from mandos.analysis.io_defns import (
+    ConcordanceDf,
+    EnrichmentDf,
     PhiPsiSimilarityDfLongForm,
     PsiProjectedDf,
-    EnrichmentDf,
-    ConcordanceDf,
     SimilarityDfShortForm,
 )
-
-
-EN_DASH = "–"
+from mandos.model.utils import CleverEnum
 
 
 @enum.unique
@@ -50,7 +47,7 @@ class CatPlotType(CleverEnum):
 @dataclass(frozen=True, repr=True)
 class PlotOptions:
     size: Optional[str]
-    stylesheet: Optional[Path]
+    style: Optional[Path]
     rc: Mapping[str, Any]
     hue: Optional[str]
     palette: Union[None, Colormap, Mapping[str, str]]
@@ -134,8 +131,8 @@ class _RelPlotter(MandosPlotter):
         kwargs = dict(dropna=False, dashes=False)
         kwargs.update(**more)
         if self.rc.extra is not None:
-            kwargs.update(**self.rc.extra)
-        kwargs.update(seed=self.seed, ci=self.ci, n_boot=self.boot)
+            kwargs.update(self.rc.extra)
+        kwargs.update(dict(seed=self.seed, ci=self.ci, n_boot=self.boot))
         return kwargs
 
 
@@ -174,9 +171,9 @@ class ScorePlotter(_CatPlotter):
         data = data.copy()
         data: TypedDf = data
         data.only("score_name")  # make sure
-        data[f"object{EN_DASH}predicate"] = data["object"] + " " + data["predicate"]
-        data[f"predicate{EN_DASH}object"] = data["predicate"] + " " + data["object"]
-        data = data.sort_natural(f"object{EN_DASH}predicate")
+        data[f"object{Chars.en}predicate"] = data["object"] + " " + data["predicate"]
+        data[f"predicate{Chars.en}object"] = data["predicate"] + " " + data["object"]
+        data = data.sort_natural(f"object{Chars.en}predicate")
         with MandosPlotStyling.context(*self.rc.rc):
             if self.kind is CatPlotType.fold:
                 self._plot_fold(data)
@@ -198,7 +195,7 @@ class ScorePlotter(_CatPlotter):
             kwargs.update({k: v for k, v in self.rc.extra if k != "saturation"})
         sns.catplot(
             kind="bar",
-            x=f"predicate{EN_DASH}object",
+            x=f"predicate{Chars.en}object",
             y="background",
             data=data,
             row="key",
@@ -216,7 +213,7 @@ class ScorePlotter(_CatPlotter):
         sns.catplot(
             kind="bar",
             data=data,
-            x=f"predicate{EN_DASH}object",
+            x=f"predicate{Chars.en}object",
             y="value",
             row="key",
             **kwargs,
@@ -234,7 +231,7 @@ class ScorePlotter(_CatPlotter):
         sns.catplot(
             kind=self.kind.name,
             data=data,
-            x=f"predicate{EN_DASH}object",
+            x=f"predicate{Chars.en}object",
             y="value",
             row="key",
             **kwargs,

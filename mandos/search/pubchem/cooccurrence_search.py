@@ -4,13 +4,13 @@ from typing import Sequence, TypeVar
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.pubchem_support.pubchem_models import CoOccurrenceType
-from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import (
+    ChemicalCoOccurrenceHit,
     CoOccurrenceHit,
     DiseaseCoOccurrenceHit,
     GeneCoOccurrenceHit,
-    ChemicalCoOccurrenceHit,
 )
+from mandos.search.pubchem import PubchemSearch
 
 H = TypeVar("H", bound=CoOccurrenceHit, covariant=True)
 

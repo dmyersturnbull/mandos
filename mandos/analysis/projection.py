@@ -5,7 +5,7 @@ try:
 except ImportError:
     UMAP = None
 
-from mandos.analysis.io_defns import SimilarityDfLongForm, PsiProjectedDf
+from mandos.analysis.io_defns import PsiProjectedDf, SimilarityDfLongForm
 
 
 class UmapCalc:

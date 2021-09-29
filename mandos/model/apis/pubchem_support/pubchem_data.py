@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import abc
 from datetime import date, datetime
-from typing import Any, Dict, FrozenSet, Mapping, Optional, Sequence, MutableMapping
+from typing import Any, Dict, FrozenSet, Mapping, MutableMapping, Optional, Sequence
 from typing import Tuple as Tup
 from typing import Union
 from urllib.parse import unquote as url_unescape
@@ -17,13 +17,12 @@ from pocketutils.core.exceptions import DataIntegrityError, XValueError
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
-from mandos.model.utils.setup import logger
+from mandos.model import CompoundStruct, MultipleMatchesError
 
 # noinspection PyProtectedMember
-from mandos.model import MultipleMatchesError, CompoundStruct
+from mandos.model.apis.pubchem_support._nav import FlatmapError, JsonNavigator
 
 # noinspection PyProtectedMember
-from mandos.model.apis.pubchem_support._nav import JsonNavigator, FlatmapError
 from mandos.model.apis.pubchem_support._nav_fns import Filter, Flatmap, Mapx
 
 # noinspection PyProtectedMember
@@ -48,6 +47,7 @@ from mandos.model.apis.pubchem_support.pubchem_models import (
     Publication,
     PubmedEntry,
 )
+from mandos.model.utils.setup import logger
 
 
 class Misc:

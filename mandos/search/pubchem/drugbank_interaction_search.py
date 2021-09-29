@@ -2,10 +2,10 @@ from typing import Sequence, Set, TypeVar
 
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.apis.pubchem_support.pubchem_models import DrugbankInteraction, DrugbankTargetType
-from mandos.search.pubchem import PubchemSearch
 
 # noinspection PyProtectedMember
 from mandos.model.concrete_hits import _DrugbankInteractionHit
+from mandos.search.pubchem import PubchemSearch
 
 T = TypeVar("T", bound=_DrugbankInteractionHit, covariant=True)
 

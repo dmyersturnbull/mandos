@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-import os
 import time
 from dataclasses import dataclass
 from typing import Sequence
 
-from pocketutils.core.exceptions import MissingResourceError, ImportFailedWarning
+from pocketutils.core.exceptions import ImportFailedWarning, MissingResourceError
 from pocketutils.core.query_utils import QueryExecutor
 
-from mandos.model.settings import MANDOS_SETTINGS
-
+from mandos.model.settings import SETTINGS
 from mandos.model.utils.setup import logger
-
 
 try:
     import selenium
@@ -32,17 +29,15 @@ except Exception:
     By = None
 
 if webdriver is not None:
-    MANDOS_SETTINGS.set_path_for_selenium()
+    SETTINGS.set_path_for_selenium()
     # noinspection PyBroadException
     try:
-        driver_fn = getattr(webdriver, MANDOS_SETTINGS.selenium_driver)
+        driver_fn = getattr(webdriver, SETTINGS.selenium_driver)
     except AttributeError:
         driver_fn = None
-        logger.caution(
-            f"Selenium driver {MANDOS_SETTINGS.selenium_driver} not found", exc_info=True
-        )
+        logger.caution(f"Selenium driver {SETTINGS.selenium_driver} not found", exc_info=True)
     else:
-        logger.info(f"Selenium installed; expecting driver {MANDOS_SETTINGS.selenium_driver}")
+        logger.info(f"Selenium installed; expecting driver {SETTINGS.selenium_driver}")
 
 
 @dataclass(frozen=True)
@@ -55,13 +50,11 @@ class Scraper:
         if WebDriver is None:
             raise MissingResourceError("Selenium is not installed")
         if driver_fn is None:
-            raise MissingResourceError(
-                f"Selenium driver {MANDOS_SETTINGS.selenium_driver} not found"
-            )
-        if MANDOS_SETTINGS.selenium_driver_path is None:
+            raise MissingResourceError(f"Selenium driver {SETTINGS.selenium_driver} not found")
+        if SETTINGS.selenium_driver_path is None:
             driver = driver_fn()
         else:
-            driver = driver_fn(MANDOS_SETTINGS.selenium_driver_path)
+            driver = driver_fn(SETTINGS.selenium_driver_path)
         logger.info(f"Loaded Selenium driver {driver}")
         return Scraper(driver, executor)
 

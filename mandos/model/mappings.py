@@ -1,14 +1,15 @@
 from pathlib import Path
 from typing import Sequence
 
-import regex
 import pandas as pd
+import regex
 from pocketutils.core.exceptions import ParsingError
 from typeddfs import TypedDfs
 
 from mandos.model.utils.resources import MandosResources
 
-MappingFrame = TypedDfs.untyped("MappingFrame")
+
+MappingDf = TypedDfs.untyped("MappingDf")
 
 
 def _patterns(self: pd.DataFrame) -> Sequence[str]:
@@ -30,7 +31,7 @@ def _get(self: pd.DataFrame, s: str) -> Sequence[str]:
     return s
 
 
-MappingFrame.__doc__ = r"""
+MappingDf.__doc__ = r"""
 A list of regex patterns and replacements.
 The first column is the pattern, and the next n columns are the targets.
 Has an important function, ``MappingFrame.get``, describe below.
@@ -47,9 +48,9 @@ Example:
     The first returned element (here "Cytochrome P450 2"), is considered the primary,
     while the second are -- for most usages -- considered optional extras.
 """
-MappingFrame.targets = _targets
-MappingFrame.patterns = _patterns
-MappingFrame.get = _get
+MappingDf.targets = _targets
+MappingDf.patterns = _patterns
+MappingDf.get = _get
 
 
 class _Compiler:
@@ -73,17 +74,17 @@ class _Compiler:
 
 class Mappings:
     """
-    Creates MappingFrames.
+    Creates MappingDfs.
     See that documentation.
     """
 
     @classmethod
-    def from_resource(cls, name: str) -> MappingFrame:
+    def from_resource(cls, name: str) -> MappingDf:
         path = MandosResources.a_file("mappings", name)
         return cls.from_path(path)
 
     @classmethod
-    def from_path(cls, path: Path) -> MappingFrame:
+    def from_path(cls, path: Path) -> MappingDf:
         """
         Reads a mapping from a CSV-like file or ``.regexes`` file.
         Feather and Parquet are fine, too.
@@ -91,10 +92,10 @@ class Mappings:
         and ignores empty lines and lines beginning with ``#``.
         It's just nice for easily editing in a text editor.
         """
-        df = MappingFrame.read_file(path)
+        df = MappingDf.read_file(path)
         compiler = _Compiler()
         df[df.columns[0]] = df[df.columns[0]].map(compiler.compile)
         return df
 
 
-__all__ = ["MappingFrame", "Mappings"]
+__all__ = ["MappingDf", "Mappings"]

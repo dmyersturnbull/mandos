@@ -9,15 +9,17 @@ from typing import Type
 import typer
 from typer.models import CommandInfo
 
-from mandos.model.utils.setup import MandosLogging, logger
+from mandos.entry.api_singletons import Apis
+from mandos.entry.calc_commands import CalcCommands
+from mandos.entry.entry_commands import Entries
 
 # noinspection PyProtectedMember
 from mandos.entry.misc_commands import MiscCommands, _InsertedCommandListSingleton
-from mandos.entry.calc_commands import CalcCommands
-from mandos.entry.api_singletons import Apis
-from mandos.entry.entry_commands import Entries
 from mandos.entry.plot_commands import PlotCommands
-from mandos.model.settings import MANDOS_SETTINGS
+from mandos.model.settings import SETTINGS
+
+# ALWAYS DO THIS FIRST:
+from mandos.model.utils.setup import MandosLogging, logger
 
 cli = typer.Typer()
 
@@ -43,8 +45,8 @@ def _init_commands():
     cli.registered_commands += [
         CommandInfo(":document", callback=MiscCommands.document),
         CommandInfo(":search", callback=MiscCommands.search),
-        CommandInfo(":detail-search", callback=MiscCommands.detail_search),
-        CommandInfo(":defaults", callback=MiscCommands.list_default_settings, hidden=True),
+        CommandInfo(":init", callback=MiscCommands.init, hidden=True),
+        CommandInfo(":settings", callback=MiscCommands.list_settings, hidden=True),
         CommandInfo(":fill", callback=MiscCommands.fill),
         CommandInfo(":cache:data", callback=MiscCommands.cache_data),
         CommandInfo(":cache:taxa", callback=MiscCommands.cache_taxa),
@@ -82,7 +84,7 @@ class MandosCli:
     Global entry point for various stuff. For import by consumers.
     """
 
-    settings = MANDOS_SETTINGS
+    settings = SETTINGS
     logger = logger
     logging = MandosLogging
     main = cli

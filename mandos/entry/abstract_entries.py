@@ -1,15 +1,16 @@
 import abc
 from pathlib import Path
-from typing import Generic, Type, Optional, Mapping, Union, TypeVar
+from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
 import typer
 from typer.models import OptionInfo
 
-from mandos.model.utils.setup import logger
-from mandos.model.utils.setup import MANDOS_SETUP
+from mandos.entry._arg_utils import EntryUtils
 from mandos.entry.searchers import Searcher
 from mandos.model.searches import Search
+from mandos.model.settings import SETTINGS
 from mandos.model.utils.reflection_utils import ReflectionUtils
+from mandos.model.utils.setup import MANDOS_SETUP, logger
 
 S = TypeVar("S", bound=Search, covariant=True)
 
@@ -52,25 +53,17 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         check: bool,
         log: Optional[Path],
         level: str,
-        no_setup: bool,
-    ):
-        MANDOS_SETUP(log, level, no_setup)
-        searcher = cls._get_searcher(built, path, to)
+    ) -> Searcher:
+        MANDOS_SETUP(log, level)
+        default_to = path.parent / (built.key + SETTINGS.table_suffix)
+        to = EntryUtils.adjust_filename(to, default=default_to, replace=True)
+        searcher = Searcher([built], [to], path)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
         out = searcher.output_paths[built.key]
         if not check:
             searcher.search()
         logger.notice(f"Done! Wrote to {out}")
         return searcher
-
-    @classmethod
-    def _get_searcher(
-        cls,
-        built: S,
-        path: Path,
-        to: Optional[Path],
-    ):
-        return Searcher([built], [to], path)
 
     @classmethod
     def default_param_values(cls) -> Mapping[str, Union[str, float, int, Path]]:

@@ -5,24 +5,24 @@ Run searches and write files.
 from __future__ import annotations
 
 import abc
+import inspect
 from pathlib import Path
 from typing import Optional, TypeVar
 
-from mandos.model.utils.setup import logger
+from mandos.entry._arg_utils import ArgUtils
+from mandos.entry._common_args import CommonArgs
 from mandos.entry._entry_args import EntryArgs
-from mandos.entry._entry_utils import EntryUtils
 from mandos.entry.abstract_entries import Entry
 from mandos.entry.api_singletons import Apis
-from mandos.entry._common_args import CommonArgs
 from mandos.entry.searchers import Searcher
-from mandos.model.utils.reflection_utils import InjectionError
-from mandos.model.utils.reflection_utils import ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.pubchem_support.pubchem_models import CoOccurrenceType, DrugbankTargetType
+from mandos.model.concrete_hits import GoType
+from mandos.model.utils.reflection_utils import InjectionError, ReflectionUtils
+from mandos.model.utils.setup import logger
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.binding_search import BindingSearch
 from mandos.search.chembl.go_search import GoSearch
-from mandos.model.concrete_hits import GoType
 from mandos.search.chembl.indication_search import IndicationSearch
 from mandos.search.chembl.mechanism_search import MechanismSearch
 from mandos.search.chembl.target_prediction_search import TargetPredictionSearch
@@ -56,19 +56,16 @@ class EntryChemblBinding(Entry[BindingSearch]):
         key: str = EntryArgs.key("chembl:binding"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
+        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: int = EntryArgs.min_confidence,
         binding: float = EntryArgs.binds_cutoff,
-        nonbinding: float = EntryArgs.does_not_bind_cutoff,
-        relations: str = EntryArgs.relations,
-        min_pchembl: float = EntryArgs.min_pchembl,
-        banned_flags: str = EntryArgs.banned_flags,
+        pchembl: float = EntryArgs.min_pchembl,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Binding data from ChEMBL.
@@ -80,20 +77,19 @@ class EntryChemblBinding(Entry[BindingSearch]):
 
         WEIGHT: The PCHEMBL value
         """
+        tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
         built = BindingSearch(
             key=key,
             api=Apis.Chembl,
-            taxa=EntryUtils.get_taxa(taxa),
+            taxa=tax,
             traversal=traversal,
-            target_types=EntryUtils.get_target_types(target_types),
+            target_types=ArgUtils.get_target_types(target_types),
             min_conf_score=confidence,
-            allowed_relations=EntryUtils.split(relations),
-            min_pchembl=min_pchembl,
-            banned_flags=EntryUtils.get_flags(banned_flags),
+            relations={"<", "<=", "="},  # there are no others with pchembl
+            min_pchembl=pchembl,
             binds_cutoff=binding,
-            does_not_bind_cutoff=nonbinding,
         )
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryChemblMechanism(Entry[MechanismSearch]):
@@ -103,7 +99,8 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:mechanism"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        taxa: Optional[str] = CommonArgs.taxa,
+        taxa: str = CommonArgs.taxa,
+        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         min_confidence: Optional[int] = EntryArgs.min_confidence,
@@ -111,7 +108,6 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Mechanism of action (MOA) data from ChEMBL.
@@ -120,15 +116,16 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
 
         PREDICATE: The target action (e.g. "agonist")
         """
+        tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
         built = MechanismSearch(
             key=key,
             api=Apis.Chembl,
-            taxa=EntryUtils.get_taxa(taxa),
+            taxa=tax,
             traversal=traversal,
-            allowed_target_types=EntryUtils.get_target_types(target_types),
+            allowed_target_types=ArgUtils.get_target_types(target_types),
             min_confidence_score=min_confidence,
         )
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
@@ -139,6 +136,7 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
         key: str = EntryArgs.key("chembl:predictions"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
+        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         min_threshold: float = EntryArgs.min_threshold,
@@ -146,7 +144,6 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Predicted target binding from ChEMBL.
@@ -159,16 +156,17 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
         WEIGHT: The square root of the PCHEMBL threshold
                 multiplied by a prediction odds-ratio, normalized
         """
+        tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
         built = TargetPredictionSearch(
             key=key,
             api=Apis.Chembl,
             scrape=Apis.ChemblScrape,
-            taxa=EntryUtils.get_taxa(taxa),
+            taxa=tax,
             traversal=traversal,
-            target_types=EntryUtils.get_target_types(target_types),
+            target_types=ArgUtils.get_target_types(target_types),
             min_threshold=min_threshold,
         )
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryChemblTrials(Entry[IndicationSearch]):
@@ -183,7 +181,6 @@ class EntryChemblTrials(Entry[IndicationSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Diseases from clinical trials listed in ChEMBL.
@@ -191,7 +188,7 @@ class EntryChemblTrials(Entry[IndicationSearch]):
         OBJECT: The name of the disease (in MeSH)
         """
         built = IndicationSearch(key=key, api=Apis.Chembl, min_phase=min_phase)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryChemblAtc(Entry[AtcSearch]):
@@ -206,7 +203,6 @@ class EntryChemblAtc(Entry[AtcSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         ATC codes from ChEMBL.
@@ -216,7 +212,7 @@ class EntryChemblAtc(Entry[AtcSearch]):
         built = AtcSearch(
             key=key, api=Apis.Chembl, levels={int(x.strip()) for x in levels.split(",")}
         )
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
@@ -235,19 +231,17 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("<see above>"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        taxa: Optional[str] = CommonArgs.taxa,
+        taxa: str = CommonArgs.taxa,
+        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,
-        relations: str = EntryArgs.relations,
-        min_pchembl: float = EntryArgs.min_pchembl,
-        banned_flags: Optional[str] = EntryArgs.banned_flags,
+        pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         See the docs for the specific entries.
@@ -261,21 +255,21 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
             binding_clazz = ReflectionUtils.injection(binding_search, BindingSearch)
             logger.info(f"Passing parameters to {binding_clazz.__qualname__}")
         try:
+            tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
             binding_search = binding_clazz(
                 key=key,
                 api=Apis.Chembl,
-                taxa=EntryUtils.get_taxa(taxa),
+                taxa=tax,
                 traversal=traversal,
-                target_types=EntryUtils.get_target_types(target_types),
+                target_types=ArgUtils.get_target_types(target_types),
                 min_conf_score=confidence,
-                allowed_relations=EntryUtils.split(relations),
-                min_pchembl=min_pchembl,
-                banned_flags=EntryUtils.get_flags(banned_flags),
+                relations={"<", "<=", "="},
+                min_pchembl=pchembl,
             )
         except (TypeError, ValueError):
             raise InjectionError(f"Failed to build {binding_clazz.__qualname__}")
         built = GoSearch(key, api, cls.go_type(), binding_search)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryGoFunction(_EntryChemblGo):
@@ -289,19 +283,17 @@ class EntryGoFunction(_EntryChemblGo):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:go.function"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        taxa: Optional[str] = CommonArgs.taxa,
+        taxa: str = CommonArgs.taxa,
+        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,
-        relations: str = EntryArgs.relations,
-        min_pchembl: float = EntryArgs.min_pchembl,
-        banned_flags: Optional[str] = EntryArgs.banned_flags,
+        pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         GO Function terms associated with ChEMBL binding targets.
@@ -310,23 +302,8 @@ class EntryGoFunction(_EntryChemblGo):
 
         WEIGHT: The sum of the PCHEMBL values
         """
-        return super().run(
-            path=path,
-            key=key,
-            to=to,
-            taxa=taxa,
-            traversal=traversal,
-            target_types=target_types,
-            confidence=confidence,
-            relations=relations,
-            min_pchembl=min_pchembl,
-            banned_flags=banned_flags,
-            binding_search=binding_search,
-            as_of=as_of,
-            check=check,
-            log=log,
-            stderr=stderr,
-        )
+        args, _, _, locs = inspect.getargvalues(inspect.currentframe())
+        return super().run(**{a: locs[a] for a in args if a != "cls"})
 
 
 class EntryGoProcess(_EntryChemblGo):
@@ -340,19 +317,17 @@ class EntryGoProcess(_EntryChemblGo):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:go.process"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        taxa: Optional[str] = CommonArgs.taxa,
+        taxa: str = CommonArgs.taxa,
+        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,
-        relations: str = EntryArgs.relations,
-        min_pchembl: float = EntryArgs.min_pchembl,
-        banned_flags: Optional[str] = EntryArgs.banned_flags,
+        pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         GO Process terms associated with ChEMBL binding targets.
@@ -361,23 +336,8 @@ class EntryGoProcess(_EntryChemblGo):
 
         WEIGHT: The sum of the PCHEMBL values
         """
-        return super().run(
-            path=path,
-            key=key,
-            to=to,
-            taxa=taxa,
-            traversal=traversal,
-            target_types=target_types,
-            confidence=confidence,
-            relations=relations,
-            min_pchembl=min_pchembl,
-            banned_flags=banned_flags,
-            binding_search=binding_search,
-            as_of=as_of,
-            check=check,
-            log=log,
-            stderr=stderr,
-        )
+        args, _, _, locs = inspect.getargvalues(inspect.currentframe())
+        return super().run(**{a: locs[a] for a in args if a != "cls"})
 
 
 class EntryGoComponent(_EntryChemblGo):
@@ -391,19 +351,17 @@ class EntryGoComponent(_EntryChemblGo):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("chembl:go.component"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        taxa: Optional[str] = CommonArgs.taxa,
+        taxa: str = CommonArgs.taxa,
+        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,
-        relations: str = EntryArgs.relations,
-        min_pchembl: float = EntryArgs.min_pchembl,
-        banned_flags: Optional[str] = EntryArgs.banned_flags,
+        pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         GO Component terms associated with ChEMBL binding targets.
@@ -412,23 +370,8 @@ class EntryGoComponent(_EntryChemblGo):
 
         WEIGHT: The sum of the PCHEMBL values
         """
-        return super().run(
-            path=path,
-            key=key,
-            to=to,
-            taxa=taxa,
-            traversal=traversal,
-            target_types=target_types,
-            confidence=confidence,
-            relations=relations,
-            min_pchembl=min_pchembl,
-            banned_flags=banned_flags,
-            binding_search=binding_search,
-            as_of=as_of,
-            check=check,
-            log=log,
-            stderr=stderr,
-        )
+        args, _, _, locs = inspect.getargvalues(inspect.currentframe())
+        return super().run(**{a: locs[a] for a in args if a != "cls"})
 
 
 class EntryPubchemDisease(Entry[DiseaseSearch]):
@@ -442,7 +385,6 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Diseases in the CTD.
@@ -453,7 +395,7 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
 
         """
         built = DiseaseSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
@@ -476,15 +418,14 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """See the docstrings for the individual entries."""
         clazz = cls.get_search_type()
         built = clazz(key, Apis.Pubchem, min_score=min_score, min_articles=min_articles)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSearch]):
@@ -497,10 +438,9 @@ class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSea
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Co-occurrences of genes from PubMed articles.
@@ -511,18 +451,8 @@ class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSea
 
         WEIGHT: The co-occurrence score (refer to the docs)
         """
-        return super().run(
-            path=path,
-            key=key,
-            to=to,
-            min_score=min_score,
-            min_articles=min_articles,
-            as_of=as_of,
-            log=log,
-            check=check,
-            stderr=stderr,
-            no_setup=no_setup,
-        )
+        args, _, _, locs = inspect.getargvalues(inspect.currentframe())
+        return super().run(**{a: locs[a] for a in args if a != "cls"})
 
 
 class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurrenceSearch]):
@@ -535,10 +465,9 @@ class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurre
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Co-occurrences of diseases from PubMed articles.
@@ -549,18 +478,8 @@ class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurre
 
         WEIGHT: The co-occurrence score (refer to the docs)
         """
-        return super().run(
-            path=path,
-            key=key,
-            to=to,
-            min_score=min_score,
-            min_articles=min_articles,
-            as_of=as_of,
-            log=log,
-            check=check,
-            stderr=stderr,
-            no_setup=no_setup,
-        )
+        args, _, _, locs = inspect.getargvalues(inspect.currentframe())
+        return super().run(**{a: locs[a] for a in args if a != "cls"})
 
 
 class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccurrenceSearch]):
@@ -573,10 +492,9 @@ class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccur
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Co-occurrences of chemicals from PubMed articles.
@@ -587,18 +505,8 @@ class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccur
 
         WEIGHT: The co-occurrence score (refer to the docs)
         """
-        return super().run(
-            path=path,
-            key=key,
-            to=to,
-            min_score=min_score,
-            min_articles=min_articles,
-            as_of=as_of,
-            log=log,
-            check=check,
-            stderr=stderr,
-            no_setup=no_setup,
-        )
+        args, _, _, locs = inspect.getargvalues(inspect.currentframe())
+        return super().run(**{a: locs[a] for a in args if a != "cls"})
 
 
 class EntryPubchemDgi(Entry[DgiSearch]):
@@ -609,10 +517,9 @@ class EntryPubchemDgi(Entry[DgiSearch]):
         key: str = EntryArgs.key("inter.dgidb:gene"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
-        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Drug/gene interactions in the DGIDB.
@@ -625,7 +532,7 @@ class EntryPubchemDgi(Entry[DgiSearch]):
         PREDICATE: "interaction:generic" or "interaction:<type>"
         """
         built = DgiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryPubchemCgi(Entry[CtdGeneSearch]):
@@ -636,10 +543,9 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
         key: str = EntryArgs.key("inter.ctd:gene"),
         as_of: Optional[str] = CommonArgs.as_of,
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        log: Optional[Path] = CommonArgs.log,
         check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Compound/gene interactions in the DGIDB.
@@ -652,7 +558,7 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
         PREDICATE: derived from the interaction type (e.g. "downregulation")
         """
         built = CtdGeneSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
@@ -666,7 +572,6 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Protein targets from DrugBank.
@@ -676,7 +581,7 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
         PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankTargetSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
@@ -690,7 +595,6 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         General functions from DrugBank targets.
@@ -700,7 +604,7 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
@@ -714,7 +618,6 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         PK-related proteins from DrugBank.
@@ -729,7 +632,7 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
             DrugbankTargetType.enzyme,
         }
         built = DrugbankTargetSearch(key, Apis.Pubchem, target_types)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
@@ -743,7 +646,6 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         DrugBank PK-related protein functions.
@@ -758,7 +660,7 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
             DrugbankTargetType.enzyme,
         }
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, target_types)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
@@ -772,7 +674,6 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Drug/drug interactions listed by DrugBank.
@@ -785,7 +686,7 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
         PREDICATE: typically increase/decrease/change followed by risk/activity/etc.
         """
         built = DrugbankDdiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryPubchemAssay(Entry[BioactivitySearch]):
@@ -795,13 +696,12 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("assay.pubchem:act"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        name_must_match: bool = EntryArgs.name_must_match,
+        match_name: bool = EntryArgs.match_name,
         ban_sources: Optional[str] = EntryArgs.banned_sources,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         PubChem bioactivity results.
@@ -816,8 +716,8 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
 
         WEIGHT: 2 for confirmatory; 1 otherwise
         """
-        built = BioactivitySearch(key, Apis.Pubchem, compound_name_must_match=name_must_match)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        built = BioactivitySearch(key, Apis.Pubchem, compound_name_must_match=match_name)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryDeaSchedule(Entry[BioactivitySearch]):
@@ -831,7 +731,6 @@ class EntryDeaSchedule(Entry[BioactivitySearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         DEA schedules (PENDING).
@@ -852,7 +751,6 @@ class EntryDeaClass(Entry[BioactivitySearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         DEA classes (PENDING).
@@ -874,7 +772,6 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Acute effect codes from ChemIDPlus.
@@ -886,7 +783,7 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
             Apis.Pubchem,
             top_level=level == 1,
         )
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryChemidPlusLd50(Entry[Ld50Search]):
@@ -900,7 +797,6 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         LD50 acute effects from ChemIDPlus.
@@ -910,7 +806,7 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
         PREDICATE: "LD50:<route>" (e.g. "LD50:intravenous")
         """
         built = Ld50Search(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryG2pInteractions(Entry[G2pInteractionSearch]):
@@ -924,7 +820,6 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Target interactions with affinities from Guide to Pharmacology.
@@ -936,7 +831,7 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
         WEIGHT: 1.0
         """
         built = G2pInteractionSearch(key, Apis.G2p)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryHmdbTissue(Entry[BioactivitySearch]):
@@ -946,12 +841,11 @@ class EntryHmdbTissue(Entry[BioactivitySearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("hmdb:tissue"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        min_nanomolar: Optional[float] = EntryArgs.min_nanomolar,
+        min_nm: Optional[float] = EntryArgs.min_nanomolar,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Tissue concentrations from HMDB (PENDING).
@@ -970,12 +864,11 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("hmdb:computed"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        min_nanomolar: Optional[float] = None,
+        min_nm: Optional[float] = None,
         as_of: Optional[str] = CommonArgs.as_of,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Computed properties from HMDB (PENDING).
@@ -1001,7 +894,6 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Computed properties from PubChem.
@@ -1022,7 +914,7 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         }
         keys = {known.get(s.strip(), s) for s in keys.split(",")}
         built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys)
-        return cls._run(built, path, to, check, log, stderr, no_setup)
+        return cls._run(built, path, to, check, log, stderr)
 
 
 class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
@@ -1036,7 +928,6 @@ class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Enzyme predictions from DrugBank (PENDING).
@@ -1058,7 +949,6 @@ class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Metabolites from DrugBank (PENDING).
@@ -1080,7 +970,6 @@ class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Dosage from DrugBank (PENDING).
@@ -1106,7 +995,6 @@ class EntryMetaRandom(Entry[BioactivitySearch]):
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        no_setup: bool = CommonArgs.no_setup,
     ) -> Searcher:
         """
         Random class assignment (PENDING).

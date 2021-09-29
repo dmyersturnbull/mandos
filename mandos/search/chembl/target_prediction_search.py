@@ -1,31 +1,29 @@
 from __future__ import annotations
 
-from typing import Sequence, Optional, Tuple, Set
+from typing import Optional, Sequence, Set, Tuple
 
 import numpy as np
-from pocketutils.core.exceptions import BadCommandError, OutOfRangeError
-
-from mandos.model.apis.chembl_support.chembl_target_graphs import (
-    ChemblTargetGraphFactory,
-    ChemblTargetGraph,
-)
-from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
-
-from mandos.model.utils.setup import logger
-from mandos.model.taxonomy import Taxonomy, Taxon
+from pocketutils.core.exceptions import OutOfRangeError
 from typeddfs import TypedDf
 
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_scrape_api import (
-    ChemblScrapePage,
     ChemblScrapeApi,
+    ChemblScrapePage,
     ChemblTargetPredictionTable,
 )
 from mandos.model.apis.chembl_support import ChemblCompound
+from mandos.model.apis.chembl_support.chembl_target_graphs import (
+    ChemblTargetGraph,
+    ChemblTargetGraphFactory,
+)
+from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
-from mandos.search.chembl import ChemblScrapeSearch
-from mandos.model.concrete_hits import ChemblTargetPredictionHit
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
+from mandos.model.concrete_hits import ChemblTargetPredictionHit
+from mandos.model.taxonomy import Taxon, Taxonomy
+from mandos.model.utils.setup import logger
+from mandos.search.chembl import ChemblScrapeSearch
 
 P = ChemblScrapePage.target_predictions
 T = ChemblTargetPredictionTable
@@ -43,7 +41,7 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
         key: str,
         api: ChemblApi,
         scrape: ChemblScrapeApi,
-        taxa: Sequence[Taxonomy],
+        taxa: Taxonomy,
         traversal: str,
         target_types: Set[str],
         required_level: int = 70,
@@ -124,11 +122,9 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
         return lst
 
     def _get_taxon(self, organism: str) -> Tuple[Optional[int], Optional[str]]:
-        if len(self.taxa) == 0:  # allow all
+        if self.taxa is None:  # allow all
             return None, organism
-        matches = {}
-        for tax in self.taxa:
-            matches += tax.get_by_id_or_name(organism)
+        matches = self.taxa.get_by_id_or_name(organism)
         if len(matches) == 0:
             logger.debug(f"Taxon {organism} not in set. Excluding.")
             return None, None

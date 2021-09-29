@@ -5,8 +5,8 @@ from typing import Sequence
 from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.apis.chembl_api import ChemblApi
+from mandos.model.concrete_hits import BindingHit, GoHit, GoType
 from mandos.search.chembl import ChemblSearch
-from mandos.model.concrete_hits import BindingHit, GoType, GoHit
 from mandos.search.chembl.binding_search import BindingSearch
 
 

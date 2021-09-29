@@ -2,13 +2,13 @@ from typing import Mapping
 
 import pytest
 
+from mandos.entry.api_singletons import Apis
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraphFactory,
     TargetEdgeReqs,
     TargetNode,
     TargetRelType,
 )
-from mandos.entry.api_singletons import Apis
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory, TargetType
 
 factory = TargetFactory(Apis.Chembl)

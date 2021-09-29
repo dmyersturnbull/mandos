@@ -1,8 +1,8 @@
 from typing import Sequence, Set
 
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import ComputedPropertyHit
+from mandos.search.pubchem import PubchemSearch
 
 
 class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):

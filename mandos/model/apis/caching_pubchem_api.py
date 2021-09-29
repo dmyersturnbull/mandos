@@ -5,25 +5,25 @@ from __future__ import annotations
 
 import gzip
 from pathlib import Path
-from typing import FrozenSet, Optional, Union, Set
+from typing import FrozenSet, Optional, Set, Union
 
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import XValueError
 
-from mandos.model.utils.setup import logger
-from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
+from mandos.model.settings import SETTINGS
+from mandos.model.utils.setup import logger
 
 
 class CachingPubchemApi(PubchemApi):
     def __init__(
         self,
         query: Optional[QueryingPubchemApi],
-        cache_dir: Path = MANDOS_SETTINGS.pubchem_cache_path,
+        cache_dir: Path = SETTINGS.pubchem_cache_path,
     ):
         self._cache_dir = cache_dir
         self._query = query
@@ -78,7 +78,7 @@ class CachingPubchemApi(PubchemApi):
             raise XValueError(f"min_tc {min_tc} is not an increment of 1%")
         percent = int(min_tc * 100)
         path = self._cache_dir / "similarity" / f"{inchi}_{percent}"
-        return path.with_suffix(MANDOS_SETTINGS.archive_filename_suffix)
+        return path.with_suffix(SETTINGS.archive_filename_suffix)
 
     def _write_json(self, encoded: str, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

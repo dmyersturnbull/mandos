@@ -6,21 +6,20 @@ from __future__ import annotations
 
 import inspect
 import os
-from pathlib import Path
-from typing import Sequence, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from textwrap import wrap
+from typing import Mapping, Sequence
 
 import pandas as pd
 import typer
-from pocketutils.core.exceptions import BadCommandError, ContradictoryRequestError
-from typeddfs import TypedDfs, FileFormat
+from pocketutils.core.exceptions import ContradictoryRequestError
+from typeddfs import FileFormat, TypedDfs
 from typeddfs.utils import Utils as TypedDfsUtils
 from typer.models import CommandInfo
 
-
-DocFrame = (
-    TypedDfs.typed("DocFrame")
+CommandDocDf = (
+    TypedDfs.typed("CommandDocDf")
     .require("command", dtype=str)
     .reserve("description", "parameters", dtype=str)
     .strict(cols=False)
@@ -51,7 +50,7 @@ class Documenter:
         elif self.search:
             cmds = [c for c in cmds if not c.name.startswith(":")]
         cmds = sorted(cmds, key=lambda c: c.name)
-        table = DocFrame([self._doc_row(c) for c in cmds])
+        table = CommandDocDf([self._doc_row(c) for c in cmds])
         self._write(to, table, style)
 
     def _doc_row(self, c: CommandInfo) -> pd.Series:

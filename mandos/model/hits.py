@@ -4,9 +4,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Sequence
 
-import numpy as np
-from typeddfs import TypedDfs
-
 HIT_FIELD_TYPE = frozenset([str, int, float, datetime])
 
 
@@ -138,23 +135,4 @@ class AbstractHit:
         return [f.name for f in dataclasses.fields(cls)]
 
 
-HitFrame = (
-    TypedDfs.typed("HitFrame")
-    .require("record_id", dtype=str)
-    .require("origin_inchikey", "matched_inchikey", dtype=str)
-    .require("predicate", dtype=str)
-    .require("object_id", "object_name", dtype=str)
-    .require("search_key", "search_class", "data_source", dtype=str)
-    .require("hit_class", dtype=str)
-    .require("cache_date", "run_date")
-    .reserve("inchi", "smiles", dtype=str)
-    .reserve("compound_id", "compound_name", dtype=str)
-    .reserve("chembl_id", "pubchem_id", dtype=str)
-    .reserve("weight", dtype=np.float64)
-    .strict(cols=False)
-    .hash(directory=True)
-    .secure()
-).build()
-
-
-__all__ = ["AbstractHit", "HitFrame", "KeyPredObj", "KeyPredObjSource", "Triple", "HIT_FIELD_TYPE"]
+__all__ = ["AbstractHit", "KeyPredObj", "KeyPredObjSource", "Triple", "HIT_FIELD_TYPE"]

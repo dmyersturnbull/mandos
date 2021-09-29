@@ -1,17 +1,108 @@
+from __future__ import annotations
 import logging
 import sys
+from dataclasses import dataclass
+from inspect import cleandoc
 from pathlib import Path
-from typing import Optional, Union
+from typing import Mapping, Optional, Union
 
+# noinspection PyProtectedMember
+import loguru._defaults as _defaults
 import regex
 from loguru import logger
 
+# noinspection PyProtectedMember
 from loguru._logger import Logger
-from pocketutils.core.exceptions import BadCommandError, XValueError
-from typeddfs import FileFormat
-from typeddfs.file_formats import CompressionFormat
+from pocketutils.core.exceptions import IllegalStateError, XValueError
 
 _LOGGER_ARG_PATTERN = regex.compile(r"(?:([a-zA-Z]+):)?(.*)", flags=regex.V1)
+_DEFAULT_LEVEL: str = "INFO"
+FMT = cleandoc(
+    r"""
+    <bold>{time:YYYY-MM-DD HH:mm:ss.SSS}</bold> |
+    <level>{level: <8}</level> |
+    <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>
+    """
+).replace("\n", " ")
+
+
+class _SENTINEL:
+    pass
+
+
+log_compressions = {
+    ".xz",
+    ".lzma",
+    ".gz",
+    ".zip",
+    ".bz2",
+    ".tar",
+    ".tar.gz",
+    ".tar.bz2",
+    ".tar.xz",
+}
+valid_log_suffixes = {
+    *{f".log{c}" for c in log_compressions},
+    *{f".txt{c}" for c in log_compressions},
+    *{f".json{c}" for c in log_compressions},
+}
+# the levels for caution and notice are DEFINED here
+# trace and success must match loguru's
+# and the rest must match logging's
+# note that most of these alternate between informative and problematic
+# i.e. info (ok), caution (bad), success (ok), warning (bad), notice (ok), error (bad)
+LEVELS = dict(
+    TRACE=_defaults.LOGURU_TRACE_NO,
+    DEBUG=_defaults.LOGURU_DEBUG_NO,
+    INFO=_defaults.LOGURU_INFO_NO,
+    CAUTION=23,
+    SUCCESS=25,
+    WARNING=_defaults.LOGURU_WARNING_NO,
+    NOTICE=35,
+    ERROR=_defaults.LOGURU_ERROR_NO,
+    CRITICAL=_defaults.LOGURU_CRITICAL_NO,
+)
+LEVEL_COLORS = dict(
+    TRACE="",
+    DEBUG="",
+    INFO="<bold>",
+    CAUTION="<yellow>",
+    SUCCESS="<blue>",
+    WARNING="<yellow>",
+    NOTICE="<blue>",
+    ERROR="<red>",
+    CRITICAL="<RED>",
+)
+LEVEL_ICONS = {}
+_ALIASES = dict(NONE="OFF", NO="OFF", VERBOSE="INFO", QUIET="ERROR")
+
+
+@dataclass(frozen=True, repr=True, order=True)
+class LogSinkInfo:
+    path: Path
+    base: Path
+    suffix: str
+    serialize: bool
+    compression: Optional[str]
+
+    @classmethod
+    def guess(cls, path: Union[str, Path]) -> LogSinkInfo:
+        path = Path(path)
+        base, compression = path.name, None
+        for c in log_compressions:
+            if path.name.endswith(c):
+                base, compression = path.name[: -len(c)], c
+        if not [base.endswith(s) for s in [".json", ".log", ".txt"]]:
+            raise XValueError(
+                f"Log filename {path.name} is not .json, .log, .txt, or a compressed variant"
+            )
+        return LogSinkInfo(
+            path=path,
+            base=path.parent / base,
+            suffix=compression,
+            serialize=base.endswith(".json"),
+            compression=compression,
+        )
 
 
 class InterceptHandler(logging.Handler):
@@ -46,6 +137,14 @@ class MyLogger(Logger):
     A wrapper that has a fake notice() method to trick static analysis.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._current_stderr_log_level: Optional[str] = _DEFAULT_LEVEL
+
+    @property
+    def current_stderr_log_level(self) -> Optional[str]:
+        return self._current_stderr_log_level
+
     def notice(self, __message: str, *args, **kwargs):
         raise NotImplementedError()  # not real
 
@@ -56,105 +155,120 @@ class MyLogger(Logger):
 class MandosLogging:
     # this is required for mandos to run
 
-    DEFAULT_LEVEL: str = "NOTICE"
+    DEFAULT_LEVEL: str = _DEFAULT_LEVEL
+    _main_handler_id: int = None
 
     @classmethod
-    def init(cls) -> None:
+    def inverse_levels(cls) -> Mapping[int, str]:
+        return {v: k for k, v in cls.levels()}
+
+    @classmethod
+    def levels(cls) -> Mapping[str, int]:
+        return dict(LEVELS)
+
+    @classmethod
+    def init(
+        cls,
+        *,
+        level: str = _DEFAULT_LEVEL,
+        sink=sys.stderr,
+        force_utf8: bool = True,
+        intercept: bool = True,
+        force: bool = False,
+    ) -> None:
         """
         Sets an initial configuration.
         """
-        # we warn the user about this in the docs!
-        sys.stderr.reconfigure(encoding="utf-8")
-        sys.stdout.reconfigure(encoding="utf-8")
-        sys.stdin.reconfigure(encoding="utf-8")
-        cls._init()
-        cls.redirect_std_logging()
-        cls.set_main_level(MandosLogging.DEFAULT_LEVEL)
-
-    @classmethod
-    def _init(cls) -> None:
-        try:
-            logger.level("NOTICE", no=35)
-        except TypeError:
-            # this happens if it's already been added (e.g. from an outside library)
-            # if we don't have it set after this, we'll find out soon enough
-            logger.debug("Could not add 'NOTICE' loguru level. Did you already set it?")
-        try:
-            logger.level("CAUTION", no=25)
-        except TypeError:
-            logger.debug("Could not add 'CAUTION' loguru level. Did you already set it?")
+        if cls._main_handler_id is not None and not force:
+            return
+        if force_utf8:
+            # we warn the user about this in the docs!
+            sys.stderr.reconfigure(encoding="utf-8")
+            sys.stdout.reconfigure(encoding="utf-8")
+            sys.stdin.reconfigure(encoding="utf-8")
+        if intercept:
+            logging.basicConfig(handlers=[InterceptHandler()], level=0, encoding="utf-8")
+        for k, v in LEVELS.items():
+            cls.configure_level(
+                k, v, color=LEVEL_COLORS.get(k, _SENTINEL), icon=LEVEL_ICONS.get(k, _SENTINEL)
+            )
         logger.notice = _notice
         logger.caution = _caution
+        logger.remove(None)  # get rid of the built-in handler
+        cls.set_main_level(level, sink=sink)
+        logger.disable("chembl_webresource_client")
+        logger.notice("Started.")
 
     @classmethod
-    def redirect_std_logging(cls, level: int = 10) -> None:
-        # 10 b/c we're really never going to want trace output
-        logging.basicConfig(handlers=[InterceptHandler()], level=level, encoding="utf-8")
+    def configure_level(
+        cls,
+        name: str,
+        level: int,
+        *,
+        color: Union[None, str, _SENTINEL] = _SENTINEL,
+        icon: Union[None, str, _SENTINEL] = _SENTINEL,
+        replace: bool = True,
+    ):
+        try:
+            data = logger.level(name)
+        except ValueError:
+            data = None
+        if data:
+            if replace:
+                if level != data.no:  # loguru doesn't check whether they're eq; it just errors
+                    raise IllegalStateError(f"Cannot set level={level}!={data.no} for {name}")
+                logger.level(
+                    name,
+                    color=data.color if color is _SENTINEL else color,
+                    icon=data.icon if icon is _SENTINEL else icon,
+                )
+        else:
+            logger.level(
+                name,
+                no=level,
+                color=None if color is _SENTINEL else color,
+                icon=None if icon is _SENTINEL else icon,
+            )
 
     @classmethod
-    def set_main_level(cls, level: str) -> None:
-        logger.remove()
-        logger.add(sys.stderr, level=level)
+    def set_main_level(cls, level: str, sink=sys.stderr) -> None:
+        """
+        Sets the logging level for the main handler (normally stderr).
+        """
+        level = level.upper()
+        if cls._main_handler_id is not None:
+            try:
+                logger.remove(cls._main_handler_id)
+            except ValueError:
+                logger.error(f"Cannot remove handler {cls._main_handler_id}")
+        if level != "OFF":
+            cls._main_handler_id = logger.add(sink, level=level, format=FMT)
 
     @classmethod
-    def disable_main(cls) -> None:
-        logger.remove()
-
-    @classmethod
-    def add_path_logger(cls, path: Path, level: str) -> None:
-        cls.get_log_suffix(path)
-        compressions = [
-            ".xz",
-            ".lzma",
-            ".gz",
-            ".zip",
-            ".bz2",
-            ".tar",
-            ".tar.gz",
-            ".tar.bz2",
-            ".tar.xz",
-        ]
-        compressions = {c: c.lstrip(".") for c in compressions}
-        serialize = path.with_suffix("").name.endswith(".json")
-        compression = compressions.get(path.suffix)
-        logger.add(
-            str(path),
+    def add_path(cls, path: Path, level: str) -> int:
+        level = level.upper()
+        info = LogSinkInfo.guess(path)
+        return logger.add(
+            str(info.base),
             level=level,
-            compression=compression,
-            serialize=serialize,
+            compression=info.compression,
+            serialize=info.serialize,
             backtrace=True,
             diagnose=True,
             enqueue=True,
             encoding="utf-8",
         )
 
-    @classmethod
-    def get_log_suffix(cls, path: Path) -> str:
-        valid_log_suffixes = {
-            *{f".log{c.suffix}" for c in CompressionFormat.list()},
-            *{f".txt{c.suffix}" for c in CompressionFormat.list()},
-            *{f".json{c.suffix}" for c in CompressionFormat.list()},
-        }
-        # there's no overlap, right? pretty sure
-        matches = {s for s in valid_log_suffixes if path.name.endswith(s)}
-        if len(matches) == 0:
-            raise XValueError(
-                f"{path} is not a valid logging path; use one of {', '.join(valid_log_suffixes)}"
-            )
-        suffix = next(iter(matches))
-        return suffix
-
 
 class MandosSetup:
-
-    LEVELS = ["off", "error", "notice", "warning", "caution", "info", "debug"]
-    ALIASES = dict(none="off", no="off", verbose="info", quiet="error")
+    @classmethod
+    def aliases(cls) -> Mapping[str, str]:
+        return _ALIASES
 
     def __call__(
         self,
         log: Union[None, str, Path] = None,
         level: Optional[str] = MandosLogging.DEFAULT_LEVEL,
-        skip: bool = False,
     ) -> None:
         """
         This function controls all aspects of the logging as set via command-line.
@@ -165,23 +279,19 @@ class MandosSetup:
                   (e.g. ``:INFO:mandos-run.log.gz``). Can serialize to JSON if .json is used
                   instead of .log or .txt.
         """
-        if skip:
-            return
-        if level is None or len(str(level)) == 0:
+        if level is None:
             level = MandosLogging.DEFAULT_LEVEL
-        level = MandosSetup.ALIASES.get(level.lower(), level).upper()
-        if level.lower() not in MandosSetup.LEVELS:
-            _permitted = ", ".join([*MandosSetup.LEVELS, *MandosSetup.ALIASES.keys()])
+        level = level.upper()
+        level = _ALIASES.get(level, level)
+        if level not in LEVELS:
+            _permitted = ", ".join([*LEVELS, *_ALIASES.keys()])
             raise XValueError(f"{level.lower()} not a permitted log level (allowed: {_permitted}")
-        if level == "OFF":
-            MandosLogging.disable_main()
-        else:
-            MandosLogging.set_main_level(level)
+        MandosLogging.set_main_level(level)
         if log is not None or len(str(log)) == 0:
             match = _LOGGER_ARG_PATTERN.match(str(log))
             path_level = "DEBUG" if match.group(1) is None else match.group(1)
             path = Path(match.group(2))
-            MandosLogging.add_path_logger(path, path_level)
+            MandosLogging.add_path(path, path_level)
             logger.info(f"Added logger to {path} at level {path_level}")
         logger.info(f"Set log level to {level}")
 
@@ -193,3 +303,5 @@ MandosLogging.init()
 
 
 MANDOS_SETUP = MandosSetup()
+
+__all__ = ["logger", "MANDOS_SETUP", "MandosLogging", "LogSinkInfo"]

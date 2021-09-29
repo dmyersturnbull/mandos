@@ -4,8 +4,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.search.chembl._activity_search import _ActivitySearch
 from mandos.model.concrete_hits import FunctionalHit
+from mandos.search.chembl._activity_search import _ActivitySearch
 
 
 class FunctionalSearch(_ActivitySearch[FunctionalHit]):

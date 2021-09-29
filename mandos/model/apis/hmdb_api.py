@@ -1,17 +1,16 @@
 import abc
 import gzip
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Union, Sequence, Optional
+from pathlib import Path
+from typing import Optional, Sequence, Union
 
 import orjson
-from pocketutils.tools.common_tools import CommonTools
-
-from mandos.model.settings import QUERY_EXECUTORS, MANDOS_SETTINGS
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
+from pocketutils.tools.common_tools import CommonTools
 
 from mandos.model import Api
+from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
 
 
 def _is_float(s):
@@ -95,7 +94,7 @@ class QueryingHmdbApi(JsonBackedHmdbApi):
 
 class CachingHmdbApi(JsonBackedHmdbApi):
     def __init__(
-        self, query: Optional[QueryingHmdbApi], cache_dir: Path = MANDOS_SETTINGS.hmdb_cache_path
+        self, query: Optional[QueryingHmdbApi], cache_dir: Path = SETTINGS.hmdb_cache_path
     ):
         self._query = query
         self._cache_dir = cache_dir

@@ -4,8 +4,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.search.chembl._activity_search import _ActivitySearch
 from mandos.model.concrete_hits import BindingHit
+from mandos.search.chembl._activity_search import _ActivitySearch
 
 
 class BindingSearch(_ActivitySearch[BindingHit]):
@@ -69,12 +69,6 @@ class BindingSearch(_ActivitySearch[BindingHit]):
             and rel in {"=", "~", "<", "<="}
         ):
             return "yes"
-        elif (
-            self.does_not_bind_cutoff is not None
-            and pchembl <= self.does_not_bind_cutoff
-            and rel in {"=", "~", ">", ">="}
-        ):
-            return "no"
         return rel
 
 

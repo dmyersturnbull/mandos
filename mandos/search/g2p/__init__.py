@@ -1,5 +1,5 @@
 import abc
-from typing import TypeVar, Sequence
+from typing import Sequence, TypeVar
 
 from pocketutils.core.exceptions import XValueError
 

@@ -1,28 +1,28 @@
 import os
 import typing
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Union, Optional, MutableMapping
+from typing import MutableMapping, Optional, TypeVar, Union
 
 import orjson
+import pint
+from pint import Quantity
+from pint.errors import PintTypeError
+from pocketutils.core.chars import Chars
 from pocketutils.core.dot_dict import NestedDotDict
-from pocketutils.core.exceptions import (
-    FileDoesNotExistError,
-    DirDoesNotExistError,
-    MissingResourceError,
-    PathExistsError,
-)
+from pocketutils.core.exceptions import FileDoesNotExistError, MissingResourceError, PathExistsError
 from pocketutils.core.hashers import Hasher
 from pocketutils.tools.common_tools import CommonTools
+from pocketutils.tools.unit_tools import UnitTools
 
-from mandos.model.utils.misc_utils import MiscUtils
+from mandos import logger
+
+_UNIT_REG = pint.UnitRegistry()
+T = TypeVar("T", covariant=True)
 
 
 class MandosResources:
 
-    start_time = MiscUtils.utc()
-    start_time_local = start_time.astimezone()
-    start_timestamp = start_time.isoformat(timespec="milliseconds")
-    start_timestamp_filesys = start_time_local.strftime("%Y-%m-%d_%H-%M-%S")
     hasher: Hasher = Hasher("sha256", buffer_size=16 * 1024)
     resource_dir = Path(__file__).parent.parent.parent
 
@@ -33,12 +33,12 @@ class MandosResources:
 
     @classmethod
     def path(
-        cls, *nodes: Union[Path, str], suffix: Optional[str] = None, exists: bool = True
+        cls, *nodes: Union[Path, str], suffix: Optional[str] = None, exists: bool = False
     ) -> Path:
         """Gets a path of a test resource file under ``resources/``."""
         path = Path(cls.resource_dir, "resources", *nodes)
         path = path.with_suffix(path.suffix if suffix is None else suffix)
-        if not path.exists():
+        if exists and not path.exists():
             raise MissingResourceError(f"Resource {path} missing")
         return path
 
@@ -89,6 +89,49 @@ class MandosResources:
         return data
 
     strings = None
+
+    @classmethod
+    def check_expired(cls, path: Path, max_sec: Union[timedelta, int], what: str) -> bool:
+        if isinstance(max_sec, timedelta):
+            max_sec = max_sec.total_seconds()
+        # getting the mod date because creation dates are iffy cross-platform
+        # (in fact the Linux kernel doesn't bother to expose them)
+        when = datetime.fromtimestamp(path.stat().st_mtime)
+        delta_sec = (datetime.now() - when).total_seconds()
+        if delta_sec > max_sec:
+            delta_str = UnitTools.delta_time_to_str(Chars.narrownbsp)
+            if delta_sec > 60 * 60 * 24 * 2:
+                logger.warning(
+                    f"{what} may be {delta_str} out of date. [downloaded: {when.strftime('%Y-%m-%d')}]"
+                )
+            else:
+                logger.warning(
+                    f"{what} may be {delta_str} out of date. [downloaded: {when.strftime('%Y-%m-%d %H:%M:%s')}]"
+                )
+            return True
+        return False
+
+    @classmethod
+    def canonicalize_quantity(cls, s: str, dimensionality: str) -> Quantity:
+        """
+        Returns a quantity in reduced units from a magnitude with units.
+
+        Args:
+            s: The string to parse; e.g. ``"1 m/s^2"``.
+               Unit names and symbols permitted, and spaces may be omitted.
+            dimensionality: The resulting Quantity is check against this;
+                            e.g. ``"[length]/[meter]^2"``
+
+        Returns:
+            a pint ``Quantity``
+
+        Raise:
+            PintTypeError: If the dimensionality is inconsistent
+        """
+        q = _UNIT_REG.Quantity(s).to_reduced_units()
+        if not q.is_compatible_with(dimensionality):
+            raise PintTypeError(f"{s} not of dimensionality {dimensionality}")
+        return q
 
 
 MandosResources.strings = {

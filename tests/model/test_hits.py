@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import pytest
 
+from mandos.model.hit_dfs import HitUtils
 from mandos.model.hits import AbstractHit, HitFrame
-from mandos.model.utils.hit_utils import HitUtils
 
 from .. import get_test_resource
 

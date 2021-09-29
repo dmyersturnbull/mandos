@@ -3,7 +3,7 @@ Calculations.
 """
 import math
 from collections import defaultdict
-from typing import Collection, Dict, Sequence, Tuple, MutableMapping
+from typing import Collection, MutableMapping, Sequence, Tuple
 
 from mandos.model.hits import AbstractHit, KeyPredObj
 

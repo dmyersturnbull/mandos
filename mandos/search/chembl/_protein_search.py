@@ -1,11 +1,9 @@
 import abc
-from typing import Optional, Sequence, Set, TypeVar, Union
+from typing import Optional, Sequence, Set, TypeVar
 
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.utils.setup import logger
-from mandos.model.concrete_hits import ProteinHit
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
@@ -14,9 +12,11 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
 )
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
-from mandos.model.taxonomy import Taxonomy
-from mandos.search.chembl import ChemblSearch
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
+from mandos.model.concrete_hits import ProteinHit
+from mandos.model.taxonomy import Taxonomy
+from mandos.model.utils.setup import logger
+from mandos.search.chembl import ChemblSearch
 
 H = TypeVar("H", bound=ProteinHit, covariant=True)
 
@@ -30,7 +30,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         self,
         key: str,
         api: ChemblApi,
-        taxa: Sequence[Taxonomy],
+        taxa: Optional[Taxonomy],
         traversal: str,
         allowed_target_types: Set[str],
         min_confidence_score: Optional[int],
@@ -40,12 +40,6 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         self.traversal = TargetTraversalStrategies.by_name(traversal, self.api)
         self.allowed_target_types = allowed_target_types
         self.min_confidence_score = min_confidence_score
-
-    def is_in_taxa(self, species: Union[int, str]) -> bool:
-        """
-        Returns true if the ChEMBL species is contained in any of our taxonomies.
-        """
-        return any((taxon.contains(species) for taxon in self.taxa))
 
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         raise NotImplementedError()

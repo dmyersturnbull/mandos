@@ -5,12 +5,12 @@ from __future__ import annotations
 
 import enum
 from pathlib import Path
-from typing import Union, Optional, Tuple, Mapping, Any, Generator, Sequence, Set
+from typing import Any, Generator, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, Colormap, ListedColormap, to_hex
+from matplotlib.colors import Colormap, LinearSegmentedColormap, ListedColormap, to_hex
 from matplotlib.figure import Figure
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import BadCommandError, LengthError, LookupFailedError
@@ -20,9 +20,7 @@ from pocketutils.tools.common_tools import CommonTools
 from seaborn.palettes import SEABORN_PALETTES
 from typeddfs import TypedDfs
 
-from mandos.model.utils.setup import logger
 from mandos.model.utils import CleverEnum
-from mandos.model.utils.misc_utils import MiscUtils
 from mandos.model.utils.resources import MandosResources
 
 try:
@@ -183,7 +181,7 @@ class MandosPlotStyling:
         except ValueError:
             pass
         x = standards.get(s, s)
-        return MiscUtils.canonicalize_quantity(x, "[length]").to("inch").magnitude
+        return MandosResources.canonicalize_quantity(x, "[length]").to("inch").magnitude
 
 
 class MandosPlotUtils:

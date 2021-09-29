@@ -12,11 +12,10 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import XTypeError, XValueError
 from pocketutils.tools.string_tools import StringTools
 
-from mandos.model.utils.resources import MandosResources
 from mandos.model.apis.pubchem_support._nav_fns import Mapx
+from mandos.model.utils.resources import MandosResources
 
-
-hazards = MandosResources.path("hazards.json").read_text(encoding="utf8")
+hazards = MandosResources.file("hazards.json").read_text(encoding="utf8")
 hazards = NestedDotDict(orjson.loads(hazards))
 hazards = {d["code"]: d for d in hazards["signals"]}
 

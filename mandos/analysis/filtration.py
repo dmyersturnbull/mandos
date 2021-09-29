@@ -7,7 +7,7 @@ from pathlib import Path
 
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos.model.hits import HitFrame
+from mandos.model.hit_dfs import HitDf
 
 
 class Filtration:
@@ -19,7 +19,7 @@ class Filtration:
     def from_toml(cls, dot: NestedDotDict) -> Filtration:
         raise NotImplementedError()
 
-    def apply(self, df: HitFrame) -> HitFrame:
+    def apply(self, df: HitDf) -> HitDf:
         raise NotImplementedError()
 
 

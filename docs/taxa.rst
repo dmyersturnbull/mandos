@@ -27,3 +27,7 @@ Besides Euteleostomi, some good choices are ``-taxa 40674`` (Mammalia),
 and ``--taxa 9606`` (Homo sapiens, 300 kiloannum).
 Sarcopterygii (under Euteleostomi) won’t include zebrafish, and Euarchonta (under Euarchontoglires) won’t include rodents.
 If you enter something outside of Vertebrata (525 Ma), a new set will be downloaded from UniProt and cached.
+
+To find more, explore the hierarchy under:
+- https://www.uniprot.org/taxonomy/131567 (cellular species)
+- https://www.uniprot.org/taxonomy/10239 (viral species)

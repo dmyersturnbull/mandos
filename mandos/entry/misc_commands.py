@@ -4,37 +4,34 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional
 
-import regex
 import typer
-from pocketutils.core.exceptions import BadCommandError, XValueError
+from pocketutils.core.exceptions import XValueError
 from typeddfs import FileFormat
-
-from mandos.model.taxonomy import TaxonomyDf
-
-from mandos.entry._entry_utils import EntryUtils
-from mandos.entry.docs import Documenter
-
-from mandos.model.utils.setup import logger
-from mandos.entry.searchers import InputFrame
-from mandos.model.utils.setup import MANDOS_SETUP
+from typeddfs.cli_help import DfCliHelp
 from typeddfs.utils import Utils as TypedDfsUtils
+
 from mandos.analysis.filtration import Filtration
 from mandos.analysis.reification import Reifier
+from mandos.entry._arg_utils import Arg, ArgUtils, EntryUtils, Opt
 from mandos.entry._common_args import CommonArgs
-from mandos.entry._arg_utils import Arg, Opt, ArgUtils
 from mandos.entry._common_args import CommonArgs as Ca
-from mandos.entry.multi_searches import MultiSearch, SearchExplainDf
-from mandos.entry.fillers import CompoundIdFiller, IdMatchFrame
-from mandos.model.utils.resources import MandosResources
+from mandos.entry.docs import Documenter
+from mandos.entry.fillers import CompoundIdFiller, IdMatchDf
+from mandos.entry.multi_searches import MultiSearch, SearchConfigDf
+from mandos.entry.searchers import InputCompoundsDf
 from mandos.model.apis.g2p_api import CachingG2pApi
-from mandos.model.hits import HitFrame
-from mandos.model.settings import MANDOS_SETTINGS
+from mandos.model.hit_dfs import HitDf
+from mandos.model.settings import SETTINGS, Globals
+from mandos.model.taxonomy import TaxonomyDf
 from mandos.model.taxonomy_caches import TaxonomyFactories
+from mandos.model.utils.setup import MANDOS_SETUP, logger
 
-DEF_SUFFIX = MANDOS_SETTINGS.default_table_suffix
+DEF_SUFFIX = SETTINGS.table_suffix
+nl = "\n\n"
 
 
 class _InsertedCommandListSingleton:
@@ -43,16 +40,38 @@ class _InsertedCommandListSingleton:
 
 class MiscCommands:
     @staticmethod
-    def list_default_settings(
+    def init(
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
     ):
         """
-        Write the default settings to stdout.
+        Initializes mandos, creating directories, etc.
         """
         MANDOS_SETUP(log, stderr)
-        for k, v in MANDOS_SETTINGS.defaults().items():
-            typer.echo(f"{k} = {v}")
+        Globals.mandos_path.mkdir(exist_ok=True, parents=True)
+        typer.echo(f"Mandos home dir is {Globals.mandos_path}")
+        if Globals.settings_path.exists():
+            typer.echo(f"Settings found at {Globals.settings_path}")
+        else:
+            typer.echo("No settings file found")
+        typer.echo(f"Log level for stderr is level {logger.current_stderr_log_level}")
+
+    @staticmethod
+    def list_settings(
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
+    ):
+        r"""
+        Write the settings to stdout.
+        """
+        MANDOS_SETUP(log, stderr)
+        defaults = SETTINGS.defaults()
+        width = max((len(k) + 2 + len(v) + 1 for k, v in SETTINGS.items()))
+        for k, v in SETTINGS.as_dict():
+            msg = f"{k} = {v}".ljust(width)
+            if v != defaults[k]:
+                msg += f" (default: {defaults[k]})"
+            typer.echo(msg)
 
     @staticmethod
     def document(
@@ -143,7 +162,7 @@ class MiscCommands:
         if width == 0:
             width = 9223372036854775807
         default = f"commands-level{level}.txt"
-        to = EntryUtils.adjust_filename(to, default, replace)
+        to = EntryUtils.adjust_filename(to, default, replace=replace)
         doc = Documenter(
             level=level,
             main=main_only,
@@ -157,60 +176,33 @@ class MiscCommands:
     @staticmethod
     def search(
         path: Path = Ca.in_compound_table,
-        config: Path = Arg.in_file(
+        config: Path = Opt.in_file(
             r"""
-            TOML config file. See docs.
-            """
+            TOML config file. See the docs.
+            """,
+            default=...,
         ),
         to: Path = Ca.out_wildcard,
         log: Optional[Path] = Ca.log,
         stderr: str = CommonArgs.stderr,
         replace: bool = Opt.flag(r"""Overwrite files if they exist."""),
+        check: bool = Opt.flag("Check and write docs file only; do not run"),
     ) -> None:
         r"""
         Run multiple searches.
         """
         MANDOS_SETUP(log, stderr)
-        default = "search-" + MandosResources.start_timestamp_filesys
+        default = "search-" + Globals.start_timestamp_filesys
+        # TODO: , suffixes=FileFormat.from_path
         out_dir, suffix = EntryUtils.adjust_dir_name(to, default)
-        if config is None:
-            raise BadCommandError("Specify config")
-        logger.notice(f"Will write as {suffix} to {out_dir}")
-        MultiSearch.build(path, out_dir, suffix, config, replace, log).run()
-
-    @staticmethod
-    def detail_search(
-        config: Path = Arg.in_file(
-            r"""
-            TOML config file. See docs.
-            """
-        ),
-        to: Path = Opt.out_path(
-            rf"""
-            Write the table here.
-
-            {Ca.output_formats}
-
-            {ArgUtils.df_description(SearchExplainDf)}
-
-            [default: <config>-details{DEF_SUFFIX}]
-            """
-        ),
-        replace: bool = Ca.replace,
-        log: Optional[Path] = Ca.log,
-        stderr: str = CommonArgs.stderr,
-    ) -> None:
-        r"""
-        Write details about a search (:search).
-        """
-        MANDOS_SETUP(log, stderr)
-        to = EntryUtils.adjust_filename(
-            to, config.parent / (config.name + f"-details{DEF_SUFFIX}"), replace
-        )
-        search = MultiSearch.build(Path("."), Path("."), config)
-        df = search.to_table()
-        df.write_file(to)
-        logger.notice(f"Wrote search details to {to}")
+        logger.notice(f"Will write {suffix} to {out_dir}{os.sep}")
+        config_fmt = FileFormat.from_path(config)
+        if config_fmt is not FileFormat.toml:
+            logger.caution(f"Config format is {config_fmt}, not toml; trying anyway")
+        config = SearchConfigDf.read_file(config)
+        search = MultiSearch(config, path, out_dir, suffix, replace, log)
+        if not check:
+            search.run()
 
     @staticmethod
     def serve(
@@ -272,23 +264,12 @@ class MiscCommands:
     def fill(
         path: Path = Arg.in_file(
             rf"""
-            The path to the file listing compounds by various IDs.
-
-            {Ca.input_formats}
-
-            Can use columns called 'inchikey', 'chembl_id', and 'pubchem_id'.
-            Other columns are permitted but will not be used.
-
-            {ArgUtils.df_description(InputFrame)}
+            {DfCliHelp.help(InputCompoundsDf).get_short_text(nl=nl)}
             """,
         ),
         to: Path = Opt.out_path(
             rf"""
-            A table of compounds and their database IDs will be written here.
-
-            {Ca.output_formats}
-
-            {ArgUtils.df_description(IdMatchFrame)}
+            {DfCliHelp.help(IdMatchDf).get_short_text(nl=nl)}
 
             [default: <path>-ids-<start-time>{DEF_SUFFIX}]
             """
@@ -336,8 +317,8 @@ class MiscCommands:
         """
         MANDOS_SETUP(log, stderr)
         default = str(Path(path).with_suffix("")) + "-filled" + "".join(path.suffixes)
-        to = EntryUtils.adjust_filename(to, default, replace)
-        df = IdMatchFrame.read_file(path)
+        to = EntryUtils.adjust_filename(to, default, replace=replace)
+        df = IdMatchDf.read_file(path)
         df = CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
         df.write_file(to)
 
@@ -356,27 +337,20 @@ class MiscCommands:
         """
         MANDOS_SETUP(log, stderr)
         logger.error(f"Not implemented fully yet.")
-        df = IdMatchFrame.read_file(path)
+        df = IdMatchDf.read_file(path)
         df = CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
         logger.notice(f"Done caching.")
 
     @staticmethod
     def export_taxa(
         taxa: str = Ca.taxa,
-        forbid: str = Opt.val(
-            r"""Exclude descendents of these taxa IDs or names (comma-separated).""", default=""
-        ),
-        to: Path = typer.Option(
-            None,
-            help=rf"""
-            Where to export.
-
-            {Ca.output_formats}
-
-            {ArgUtils.df_description(TaxonomyDf)}
+        forbid: str = Ca.ban_taxa,
+        to: Path = Opt.out_path(
+            rf"""
+            {DfCliHelp.help(TaxonomyDf).get_short_text(nl=nl)}
 
             [default: ./<taxa>-<datetime>{DEF_SUFFIX}]
-            """,
+            """
         ),
         replace: bool = Ca.replace,
         in_cache: bool = CommonArgs.in_cache,
@@ -391,10 +365,13 @@ class MiscCommands:
         MANDOS_SETUP(log, stderr)
         concat = taxa + "-" + forbid
         taxa = ArgUtils.parse_taxa(taxa)
+        ancestors = ArgUtils.parse_taxa_ids(ancestors)
         forbid = ArgUtils.parse_taxa(forbid)
-        default = concat + "-" + MandosResources.start_timestamp_filesys + DEF_SUFFIX
-        to = EntryUtils.adjust_filename(to, default, replace)
-        my_tax = TaxonomyFactories.get_smart_taxonomy(taxa, forbid)
+        default = concat + "-" + Globals.start_timestamp_filesys + DEF_SUFFIX
+        to = EntryUtils.adjust_filename(to, default, replace=replace)
+        my_tax = TaxonomyFactories.get_smart_taxonomy(
+            allow=taxa, forbid=forbid, ancestors=ancestors, local_only=in_cache
+        )
         my_tax = my_tax.to_df()
         my_tax.write_file(to, mkdirs=True)
 
@@ -402,8 +379,9 @@ class MiscCommands:
     def cache_taxa(
         taxa: str = Opt.val(
             r"""
-            Either "vertebrata", "all", or a comma-separated list of UniProt taxon IDs.
+            Either "all" or a comma-separated list of UniProt taxon IDs.
 
+            Can also be "vertebrata", "cellular", or "viral" for those specific taxa.
             "all" is only valid when --replace is passed;
             this will regenerate all taxonomy files that are found in the cache.
             """,
@@ -425,31 +403,15 @@ class MiscCommands:
         Puts both the raw data and fixed data in the cache under ``~/.mandos/taxonomy/``.
         """
         MANDOS_SETUP(log, stderr)
-        if taxa == "":
-            logger.info("No taxa were specified. No data downloaded.")
-            return
-        if (
-            taxa not in ["all", "vertebrata"]
-            and not taxa.replace(",", "").replace(" ", "").isdigit()
-        ):
-            raise XValueError(f"Use either 'all', 'vertebrata', or a UniProt taxon ID")
         if taxa == "all" and not replace:
-            raise XValueError(f"Use --replace with taxon 'all'")
-        factory = TaxonomyFactories.from_uniprot()
-        if taxa == "all" and replace:
-            listed = TaxonomyFactories.list_cached_files()
-            for p in listed.values():
-                p.unlink()
-            factory.rebuild_vertebrata()
-            for t in listed.keys():
-                factory.load_dl(t)
-        elif taxa == "vertebrata" and (replace or not factory.resolve_path(7742).exists()):
-            factory.rebuild_vertebrata()
-        elif taxa == "vertebrata":
-            factory.load_vertebrate(7742)  # should usually do nothing
+            raise XValueError(f"Use --replace with 'all'")
+        # we're good to go:
+        factory = TaxonomyFactories.main()
+        if taxa == "all":
+            taxa = TaxonomyFactories.list_cached_files().keys()
         else:
-            for taxon in [int(t.strip()) for t in taxa.split(",")]:
-                factory.delete_exact(taxon)
+            taxa = ArgUtils.parse_taxa_ids(taxa)
+        factory.rebuild(taxa, replace=replace)
 
     @staticmethod
     def cache_g2p(
@@ -464,7 +426,7 @@ class MiscCommands:
         Data will generally be stored under``~/.mandos/g2p/``.
         """
         MANDOS_SETUP(log, stderr)
-        api = CachingG2pApi(MANDOS_SETTINGS.g2p_cache_path)
+        api = CachingG2pApi(SETTINGS.g2p_cache_path)
         api.download(force=replace)
 
     @staticmethod
@@ -478,11 +440,11 @@ class MiscCommands:
         """
         MANDOS_SETUP(log, stderr)
         typer.echo(f"Will recursively delete all of these paths:")
-        for p in MANDOS_SETTINGS.all_cache_paths:
+        for p in SETTINGS.all_cache_paths:
             typer.echo(f"    {p}")
         if not yes:
             typer.confirm("Delete?", abort=True)
-        for p in MANDOS_SETTINGS.all_cache_paths:
+        for p in SETTINGS.all_cache_paths:
             p.unlink(missing_ok=True)
         logger.notice("Deleted all cached data")
 
@@ -492,7 +454,7 @@ class MiscCommands:
             rf"""
             Directory containing results from a mandos search.
 
-            {Ca.input_formats}
+            {DfCliHelp.list_formats().get_short_text()}
             """
         ),
         to: Optional[Path] = Ca.out_annotations_file,
@@ -533,7 +495,7 @@ class MiscCommands:
         MANDOS_SETUP(log, stderr)
         default = str(path) + "-filter-" + by.stem + DEF_SUFFIX
         to = EntryUtils.adjust_filename(to, default, replace)
-        df = HitFrame.read_file(path)
+        df = HitDf.read_file(path)
         Filtration.from_file(by).apply(df).write_file(to)
 
     @staticmethod
@@ -565,7 +527,7 @@ class MiscCommands:
         MANDOS_SETUP(log, stderr)
         default = f"{path}-statements.nt"
         to = EntryUtils.adjust_filename(to, default, replace)
-        hits = HitFrame.read_file(path).to_hits()
+        hits = HitDf.read_file(path).to_hits()
         with to.open() as f:
             for hit in hits:
                 f.write(hit.to_triple.n_triples)
@@ -596,7 +558,7 @@ class MiscCommands:
         MANDOS_SETUP(log, stderr)
         default = f"{path}-reified.nt"
         to = EntryUtils.adjust_filename(to, default, replace)
-        hits = HitFrame.read_file(path).to_hits()
+        hits = HitDf.read_file(path).to_hits()
         with to.open() as f:
             for triple in Reifier().reify(hits):
                 f.write(triple.n_triples)
@@ -608,7 +570,7 @@ class MiscCommands:
             rf"""
             Path to the output file.
 
-            {Ca.output_formats}
+            {DfCliHelp.list_formats().get_short_text()}
 
             [default: <path.parent>/export{DEF_SUFFIX}]
             """
@@ -625,7 +587,7 @@ class MiscCommands:
         MANDOS_SETUP(log, stderr)
         default = path.parent / DEF_SUFFIX
         to = EntryUtils.adjust_filename(to, default, replace)
-        df = HitFrame.read_file(path)
+        df = HitDf.read_file(path)
         df.write_file(to)
 
 

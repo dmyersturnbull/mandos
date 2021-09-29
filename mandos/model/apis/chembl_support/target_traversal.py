@@ -4,15 +4,13 @@ import abc
 import enum
 import sre_compile
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Sequence, Set, MutableMapping
+from typing import Dict, Mapping, MutableMapping, Optional, Sequence, Set
 from typing import Tuple as Tup
 from typing import Type
 
 import regex
 from pocketutils.core.exceptions import ParsingError
 
-from mandos.model.utils.resources import MandosResources
-from mandos.model.utils.reflection_utils import ReflectionUtils
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
     ChemblTargetGraph,
@@ -21,6 +19,8 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
     TargetRelType,
 )
 from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType
+from mandos.model.utils.reflection_utils import ReflectionUtils
+from mandos.model.utils.resources import MandosResources
 
 
 class Acceptance(enum.Enum):
@@ -169,9 +169,7 @@ class TargetTraversalStrategies:
 
     @classmethod
     def standard_strategies(cls) -> Set[str]:
-        return {
-            p.stem for p in MandosResources.path("strategies").iterdir() if p.suffix == ".strat"
-        }
+        return {p.stem for p in MandosResources.dir("strategies").iterdir() if p.suffix == ".strat"}
 
     @classmethod
     def by_name(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
@@ -190,7 +188,7 @@ class TargetTraversalStrategies:
 
     @classmethod
     def from_resource(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
-        path = MandosResources.path("strategies", name, suffix=".strat")
+        path = MandosResources.file("strategies", name, suffix=".strat")
         lines = StandardStrategyParser.read_lines(path)
         return cls._from_lines(lines, api, path.stem)
 

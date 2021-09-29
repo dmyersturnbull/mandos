@@ -1,5 +1,5 @@
 import enum
-from typing import Optional, Union, AbstractSet
+from typing import AbstractSet, Optional, Union
 
 from pocketutils.core.exceptions import XValueError
 

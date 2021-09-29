@@ -1,8 +1,8 @@
 import abc
-from typing import TypeVar, AbstractSet, Sequence
+from typing import Sequence, TypeVar
 
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.chembl_scrape_api import ChemblScrapePage, ChemblScrapeApi
+from mandos.model.apis.chembl_scrape_api import ChemblScrapeApi, ChemblScrapePage
 from mandos.model.hits import AbstractHit
 from mandos.model.searches import Search
 

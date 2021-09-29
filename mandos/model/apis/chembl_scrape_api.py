@@ -10,12 +10,12 @@ from typing import Optional, Type
 
 import pandas as pd
 from pocketutils.core.query_utils import QueryExecutor
-from typeddfs import TypedDfs, TypedDf
+from typeddfs import TypedDf, TypedDfs
 
 from mandos.model import Api
+from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
 from mandos.model.utils import CleverEnum
-from mandos.model.settings import QUERY_EXECUTORS, MANDOS_SETTINGS
-from mandos.model.utils.scrape import Scraper, By
+from mandos.model.utils.scrape import By, Scraper
 
 
 class SarPredictionResult(CleverEnum):
@@ -121,7 +121,7 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
     def __init__(
         self,
         query: Optional[QueryingChemblScrapeApi],
-        cache_dir: Path = MANDOS_SETTINGS.chembl_cache_path,
+        cache_dir: Path = SETTINGS.chembl_cache_path,
     ):
         self._cache_dir = cache_dir
         self._query = query
@@ -137,9 +137,7 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
         return data
 
     def path(self, cid: str, page: ChemblScrapePage):
-        return (self._cache_dir / page.name / cid).with_suffix(
-            MANDOS_SETTINGS.archive_filename_suffix
-        )
+        return (self._cache_dir / page.name / cid).with_suffix(SETTINGS.archive_filename_suffix)
 
 
 __all__ = [

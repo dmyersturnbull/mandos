@@ -10,15 +10,15 @@ from pocketutils.core.exceptions import UnsupportedOpError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDf, TypedDfs
 
-from mandos.model.utils.setup import logger
 from mandos.model import Api, CompoundNotFoundError
-from mandos.model.settings import MANDOS_SETTINGS
 from mandos.model.apis.g2p_support.g2p_data import G2pData, G2pInteraction
+from mandos.model.settings import SETTINGS
 from mandos.model.utils import TrueFalseUnknown
+from mandos.model.utils.setup import logger
 
 LIGANDS_URL = "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.tsv"
 INTERACTIONS_URL = "https://www.guidetopharmacology.org/DATA/interactions.tsv"
-_DEF_SUFFIX = MANDOS_SETTINGS.archive_filename_suffix
+_DEF_SUFFIX = SETTINGS.archive_filename_suffix
 
 
 def _oint(x: str) -> Optional[int]:
@@ -60,7 +60,7 @@ class G2pApi(Api, metaclass=abc.ABCMeta):
 
 
 class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
-    def __init__(self, cache_path: Path = MANDOS_SETTINGS.g2p_cache_path):
+    def __init__(self, cache_path: Path = SETTINGS.g2p_cache_path):
         self.cache_path = Path(cache_path)
         self.ligands: LigandDf = None
         self.interactions: InteractionDf = None

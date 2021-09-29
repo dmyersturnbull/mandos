@@ -6,7 +6,7 @@ traversal = "@null"
 [[search]]
 key = "core.binding"
 source = "chembl:binding"
-min_pchembl = 6
+pchembl = 6
 confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
@@ -15,7 +15,7 @@ traversal = "@null"
 [[search]]
 key = "core.chembl.process"
 source = "chembl:go.process"
-min_pchembl = 6
+pchembl = 6
 confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
@@ -24,7 +24,7 @@ traversal = "@null"
 [[search]]
 key = "core.chembl.function"
 source = "chembl:go.function"
-min_pchembl = 6
+pchembl = 6
 confidence = 5
 taxa = "euteleostomi"
 traversal = "@null"
@@ -32,7 +32,7 @@ traversal = "@null"
 [[search]]
 key = "extra.chembl.component"
 source = "chembl:go.component"
-min_pchembl = 6
+pchembl = 6
 confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
@@ -98,7 +98,7 @@ source = "inter.drugbank:ddi"
 [[search]]
 key = "core.pubchem.activity"
 source = "assay.pubchem:act"
-name_must_match = false
+match_name = false
 
 [[search]]
 key = "core.chemidplus.effects"

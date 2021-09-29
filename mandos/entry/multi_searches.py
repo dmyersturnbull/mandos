@@ -6,28 +6,24 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence, Type, Union, Optional, MutableMapping
+from typing import Any, Mapping, MutableMapping, Optional, Sequence, Type, Union
 
 import pandas as pd
-import tomlkit
 import typer
-from pocketutils.core.exceptions import (
-    ReservedError,
-    AlreadyUsedError,
-    PathExistsError,
-    XValueError,
-)
+from pocketutils.core.exceptions import PathExistsError
 from typeddfs import TypedDfs
-from tomlkit.api import Table, AoT
+from typeddfs.abs_dfs import AbsDf
 from typeddfs.checksums import Checksums
-from typeddfs.file_formats import CompressionFormat
+from typeddfs.utils import Utils
 
-from mandos.model.utils.setup import logger, MandosLogging
+from mandos.entry._arg_utils import EntryUtils
+from mandos.entry.abstract_entries import Entry
 from mandos.entry.api_singletons import Apis
 from mandos.entry.entry_commands import Entries
-from mandos.entry.abstract_entries import Entry
+from mandos.model.hit_dfs import HitDf
+from mandos.model.settings import SETTINGS
 from mandos.model.utils.reflection_utils import InjectionError
-from mandos.model.hits import HitFrame
+from mandos.model.utils.setup import MandosLogging, logger, LogSinkInfo
 
 cli = typer.Typer()
 Apis.set_default()
@@ -35,25 +31,48 @@ Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
 
 EntriesByCmd: MutableMapping[str, Type[Entry]] = {e.cmd(): e for e in Entries}
 
-# these are only permitted in 'meta', not individual searches
-meta_keys = {"log", "stderr"}
+# these are not permitted in individual searches
 forbidden_keys = {"to", "no_setup"}
 
 SearchExplainDf = (
     TypedDfs.typed("SearchExplainDf")
     .require("key", "search", "source", dtype=str)
-    .require("category", "desc", "args", dtype=str)
+    .require("desc", "args", dtype=str)
+    .reserve("category", dtype=str)
     .strict()
     .secure()
 ).build()
 
 
+def _no_duplicate_keys(self: AbsDf):
+    group = self[["key"]].groupby("key").count().to_dict()
+    bad = {k for k, v in group.items() if v > 1}
+    if len(bad) > 0:
+        return f"Duplicate keys: {', '.join(bad)}"
+
+
+def _no_illegal_cols(self: AbsDf):
+    if "to" in self.columns:
+        return "Illegal key 'to'"
+    if "path" in self.columns:
+        return "Illegal key 'path'"
+
+
+SearchConfigDf = (
+    TypedDfs.typed("SearchConfigDf")
+    .require("key", "source", dtype=str)
+    .verify(_no_duplicate_keys)
+    .verify(_no_illegal_cols)
+    .add_read_kwargs("toml", aot="search")
+    .add_write_kwargs("toml", aot="search")
+    .secure()
+    .build()
+)
+
+
 @dataclass(frozen=True, repr=True)
 class MultiSearch:
-    # 'meta' allows us to set defaults for things like --to
-    meta: Table
-    searches: AoT
-    toml_path: Path
+    config: SearchConfigDf
     input_path: Path
     out_dir: Path
     suffix: str
@@ -62,48 +81,69 @@ class MultiSearch:
 
     @property
     def final_path(self) -> Path:
-        name = "search_" + self.input_path.name + "_" + self.toml_path.name + self.suffix
+        name = "search_" + self.input_path.name + self.suffix
         return self.out_dir / name
 
     @property
-    def explain_path(self) -> Path:
-        return Path(str(self.final_path.with_suffix("")) + "_explain.tsv")
+    def doc_path(self) -> Path:
+        return Path(str(self.final_path.with_suffix("")) + "_doc.tsv")
 
     def __post_init__(self):
         if not self.replace and self.final_path.exists():
             raise PathExistsError(f"Path {self.final_path} exists but --replace is not set")
-        if not self.replace and self.explain_path.exists():
-            raise PathExistsError(f"Path {self.explain_path} exists but --replace is not set")
-        for key, value in dict(self.meta).items():
-            if key not in meta_keys:
-                raise ReservedError(f"{key} in 'meta' not supported.")
+        if not self.replace and self.doc_path.exists():
+            raise PathExistsError(f"Path {self.doc_path} exists but --replace is not set")
 
-    @classmethod
-    def build(
-        cls,
-        input_path: Path,
-        out_dir: Path,
-        suffix: str,
-        toml_path: Path,
-        replace: bool,
-        log_path: Optional[Path],
-    ) -> MultiSearch:
-        toml = tomlkit.loads(Path(toml_path).read_text(encoding="utf8"))
-        searches = toml.get("search", [])
-        return MultiSearch(
-            toml.get("meta", []),
-            searches,
-            toml_path,
-            input_path,
-            out_dir,
-            suffix,
-            replace,
-            log_path,
-        )
+    def run(self) -> None:
+        # build up the list of Entry classes first, and run ``test`` on each one
+        # that's to check that the parameters are correct before running anything
+        commands = self._build_commands()
+        if len(commands) == 0:
+            logger.warning(f"No searches; nothing to do")
+            return
+        # write a file describing all of the searches
+        self.write_docs(commands)
+        # build and test
+        for cmd in commands:
+            try:
+                cmd.test()
+            except Exception:
+                logger.error(f"Bad search {cmd}")
+                raise
+        logger.notice("Searches look ok.")
+        # start!
+        for cmd in commands:
+            cmd.run()
+        logger.notice("Done with all searches!")
+        # write the final file
+        df = HitDf(pd.concat([HitDf.read_file(cmd.output_path) for cmd in commands]))
+        df.write_file(self.final_path, file_hash=True)
+        logger.notice(f"Concatenated file to {self.final_path}")
 
-    def to_table(self) -> SearchExplainDf:
+    def _build_commands(self) -> Sequence[CmdRunner]:
+        commands = {}
+        for i in range(len(self.config)):
+            data = {
+                k: v
+                for k, v in self.config.iloc[i].to_dict().items()
+                if v is not None and not pd.isna(v)
+            }
+            key = data["key"]
+            default_to = self.input_path.parent / (key + SETTINGS.table_suffix)
+            data["to"] = EntryUtils.adjust_filename(None, default=default_to, replace=self.replace)
+            data["log"] = self._get_log_path(key)
+            cmd = CmdRunner.build(data, self.input_path)
+            commands[cmd.key] = cmd
+        # log about replacing
+        replacing = {k for k, v in commands.items() if v.was_run}
+        if len(replacing) > 0:
+            replacing = Utils.join_to_str(replacing, last="and")
+            logger.notice(f"Overwriting results for {replacing}.")
+        return list(commands.values())
+
+    def write_docs(self, commands: Sequence[CmdRunner]) -> None:
         rows = []
-        for cmd in self._build_commands():
+        for cmd in commands:
             name = cmd.cmd.get_search_type().search_name()
             cat = cmd.category
             src = cmd.cmd.get_search_type().primary_data_source()
@@ -111,55 +151,15 @@ class MultiSearch:
             args = ", ".join([f"{k}={v}" for k, v in cmd.params.items()])
             ser = dict(key=cmd.key, search=name, category=cat, source=src, desc=desc, args=args)
             rows.append(pd.Series(ser))
-        return SearchExplainDf(rows)
+        df = SearchExplainDf(rows)
+        df.write_file(self.doc_path, mkdirs=True)
 
-    def run(self) -> None:
-        # build up the list of Entry classes first, and run ``test`` on each one
-        # that's to check that the parameters are correct before running anything
-        commands = self._build_commands()
-        if len(commands) == 0:
-            logger.warning(f"No searches -- nothing to do")
-            return
-        # write a metadata file describing all of the searches
-        explain = self.to_table()
-        explain.write_file(self.explain_path, mkdirs=True)
-        for cmd in commands:
-            cmd.test()
-            logger.info(f"Search {cmd.key} looks ok.")
-        logger.notice("All searches look ok.")
-        for cmd in commands:
-            cmd.run()
-        logger.notice("Done with all searches!")
-        # write the final file
-        df = HitFrame(pd.concat([HitFrame.read_file(cmd.output_path) for cmd in commands]))
-        df.write_file(self.final_path)
-        logger.notice(f"Concatenated file to {self.final_path}")
-
-    def _build_commands(self) -> Sequence[CmdRunner]:
-        commands = {}
-        skipping = []
-        replacing = []
-        for search in self.searches:
-            cmd = CmdRunner.build(
-                search, self.meta, self.input_path, self.out_dir, self.suffix, self.log_path
-            )
-            if cmd.output_path.exists() and not cmd.done_path.exists():
-                logger.error(f"Path {cmd.output_path} exists but not marked as complete.")
-            elif cmd.was_run and self.replace:
-                replacing += [cmd]
-            elif cmd.was_run and not self.replace:
-                skipping += [cmd]
-            if cmd.key in commands:
-                raise AlreadyUsedError(f"Repeated search key '{cmd.key}'")
-            if cmd not in skipping:
-                commands[cmd.key] = cmd
-        if len(skipping) > 0:
-            skipping = ", ".join([c.key for c in skipping])
-            logger.notice(f"Skipping searches {skipping} (already run).")
-        if len(replacing) > 0:
-            replacing = ", ".join([c.key for c in skipping])
-            logger.notice(f"Overwriting results for searches {replacing}.")
-        return list(commands.values())
+    def _get_log_path(self, key: str):
+        if self.log_path is None:
+            suffix = SETTINGS.log_suffix
+        else:
+            suffix = LogSinkInfo.guess(self.log_path).suffix
+        return self.out_dir / (key + suffix)
 
 
 @dataclass(frozen=True, repr=True)
@@ -195,49 +195,24 @@ class CmdRunner:
         self.cmd.run(self.input_path, **self.params)
 
     @classmethod
-    def build(
-        cls,
-        e: Table,
-        meta: Table,
-        input_path: Path,
-        out_dir: Path,
-        suffix: str,
-        cli_log: Optional[Path],
-    ):
-        cmd = e["source"].value
-        key = e.get("key", cmd)
-        if "log" in meta:
-            if len(meta["log"].value) == 1:
-                raise XValueError("'log' is empty")
-            log = key + meta["log"].value
-            MandosLogging.get_log_suffix(cli_log)  # just check
-        elif cli_log is not None:
-            log = key + MandosLogging.get_log_suffix(cli_log)
-        else:
-            log = key + ".log"
-        log = out_dir / log
+    def build(cls, data: Mapping[str, Any], input_path: Path):
+        key, cmd = data["key"], data["source"]
         try:
             cmd = EntriesByCmd[cmd]
         except KeyError:
-            raise InjectionError(f"Search command {cmd} (key {key}) does not exist")
-        # use defaults
-        params = dict(meta)
-        # they shouldn't pass any of these args
-        bad = {b for b in {*meta_keys, "path", "no_setup", "to"} if b in e}
-        if len(bad) > 0:
-            raise ReservedError(f"Forbidden keys in [[search]] ({cmd}): {','.join(bad)}")
-        # update the defaults from 'meta' (e.g. 'verbose')
-        # skip the source -- it's the command name
-        # stupidly, we need to explicitly add the defaults from the OptionInfo instances
+            raise InjectionError(f"Search command {cmd} (key {key}) does not exist") from None
+        params = {}
+        # we need to explicitly add the defaults from the OptionInfo instances
         params.update(cmd.default_param_values().items())
         # do this after: the defaults had path, key, and to
         params["key"] = key
-        params["to"] = out_dir / (key + suffix)
-        params["log"] = log
         # now add the params we got for this command's section
-        params.update({k: v for k, v in e.items() if k != "source" and k != "category"})
-        category = e.get("category")
-        return CmdRunner(cmd, params, input_path, category)
+        params.update({k: v for k, v in data.items() if k != "source" and k != "category"})
+        category = data.get("category")
+        runner = CmdRunner(cmd, params, input_path, category)
+        if runner.output_path.exists() and not runner.done_path.exists():
+            logger.error(f"Path {runner.output_path} exists but not marked as complete.")
+        return runner
 
 
-__all__ = ["MultiSearch"]
+__all__ = ["MultiSearch", "SearchExplainDf", "SearchConfigDf"]

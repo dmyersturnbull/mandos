@@ -1,7 +1,7 @@
 import inspect
 import sys
 import typing
-from typing import Type, Optional, Mapping, Any
+from typing import Any, Mapping, Optional, Type
 
 from pocketutils.core.exceptions import LookupFailedError
 
@@ -16,7 +16,7 @@ class ReflectionUtils:
     @classmethod
     def get_generic_arg(cls, clazz: Type[T], bound: Optional[Type[T]] = None) -> Type:
         """
-        Finds the generic argument (specific TypeVar) of a :py:class:`~typing.Generic` class.
+        Finds the generic argument (specific TypeVar) of a :class:`~typing.Generic` class.
         **Assumes that ``clazz`` only has one type parameter. Always returns the first.**
 
         Args:
@@ -121,3 +121,6 @@ class ReflectionUtils:
             raise InjectionError(
                 f"Did not find {clazz} by fully-qualified class name {fully_qualified}"
             ) from None
+
+
+__all__ = ["ReflectionUtils", "InjectionError"]

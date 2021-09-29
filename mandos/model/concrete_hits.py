@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 import abc
 import enum
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from mandos.model.utils.reflection_utils import ReflectionUtils
 from mandos.model.hits import AbstractHit
+from mandos.model.utils.reflection_utils import ReflectionUtils
 
 
 @dataclass(frozen=True, order=True, repr=True)

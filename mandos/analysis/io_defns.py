@@ -2,12 +2,12 @@
 Definitions of input types for analysis.
 """
 
-from typing import Sequence, Optional
+from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
 from pocketutils.core.exceptions import XValueError
-from typeddfs import TypedDfs, AffinityMatrixDf, FileFormat, UntypedDf
+from typeddfs import AffinityMatrixDf, TypedDfs
 
 
 def _to_long_form(self: pd.DataFrame, kind: str, key: str):
@@ -84,7 +84,7 @@ SimilarityDfShortForm = (
 
 
 ScoreDf = (
-    TypedDfs.typed("InputScoreFrame")
+    TypedDfs.typed("ScoreDf")
     .require("inchikey", "score_name", dtype=str)
     .require("score_value", dtype=np.float64)
     .add_methods(of_constant=_of_constant)
@@ -94,7 +94,7 @@ ScoreDf = (
 
 
 EnrichmentDf = (
-    TypedDfs.typed("EnrichmentFrame")
+    TypedDfs.typed("EnrichmentDf")
     .require("predicate", "object", "key", dtype=str)
     .require("score_name", dtype=str)
     .require("value", "inverse", dtype=np.float64)

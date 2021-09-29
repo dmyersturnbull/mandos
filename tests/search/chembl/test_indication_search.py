@@ -1,9 +1,9 @@
 from collections import Sequence
 
 import pytest
-from mandos.model.hits import AbstractHit
 
 from mandos.entry.api_singletons import Apis
+from mandos.model.hits import AbstractHit
 from mandos.search.chembl.indication_search import IndicationSearch
 
 from .. import get_test_resource

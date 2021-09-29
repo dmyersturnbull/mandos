@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 import enum
-from typing import Union, Set
+from typing import Set, Union
 
 from mandos.model.utils import CleverEnum
 
@@ -35,23 +36,6 @@ class DataValidityComment(CleverEnum):
     outside_typical_range = enum.auto()
     non_standard_unit_for_type = enum.auto()
     author_confirmed_error = enum.auto()
-
-    @classmethod
-    def resolve(cls, st: str) -> Set[DataValidityComment]:
-        found = set()
-        for s in st.lower().split(","):
-            s = s.strip()
-            if s == "@all":
-                return set(cls)
-            if s == "@negative":
-                match = DataValidityComment.negative_comments()
-            elif s == "@positive":
-                match = DataValidityComment.positive_comments()
-            else:
-                match = {DataValidityComment.of(s)}
-            for m in match:
-                found.add(m)
-        return found
 
     @property
     def is_positive(self) -> bool:

@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Any, Callable, FrozenSet, Iterable, Optional, Set, Type, TypeVar, Union
 
 import regex
-from pocketutils.core.exceptions import XValueError, XTypeError
+from pocketutils.core.exceptions import XTypeError, XValueError
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools
 

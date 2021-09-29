@@ -4,16 +4,17 @@ Scoring (regression and enrichment) calculations.
 import abc
 import enum
 import math
-from typing import Generic, Mapping, Sequence, Type, TypeVar, Union, Optional, Any, Tuple
+from typing import Any, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pandas as pd
 from numpy.random import RandomState
 
 from mandos.analysis import AnalysisUtils as Au
+from mandos.analysis.io_defns import EnrichmentDf, ScoreDf
+from mandos.model.hit_dfs import HitDf
+from mandos.model.hits import AbstractHit, KeyPredObj
 from mandos.model.utils import CleverEnum
-from mandos.model.hits import AbstractHit, HitFrame, KeyPredObj
-from mandos.analysis.io_defns import ScoreDf, EnrichmentDf
 
 S = TypeVar("S", bound=Union[int, float, bool])
 
@@ -167,7 +168,7 @@ class EnrichmentCalculation:
         self.seed = seed
         self.state = RandomState(seed)
 
-    def calculate(self, hit_df: HitFrame, scores: Optional[ScoreDf]) -> EnrichmentDf:
+    def calculate(self, hit_df: HitDf, scores: Optional[ScoreDf]) -> EnrichmentDf:
         hits = hit_df.to_hits()
         if scores is None:
             scores = self._default_scores(hit_df)
@@ -188,7 +189,7 @@ class EnrichmentCalculation:
                 reverse = alg_instance.calc(hits, (-score_vals).to_dict())
             return [self._make_df(forward, reverse, score_name, alg_type.name, sample)]
 
-    def _default_scores(self, hit_df: HitFrame) -> ScoreDf:
+    def _default_scores(self, hit_df: HitDf) -> ScoreDf:
         inchikeys = hit_df["origin_inchikey"].unique().values
         counts = ScoreDf.of_constant(inchikeys, score_name="count")
         weights = ScoreDf.of_constant(inchikeys, score_name="count")

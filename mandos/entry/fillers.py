@@ -1,22 +1,21 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Optional, Mapping, Tuple, Dict, MutableMapping
+from typing import Any, Mapping, MutableMapping, Optional, Tuple
 
 from pocketutils.core.exceptions import XValueError
-
-from mandos.model.utils.setup import logger
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 
-from mandos.model import CompoundNotFoundError, CompoundStruct
-
 from mandos.entry.api_singletons import Apis
+from mandos.model import CompoundNotFoundError, CompoundStruct
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
+from mandos.model.utils.setup import logger
 
 
-IdMatchFrame = (
-    TypedDfs.typed("IdMatchFrame")
+IdMatchDf = (
+    TypedDfs.typed("IdMatchDf")
     .reserve("inchikey", dtype=str)
     .reserve("compound_id", "compound_name", "library", dtype=str)
     .reserve("inchi", dtype=str)
@@ -69,7 +68,7 @@ class CompoundIdFiller:
     chembl: bool = True
     pubchem: bool = True
 
-    def fill(self, df: IdMatchFrame) -> IdMatchFrame:
+    def fill(self, df: IdMatchDf) -> IdMatchDf:
         df = self._prep(df)
         logger.info(f"Processing {len(df)} input compounds...")
         fill = []
@@ -118,7 +117,7 @@ class CompoundIdFiller:
         pubchem_id: Optional[str],
         chembl_id: Optional[str],
         line_no: int,
-    ):
+    ) -> Mapping[str, Any]:
         if inchikey is pubchem_id is chembl_id is None:
             logger.error(f"[line {line_no}] No data for {compound_id}")
             return dict(
@@ -193,14 +192,14 @@ class CompoundIdFiller:
         else:
             return list(all_uniques)[0], non_input_dbs
 
-    def _prep(self, df: IdMatchFrame) -> IdMatchFrame:
+    def _prep(self, df: IdMatchDf) -> IdMatchDf:
         bad_cols = [c for c in df.columns if c.startswith("origin_")]
         if len(bad_cols) > 0:
             raise XValueError(f"Columns {', '.join(bad_cols)} start with 'origin_'")
         rename_cols = {c: "origin_" + c for c in FILL_IDS if c in df.columns}
         if len(rename_cols) > 0:
             logger.notice(f"Renaming columns: {', '.join(rename_cols.keys())}")
-        df: IdMatchFrame = df.rename(columns=rename_cols)
+        df: IdMatchDf = df.rename(columns=rename_cols)
         drop_cols = {c for c in df.columns if df[c].isnull().all()}
         if len(drop_cols):
             logger.warning(f"Dropping empty columns: {', '.join(drop_cols)}")
@@ -232,4 +231,4 @@ class CompoundIdFiller:
             return None
 
 
-__all__ = ["CompoundIdFiller", "IdMatchFrame"]
+__all__ = ["CompoundIdFiller", "IdMatchDf"]

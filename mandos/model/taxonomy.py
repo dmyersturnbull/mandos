@@ -5,16 +5,26 @@ from collections import defaultdict
 from dataclasses import dataclass
 from functools import total_ordering
 from pathlib import Path
-from typing import FrozenSet, Iterable, List, Mapping, Optional, Sequence, Set, Union
+from typing import (
+    Collection,
+    FrozenSet,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Set,
+    Union,
+    Dict,
+)
 
 import pandas as pd
-from pocketutils.core.exceptions import LookupFailedError, DataIntegrityError
-
-from mandos.model import MultipleMatchesError
+from pocketutils.core.exceptions import DataIntegrityError, LookupFailedError, XTypeError
 from typeddfs import TypedDfs
 
-from mandos.model.utils.setup import logger
+from mandos.model import MultipleMatchesError
 from mandos.model.utils import CleverEnum
+from mandos.model.utils.setup import logger
 
 
 class KnownTaxa:
@@ -234,16 +244,19 @@ class Taxonomy:
             logger.warning(f"{self} contains 0 taxa")
 
     @classmethod
-    def from_trees(cls, taxonomies: Sequence[Taxonomy]) -> Taxonomy:
+    def from_trees(cls, taxonomies: Collection[Taxonomy]) -> Taxonomy:
         # we need to rewrite the ancestors, which from_df already does
         # so we'll just use that
         dfs = [tree.to_df() for tree in taxonomies]
-        df = TaxonomyDf(pd.concat(dfs, ignore_index=True))
+        if len(dfs) == 0:
+            df = TaxonomyDf.new_df()
+        else:
+            df = TaxonomyDf.of(pd.concat(dfs, ignore_index=True))
         df = df.drop_duplicates().sort_values("taxon")
         return Taxonomy.from_df(df)
 
     @classmethod
-    def from_list(cls, taxa: Sequence[Taxon]) -> Taxonomy:
+    def from_list(cls, taxa: Collection[Taxon]) -> Taxonomy:
         by_id = {x.id: x for x in taxa}
         by_name = cls._build_by_name(by_id.values())
         tax = Taxonomy(by_id, by_name)
@@ -273,7 +286,7 @@ class Taxonomy:
             The corresponding taxonomic tree
         """
         # just build up a tree, sticking the elements in by_id
-        tax = {}
+        tax: Dict[int, _Taxon] = {}
         for row in df.itertuples():
             _new_child = _Taxon(
                 row.taxon, row.scientific_name, row.common_name, row.mnemonic, None, set()
@@ -508,6 +521,8 @@ class Taxonomy:
             item = item.id
         if isinstance(item, int):
             return self._by_id.get(item)
+        elif isinstance(item, str):
+            return self._by_id.get(item)
         else:
             raise XTypeError(f"Type {type(item)} of {item} not applicable")
 
@@ -536,6 +551,8 @@ class Taxonomy:
         return len(self._by_id)
 
     def __contains__(self, item: Union[Taxon, int, str]):
+        if isinstance(item, str):
+            return self._by_name.get(item) is not None
         return self.get(item) is not None
 
     def __len__(self) -> int:

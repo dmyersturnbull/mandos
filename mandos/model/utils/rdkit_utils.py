@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Iterator, List, Set
 
 import numpy as np
@@ -6,13 +7,10 @@ from pocketutils.core.exceptions import DataIntegrityError
 
 from mandos.model.utils.setup import logger
 
-
 try:
-    from rdkit import Chem
-    from rdkit.Chem import SaltRemover
-    from rdkit.Chem import Mol
     import rdkit.Chem.inchi as Inchi
-    from rdkit.Chem import AllChem
+    from rdkit import Chem
+    from rdkit.Chem import AllChem, Mol, SaltRemover
 except ImportError:
     logger.info("rdkit is not installed")
     logger.debug("failed to import rdkit", exc_info=True)

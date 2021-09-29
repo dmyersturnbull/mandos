@@ -4,15 +4,8 @@ import abc
 from dataclasses import dataclass
 from typing import TypeVar
 
-from pocketutils.core.exceptions import (
-    MultipleMatchesError as _MME,
-    LookupFailedError,
-    XValueError,
-    Error,
-    DownloadError,
-)
-
-from mandos.model.utils.misc_utils import MiscUtils
+from pocketutils.core.exceptions import DownloadError, LookupFailedError
+from pocketutils.core.exceptions import MultipleMatchesError as _MME
 
 
 class Api(metaclass=abc.ABCMeta):

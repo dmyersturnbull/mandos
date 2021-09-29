@@ -5,51 +5,49 @@ Command-line interface for mandos.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Tuple, Mapping, Any, TypeVar
+from typing import Any, Mapping, Optional, Tuple, TypeVar
 
-# noinspection PyProtectedMember
 import pandas as pd
+from pocketutils.core.chars import Chars
 from pocketutils.core.exceptions import XValueError
 from typeddfs import TypedDf
-
-from mandos.entry._arg_utils import Arg
-
-from mandos.analysis.io_defns import (
-    EnrichmentDf,
-    SimilarityDfLongForm,
-    PhiPsiSimilarityDfLongForm,
-    PsiProjectedDf,
-)
+from typeddfs.cli_help import DfCliHelp
 
 # noinspection PyProtectedMember
 from mandos.analysis._plot_utils import (
+    VIZ_RESOURCES,
+    CompoundStyleDf,
     MandosPlotStyling,
     MandosPlotUtils,
-    PredicateObjectStyleDf,
-    CompoundStyleDf,
     PhiPsiStyleDf,
-    VIZ_RESOURCES,
+    PredicateObjectStyleDf,
+)
+from mandos.analysis.io_defns import (
+    EnrichmentDf,
+    PhiPsiSimilarityDfLongForm,
+    PsiProjectedDf,
+    SimilarityDfLongForm,
 )
 from mandos.analysis.plots import (
-    TauPlotter,
-    ProjectionPlotter,
-    CorrPlotter,
-    ScorePlotter,
     CatPlotType,
-    RelPlotType,
+    CorrPlotter,
     PlotOptions,
+    ProjectionPlotter,
+    RelPlotType,
+    ScorePlotter,
+    TauPlotter,
 )
-from mandos.entry._common_args import CommonArgs
 
 # noinspection PyProtectedMember
+from mandos.entry._arg_utils import Arg, EntryUtils, Opt
+from mandos.entry._common_args import CommonArgs
 from mandos.entry.calc_commands import Aa
-from mandos.model.utils.resources import MandosResources
+from mandos.model.settings import SETTINGS
 from mandos.model.utils.setup import MANDOS_SETUP
-from mandos.entry._arg_utils import Opt
-from mandos.model.settings import MANDOS_SETTINGS
 
-DEF_SUFFIX = MANDOS_SETTINGS.default_table_suffix
-
+DEF_SUFFIX = SETTINGS.table_suffix
+nl = "\n\n"
+IMG_SUFFIXES = {".pdf", ".png", ".svg", ".jpg", ".jpeg"}
 
 T = TypeVar("T", bound=TypedDf)
 V = TypeVar("V", bound=TypedDf)
@@ -57,9 +55,9 @@ V = TypeVar("V", bound=TypedDf)
 
 class Pa:
 
-    stylesheet: str = Opt.val(
+    in_style: str = Opt.val(
         rf"""
-        The name of a standard matplotlib style or a path to a .mplstyle file.
+        The name of a matplotlib style or a path to a .mplstyle file.
 
         See https://matplotlib.org/stable/tutorials/introductory/customizing.html.
         [default: matplotlib default]
@@ -102,7 +100,7 @@ class Pa:
         """
     )
 
-    out_fig_dir: Optional[Path] = Opt.out_file(
+    out_fig_dir: Optional[Path] = Opt.out_dir(
         r"""
         Path to an output directory for figures.
 
@@ -132,8 +130,8 @@ class Pa:
     )
 
     rel_plot_kind = Opt.val(
-        r"""
-        The type of x--y relationship plot.
+        rf"""
+        The type of x{Chars.en}y relationship plot.
 
         Either 'scatter', 'line', 'regression:logistic', or 'regression:<order>.
         'regression:1' plots a linear regression line, 'regression:2' plots a quadratic,
@@ -174,41 +172,35 @@ class Pa:
         default=2,
     )
 
-    in_compound_style: Optional[Path] = Opt.in_file(
-        r"""
-        Path to a table mapping compounds to colors and markers.
+    in_compound_viz: Optional[Path] = Opt.in_file(
+        rf"""
+        {DfCliHelp.help(CompoundStyleDf).get_short_text(nl=nl)}
 
-        If this is set, ``--colors`` and ``--markers`` will refer to columns in this file.
+        If set, ``--colors`` and ``--markers`` will refer to columns in this file.
         Otherwise, they will refer to columns in the input.
-        Should contain a column called "inchikey", along with 0 or more additional columns.
-        See ``--colors`` and ``--markers`` for info on the formatting.
         """
     )
 
     in_pair_viz: Optional[Path] = Opt.in_file(
-        r"""
-        Path to a table mapping predicate/object pairs to colors and markers.
+        rf"""
+        {DfCliHelp.help(PredicateObjectStyleDf).get_short_text(nl=nl)}
 
-        NOTE: This is currently not supported when using predicate/object pair intersection.
+        NOTE: This is currently not supported with pair intersection.
 
-        If this is set, ``--colors`` and ``--markers`` will refer to columns in this file.
+        If set, ``--colors`` and ``--markers`` will refer to columns in this file.
         Otherwise, they will refer to columns in the input.
-        Should contain columns "key", "predicate", and "object", along with 0 or more additional columns.
-        The "key" refers to the search key specified in ``:search``.
-        Any null (empty-string) value will be taken to mean any/all.
+
+        Any null (empty-string) value is taken to mean any/all.
         (The main use is to easily collapse over all predicates.)
-        See ``--colors`` and ``--markers`` for info on the formatting.
         """
     )
 
     in_psi_viz: Optional[Path] = Opt.in_file(
-        r"""
-        Path to a table mapping each psi variable name (search key) to a color and marker.
+        rf"""
+        {DfCliHelp.help(CompoundStyleDf).get_short_text(nl=nl)}
 
-        If this is set, ``--colors`` and ``--markers`` will refer to columns in this file.
+        If set, ``--colors`` and ``--markers`` will refer to columns in this file.
         Otherwise, they will refer to columns in the input.
-        Should contain a "psi" column, along with 0 or more additional columns.
-        See ``--colors`` and ``--markers`` for info on the formatting.
         """
     )
 
@@ -240,30 +232,6 @@ class Pa:
         """
     )
 
-    markers: Optional[Path] = Opt.val(
-        rf"""
-        The column to use for markers.
-
-        If not specified, Mandos will use one marker shape, unless the plot requires more.
-        If required, a semi-arbitrary column will be chosen.
-
-        If the values are matplotlib-recognized (e.g. ``:`` or ``o``), mandos uses those.
-        Otherwise, markers are chosen from the available set and mapped to the distinct values.
-        """,
-    )
-
-    @classmethod
-    def to_dir(cls, in_path: Path, out_path: Optional[Path]) -> Path:
-        if out_path is None:
-            out_path = in_path
-        return out_path
-
-    @classmethod
-    def to_file(cls, in_path: Path, out_path: Optional[Path], default_filename: str) -> Path:
-        if out_path is None:
-            out_path = in_path / default_filename
-        return out_path
-
     @classmethod
     def add_styling(cls, data: T, viz: Optional[TypedDf]) -> T:
         if viz is None:
@@ -279,34 +247,28 @@ class Pa:
         type_, order = kind.split(":")
         if order == "logistic":
             return type_, dict(logistic=True)
-        order = cls.get_arity(order)
+        order = cls.get_degree(order)
         if order is None:
             raise XValueError(f"Unknown plot kind {kind}")
         return type_, dict(order=order)
 
     @classmethod
-    def get_arity(cls, order: str):
+    def get_degree(cls, order: str) -> int:
         try:
             order = int(order)
         except ValueError:
-            return None
-        arities = [
-            "nullary",
-            "unary",
-            "binary",
-            "ternary",
-            "quaternary",
-            "quinary",
-            "senary",
-            "septenary",
-            "octonary",
-            "novenary",
-            "denary",
-            "undenary",
-            "duodenary",
-        ]
-        arities = dict(enumerate(arities))
-        arities.update(dict(enumerate(range(0, len(arities)))))
+            pass
+        arities = dict(
+            linear=1,
+            quadratic=2,
+            cubic=3,
+            quartic=4,
+            quintic=5,
+            sextic=6,
+            hexic=6,
+            septic=7,
+            heptic=7,
+        )
         return arities[order]
 
 
@@ -325,7 +287,7 @@ class PlotCommands:
         colors: Optional[str] = Pa.colors,
         palette: Optional[str] = Pa.palette,
         size: Optional[str] = Pa.size,
-        stylesheet: Optional[str] = Pa.stylesheet,
+        style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_dir,
         log: Optional[Path] = CommonArgs.log,
         stderr: bool = CommonArgs.stderr,
@@ -337,9 +299,9 @@ class PlotCommands:
         Will output one figure (file) per scoring function.
         Will plot over a grid, one row per key/source pair and column per predicate/object pair.
         """
-        kind = CatPlotType.of(kind)
         MANDOS_SETUP(log, stderr)
-        to = Pa.to_dir(path, to)
+        kind = CatPlotType.of(kind)
+        to, suffix = EntryUtils.adjust_dir_name(to, path.parent, suffixes=IMG_SUFFIXES)
         df = EnrichmentDf.read_file(path)
         viz = None if viz is None else PredicateObjectStyleDf.read_file(viz)
         df = Pa.add_styling(df, viz)
@@ -347,7 +309,7 @@ class PlotCommands:
         extra = dict(bandwith=bandwidth, cut=cut) if kind is CatPlotType.violin else {}
         rc = PlotOptions(
             size=size,
-            stylesheet=stylesheet,
+            style=style,
             rc={},
             hue=colors,
             palette=palette,
@@ -363,7 +325,7 @@ class PlotCommands:
         )
         for score_name in df["score_name"].unique():
             fig = plotter.plot(df)
-            MandosPlotUtils.save(fig, to / f"{score_name}-{kind}-plot.pdf")
+            MandosPlotUtils.save(fig, to / f"{score_name}-{kind}-plot{suffix}")
 
     @staticmethod
     def plot_phi_psi(
@@ -375,9 +337,8 @@ class PlotCommands:
         viz: Optional[Path] = Pa.in_psi_viz,
         colors: Optional[str] = Pa.colors,
         palette: Optional[str] = Pa.palette,
-        markers: Optional[str] = Pa.markers,
         size: Optional[str] = Pa.size,
-        stylesheet: Optional[str] = Pa.stylesheet,
+        style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
         stderr: bool = CommonArgs.stderr,
@@ -396,7 +357,8 @@ class PlotCommands:
         If --colors is not set, will choose a palette.
         """
         MANDOS_SETUP(log, stderr)
-        to = Pa.to_file(path, to, f"phi-psi-{kind}-plot.pdf")
+        default = path.parent / f"{path.name}-{kind}-plot.pdf"
+        to = EntryUtils.adjust_filename(to, default, True, suffixes=IMG_SUFFIXES)
         df = PhiPsiSimilarityDfLongForm.read_file(path)
         viz = None if viz is None else PhiPsiStyleDf.read_file(viz)
         df = Pa.add_styling(df, viz)
@@ -404,7 +366,7 @@ class PlotCommands:
         kind, extra = Pa.read_rel_kind(kind)
         rc = PlotOptions(
             size=size,
-            stylesheet=stylesheet,
+            style=style,
             rc={},
             hue=colors,
             palette=palette,
@@ -436,10 +398,9 @@ class PlotCommands:
         cut: int = Pa.cut,
         viz: Optional[Path] = Pa.in_psi_viz,
         colors: Optional[str] = Pa.colors,
-        markers: Optional[str] = Pa.markers,
         palette: Optional[str] = Pa.palette,
         size: Optional[str] = Pa.size,
-        stylesheet: Optional[str] = Pa.stylesheet,
+        style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
         stderr: bool = CommonArgs.stderr,
@@ -449,12 +410,12 @@ class PlotCommands:
 
         The input data should be generated by ``:calc:phi-vs-psi.tau``.
 
-        Will plot each (phi, psi) pair over a grid, one row per phi and one column per psi
-        (unless ``--split`` is set).
+        Will plot each (phi, psi) pair over a grid, one row per phi and one column per psi.
         """
-        kind = CatPlotType.of(kind)
         MANDOS_SETUP(log, stderr)
-        to = Pa.to_file(path, to, f"tau-{kind}-plot.pdf")
+        kind = CatPlotType.of(kind)
+        default = path.parent / (f"{path.name}-{kind}-plot.pdf")
+        to = EntryUtils.adjust_filename(to, default, suffixes=IMG_SUFFIXES)
         df: SimilarityDfLongForm = SimilarityDfLongForm.read_file(path)
         viz = None if viz is None else PhiPsiStyleDf.read_file(viz)
         df = Pa.add_styling(df, viz)
@@ -462,7 +423,7 @@ class PlotCommands:
         extra = dict(bandwith=bandwidth, cut=cut) if kind is CatPlotType.violin else {}
         rc = PlotOptions(
             size=size,
-            stylesheet=stylesheet,
+            style=style,
             rc={},
             hue=colors,
             palette=palette,
@@ -483,7 +444,7 @@ class PlotCommands:
     def plot_heatmap(
         path: Path = Aa.in_matrix_long_form,
         size: Optional[str] = Pa.size,
-        stylesheet: Optional[str] = Pa.stylesheet,
+        style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
         stderr: bool = CommonArgs.stderr,
@@ -494,11 +455,12 @@ class PlotCommands:
         Will output one figure / file per correlation definition ('key' column).
         """
         MANDOS_SETUP(log, stderr)
-        to = Pa.to_dir(path, to)
+        default = path.parent / (path.name + "-heatmap-plot.pdf")
+        to = EntryUtils.adjust_filename(to, default, True, suffixes=IMG_SUFFIXES)
         df = PsiProjectedDf.read_file(path)
         rc = PlotOptions(
             size=size,
-            stylesheet=stylesheet,
+            style=style,
             rc={},
             hue=None,
             palette=None,
@@ -510,12 +472,11 @@ class PlotCommands:
     @staticmethod
     def plot_projection(
         path: Path = Pa.in_projection,
-        viz: Optional[Path] = Pa.in_compound_style,
+        viz: Optional[Path] = Pa.in_compound_viz,
         colors: Optional[str] = Pa.colors,
-        markers: Optional[str] = Pa.markers,
         palette: Optional[str] = Pa.palette,
         size: Optional[str] = Pa.size,
-        stylesheet: Optional[str] = Pa.stylesheet,
+        style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
         stderr: bool = CommonArgs.stderr,
@@ -526,14 +487,15 @@ class PlotCommands:
         Will plot the psi variables over a grid.
         """
         MANDOS_SETUP(log, stderr)
-        to = Pa.to_dir(path, to)
+        default = path.parent / (path.name + "-plot.pdf")
+        to = EntryUtils.adjust_filename(to, default, True, suffixes=IMG_SUFFIXES)
         df = PsiProjectedDf.read_file(path)
         viz = None if viz is None else CompoundStyleDf.read_file(viz)
         df = Pa.add_styling(df, viz)
         palette = MandosPlotStyling.choose_palette(df, colors, palette)
         rc = PlotOptions(
             size=size,
-            stylesheet=stylesheet,
+            style=style,
             rc={},
             hue=colors,
             palette=palette,

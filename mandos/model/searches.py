@@ -2,18 +2,15 @@ from __future__ import annotations
 
 import abc
 import dataclasses
-import typing
-from typing import Generic, Sequence, TypeVar, AbstractSet
+from typing import Any, Generic, Mapping, Sequence, TypeVar
 
 from pocketutils.core.exceptions import XTypeError
+from suretime import Suretime
 
-from mandos.model.utils.setup import logger
-from mandos.model import CompoundNotFoundError
-from mandos.model.utils.misc_utils import MiscUtils
-from mandos.model.utils.resources import MandosResources
+from mandos.model.hit_dfs import HitDf
+from mandos.model.hits import AbstractHit
 from mandos.model.utils.reflection_utils import ReflectionUtils
-from mandos.model.hits import AbstractHit, HitFrame
-from mandos.model.utils.hit_utils import HitUtils
+from mandos.model.utils.resources import MandosResources
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -48,6 +45,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     @classmethod
     def primary_data_source(cls) -> str:
         z = MandosResources.strings[cls.__name__]["source"]
+        # TODO: really?
         return z.split(":")[0]
 
     @property
@@ -58,77 +56,15 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     def search_name(cls) -> str:
         return cls.__name__.lower().replace("search", "")
 
-    def get_params(self) -> typing.Mapping[str, typing.Any]:
+    def get_params(self) -> Mapping[str, Any]:
         """
         Returns the *parameters* of this ``Search`` their values.
         Parameters are attributes that do not begin with an underscore.
         """
         return {key: value for key, value in vars(self).items() if not key.startswith("_")}
 
-    def find_to_df(self, inchikeys: Sequence[str]) -> HitFrame:
-        """
-        Calls :py:meth:`find_all` and returns a :py:class:`HitFrame` DataFrame subclass.
-        Writes a logging ERROR for each compound that was not found.
-
-        Args:
-            inchikeys: A list of InChI key strings
-        """
-        hits = self.find_all(inchikeys)
-        return HitUtils.hits_to_df(hits)
-
-    def find_all(self, inchikeys: Sequence[str]) -> Sequence[H]:
-        """
-        Loops over every compound and calls ``find``.
-        Comes with better logging.
-        Writes a logging ERROR for each compound that was not found.
-
-        Args:
-            inchikeys: A list of InChI key strings
-
-        Returns:
-            The list of :py:class:`mandos.model.hits.AbstractHit`
-        """
-        lst = []
-        # set just in case we never iterate
-        i = 0
-        for i, compound in enumerate(inchikeys):
-            try:
-                x = self.find(compound)
-            except CompoundNotFoundError:
-                logger.info(f"NOT FOUND: {compound}. Skipping.")
-                continue
-            except Exception:
-                raise SearchError(
-                    f"Failed {self.key} [{self.search_class}] on compound {compound}",
-                    compound=compound,
-                    search_key=self.key,
-                    search_class=self.search_class,
-                )
-            lst.extend(x)
-            logger.debug(f"Found {len(x)} {self.search_name()} annotations for {compound}")
-            if i % 10 == 9:
-                logger.notice(
-                    f"Found {len(lst)} {self.search_name()} annotations for {i+1} of {len(inchikeys)} compounds"
-                )
-        logger.notice(
-            f"Found {len(lst)} {self.search_name()} annotations for {i+1} of {len(inchikeys)} compounds"
-        )
-        return lst
-
     def find(self, inchikey: str) -> Sequence[H]:
-        """
-        To override.
-        Finds the annotations for a single compound.
-
-        Args:
-            inchikey: An InChI Key
-
-        Returns:
-            A list of annotations
-
-        Raises:
-            CompoundNotFoundError
-        """
+        # override this
         raise NotImplementedError()
 
     @classmethod
@@ -145,6 +81,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         # If this magic is too magical, we can make this an abstract method
         # But that would be a lot of excess code and it might be less modular
         x = cls.get_h()
+        # noinspection PyDataclass
         return [f.name for f in dataclasses.fields(x) if f.name != "search_class"]
 
     @classmethod
@@ -152,6 +89,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         """
         Returns the underlying hit TypeVar, ``H``.
         """
+        # noinspection PyTypeChecker
         return ReflectionUtils.get_generic_arg(cls, AbstractHit)
 
     def _format_source(self, **kwargs) -> str:
@@ -184,7 +122,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
             search_key=self.key,
             search_class=self.search_class,
             data_source=data_source,
-            run_date=MiscUtils.utc(),
+            run_date=Suretime.tagged.now_utc_sys().iso_with_zone,
             cache_date=None,
             weight=1,
             compound_id=c_id,
@@ -212,11 +150,11 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         Multiversal equality.
 
         Raises:
-            TypeError: If ``other`` is not a :py:class:`Search`
+            TypeError: If ``other`` is not a :class:`Search`
         """
         if not isinstance(other, Search):
             raise XTypeError(f"{type(other)} not comparable")
         return repr(self) == repr(other)
 
 
-__all__ = ["Search", "HitFrame"]
+__all__ = ["Search", "HitDf", "SearchError"]

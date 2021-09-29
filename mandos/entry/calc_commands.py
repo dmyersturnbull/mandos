@@ -6,35 +6,34 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 
 from pocketutils.core.exceptions import ResourceError
+from typeddfs.cli_help import DfCliHelp
 
-from mandos.entry._entry_utils import EntryUtils
-from mandos.entry.searchers import InputFrame
-
-from mandos.model.utils.setup import logger, MANDOS_SETUP
-from mandos.analysis.io_defns import (
-    SimilarityDfLongForm,
-    PsiProjectedDf,
-    SimilarityDfShortForm,
-    EnrichmentDf,
-    ConcordanceDf,
-)
 from mandos.analysis.concordance import ConcordanceCalculation
 from mandos.analysis.distances import MatrixCalculation
-from mandos.analysis.enrichment import EnrichmentCalculation, RealAlg, BoolAlg
-from mandos.analysis.io_defns import ScoreDf
+from mandos.analysis.enrichment import BoolAlg, EnrichmentCalculation, RealAlg
+from mandos.analysis.io_defns import (
+    ConcordanceDf,
+    EnrichmentDf,
+    PsiProjectedDf,
+    ScoreDf,
+    SimilarityDfLongForm,
+    SimilarityDfShortForm,
+)
 from mandos.analysis.prepping import MatrixPrep
-from mandos.entry._common_args import CommonArgs
-from mandos.entry._arg_utils import Arg, Opt, ArgUtils
-from mandos.entry._common_args import CommonArgs as Ca
-from mandos.model.hits import HitFrame
-from mandos.model.settings import MANDOS_SETTINGS
 from mandos.analysis.projection import UMAP
+from mandos.entry._arg_utils import Arg, ArgUtils, EntryUtils, Opt
+from mandos.entry._common_args import CommonArgs
+from mandos.entry._common_args import CommonArgs as Ca
+from mandos.entry.searchers import InputCompoundsDf
+from mandos.model.hit_dfs import HitDf
+from mandos.model.settings import SETTINGS
+from mandos.model.utils.setup import MANDOS_SETUP, logger
 
-
-DEF_SUFFIX = MANDOS_SETTINGS.default_table_suffix
+DEF_SUFFIX = SETTINGS.table_suffix
+nl = "\n\n"
 
 if UMAP is None:
     _umap_params = {}
@@ -50,70 +49,51 @@ class Aa:
 
     in_scores_table: Path = Opt.in_file(
         rf"""
-        Path to a table containing scores.
+        {DfCliHelp.help(ScoreDf).get_short_text(nl=nl)}
 
-        {Ca.input_formats}
-
-        Required columns are 'inchikey', 'score_name', and 'score_value'.
         The InChI Keys must match those provided for the search.
-        Each score must start with either 'score_' or 'is_'.
-
-        {ArgUtils.df_description(ScoreDf)}
+        Each score must start with either "score_" or "is_".
         """
     )
 
     out_enrichment: Optional[Path] = Opt.out_file(
         rf"""
-        Path to write enrichment info.
+        {DfCliHelp.help(EnrichmentDf).get_short_text(nl=nl)}
 
-        Use the format "<path>{os.sep}*<suffix>" to set the output format.
-        (e.g. "output/*.csv.gz").
-        If no suffix is provided, will interpret the path as a directory.
-
-        {Ca.output_formats}
+        Use "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz"). If no suffix is provided, will interpret as a directory.
 
         One row will be included per predicate/object pair (or list of them), per bootstrap sample.
         Rows with a null bootstrap sample are not sub-sampled.
         Columns will correspond to the columns you provided.
 
-        {ArgUtils.df_description(EnrichmentDf)}
-
-        [default: <path>-correlation-<scores.filename>{MANDOS_SETTINGS.default_table_suffix}]
+        [default: <path>-correlation-<scores.filename>{SETTINGS.table_suffix}]
         """
     )
 
     in_matrix_long_form: Path = Arg.in_file(
         rf"""
-        The path to a file with compound/compound similarity matrices.
-
-        {Ca.input_formats}
+        {DfCliHelp.help(SimilarityDfLongForm).get_short_text(nl=nl)}
 
         The matrix is "long-form" so that multiple matrices can be included.
-        Columns are "inchikey_1", "inchikey_2", "key", and "type".
+
         The key is the specific similarity matrix; it is usually the search_key
         for psi matrices (computed from annotations from :search), and
         a user-provided value for phi matrices (typically of phenotypic similarity).
-        The "type" column should contain either "phi" or "psi" accordingly.
-
-        {ArgUtils.df_description(SimilarityDfLongForm)}
+        The "type" column should be either "phi" or "psi" accordingly.
         """
     )
 
     out_matrix_long_form: Path = Opt.out_file(
         rf"""
-        The path to a file with compound/compound similarity matrices.
+        {DfCliHelp.help(SimilarityDfLongForm).get_short_text(nl=nl)}
 
-        Use the format "<path>{os.sep}*<suffix>" to set the output format.
-        (e.g. "output/*.csv.gz").
-        If no suffix is provided, will interpret the path as a directory.
-
-        {Ca.output_formats}
+        Use "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz"). If no suffix is provided, will interpret as a directory.
 
         The matrix is "long-form" so that multiple matrices can be included.
         You can provide just a filename suffix to change the format and suffix
         but otherwise use the default path.
-
-        {ArgUtils.df_description(SimilarityDfLongForm)}
 
         [default: inferred from input path(s)]
         """,
@@ -121,42 +101,25 @@ class Aa:
 
     in_matrix_short_form = Arg.in_file(
         rf"""
-        The path to a file with a compound/compound similarity matrix.
-
-        {Ca.input_formats}
-
-        The matrix is "short-form": the first row and first column list the InChI Keys.
-        The table must be symmetric (the rows and columns listed in the same order).
-
-        {ArgUtils.df_description(SimilarityDfShortForm)}
+        {DfCliHelp.help(SimilarityDfShortForm).get_short_text(nl=nl)}
         """
     )
 
     out_tau = Arg.out_file(
         rf"""
-        Output file.
+        {DfCliHelp.help(ConcordanceDf).get_short_text(nl=nl)}
 
-        Use the format "<path>{os.sep}*<suffix>" to set the output format.
-        (e.g. "output/*.csv.gz").
-        If no suffix is provided, will interpret the path as a directory.
-
-        {Ca.output_formats}
-
-        {ArgUtils.df_description(ConcordanceDf)}
+        Use "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz"). If no suffix is provided, will interpret as a directory.
         """
     )
 
     out_projection: Optional[Path] = Opt.out_file(
         rf"""
-        Path to the output table.
+        {DfCliHelp.help(PsiProjectedDf).get_short_text(nl=nl)}
 
-        Use the format "<path>{os.sep}*<suffix>" to set the output format.
-        (e.g. "output/*.csv.gz").
-        If no suffix is provided, will interpret the path as a directory.
-
-        {Ca.output_formats}
-
-        {ArgUtils.df_description(PsiProjectedDf)}
+        Use "<path>{os.sep}*<suffix>" to set the output format.
+        (e.g. "output/*.csv.gz"). If no suffix is provided, will interpret as a directory.
 
         [default: <path>-<algorithm>{DEF_SUFFIX}],
         """
@@ -169,10 +132,9 @@ class Aa:
         Generate results for <b> bootstrapped samples.
 
         Number of bootstrap samples (positive integer).
-        If 0, will not perform a bootstrap.
-
         If set, will still include the non-bootstrapped results
         (sample=0 in the output).
+        If 0, will not perform a bootstrap.
         """,
         min=1,
         max=1000000,
@@ -182,35 +144,12 @@ class Aa:
 
 class CalcCommands:
     @staticmethod
-    def calc_analysis(
-        path: Path = Ca.in_annotations_file,
-        phi: Path = Aa.in_matrix_long_form,
-        scores: Path = Aa.in_scores_table,
-        seed: int = Aa.seed,
-        samples: int = Aa.boot,
-        to: Optional[Path] = Ca.out_wildcard,
-        replace: bool = Ca.replace,
-        log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
-    ) -> None:
-        """
-        Shorthand for multiple calculations and plots.
-
-        Generates n-triple statements and reified n-triples.
-        Calculates correlation and enrichment using ``scores``,
-        psi matrices (one per variable), and concordance between psi and tau matrices (tau).
-        Plots UMAP of psi variables, enrichment bar plots, correlation violin plots,
-        phi-vs-psi scatter and line plots, and phi-vs-psi (tau) violin plots.
-        """
-        MANDOS_SETUP(log, stderr)
-
-    @staticmethod
     def calc_enrichment(
         path: Path = Ca.in_annotations_file,
         scores: Path = Aa.in_scores_table,
         bool_alg: Optional[str] = Opt.val(
             rf"""
-            Algorithm to use for scores starting with 'is_'.
+            Algorithm to use for scores starting with "is_".
 
             Allowed values: {ArgUtils.list(BoolAlg)}
             """,
@@ -218,7 +157,7 @@ class CalcCommands:
         ),
         real_alg: Optional[str] = Opt.val(
             rf"""
-            Algorithm to use for scores starting with 'score_'.
+            Algorithm to use for scores starting with "score_".
 
             Allowed values: {ArgUtils.list(RealAlg)}
             """,
@@ -268,7 +207,7 @@ class CalcCommands:
         MANDOS_SETUP(log, stderr)
         default = f"{path}-{scores.name}-{on}{DEF_SUFFIX}"
         to = EntryUtils.adjust_filename(to, default, replace)
-        hits = HitFrame.read_file(path)
+        hits = HitDf.read_file(path)
         scores = ScoreDf.read_file(scores)
         calculator = EnrichmentCalculation(bool_alg, real_alg, boot, seed)
         df = calculator.calculate(hits, scores)
@@ -279,8 +218,6 @@ class CalcCommands:
         path: Path = Arg.in_file(
             rf"""
             The path to a file from ``:calc:score``.
-
-            {Ca.input_formats}
             """
         ),
         algorithm: str = Opt.val(
@@ -299,13 +236,13 @@ class CalcCommands:
         r"""
         Calculate a similarity matrix from annotations.
 
-        The data are output as a dataframe (CSV by default), where rows and columns correspond
+        The data are output to a DataFrame where rows and columns correspond
         to compounds, and the cell i,j is the overlap J' in annotations between compounds i and j.
         """
         MANDOS_SETUP(log, stderr)
         default = path.parent / (algorithm + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
-        hits = HitFrame.read_file(path).to_hits()
+        hits = HitDf.read_file(path).to_hits()
         calculator = MatrixCalculation.create(algorithm)
         matrix = calculator.calc_all(hits)
         matrix.write_file(to)
@@ -338,7 +275,7 @@ class CalcCommands:
         name = f"ecfp{radius}-n{n_bits}"
         default = path.parent / (name + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
-        df = InputFrame.read_file(path)
+        df = InputCompoundsDf.read_file(path)
         kind = "psi" if psi else "phi"
         short = MatrixPrep.ecfp_matrix(df, radius, n_bits)
         long_form = MatrixPrep(kind, False, False, False).create({name: short})
@@ -362,13 +299,11 @@ class CalcCommands:
         samples: int = Aa.boot,
         to: Optional[Path] = Opt.out_file(
             rf"""
+            {DfCliHelp.help(ConcordanceDf).get_short_text(nl=nl)}
             The path to a table for output.
 
-            Use the format "<path>{os.sep}*<suffix>" to set the output format.
-            (e.g. "output/*.csv.gz").
-            If no suffix is provided, will interpret the path as a directory.
-
-            {Ca.output_formats}
+            Use "<path>{os.sep}*<suffix>" to set the output format.
+            (e.g. "output/*.csv.gz"). If no suffix is provided, will interpret as a directory.
 
             [default: <input-path.parent>/<algorithm>-concordance.{DEF_SUFFIX}]
             """,
@@ -425,20 +360,16 @@ class CalcCommands:
             For example: ``n_neighbors=4,n_components=12,min_dist=0.8``
             Supports all UMAP parameters except random_state and metric:
 
-            {ArgUtils.definition_list(_umap_params) if UMAP else "<list is unavailable>"}
+            {ArgUtils.definition_list(_umap_params) if UMAP else "<list unavailable>"}
             """,
             default="",
         ),
         to: Optional[Path] = Opt.val(
             rf"""
-            Path to write a table of the projection coordinates.
-            Will contain columns "x", "y", "inchikey", "key", and "data_source".
+            {DfCliHelp.help(PsiProjectedDf).get_short_text(nl=nl)}
 
-            Use the format "<path>{os.sep}*<suffix>" to set the output format.
-            (e.g. "output/*.csv.gz").
-            If no suffix is provided, will interpret the path as a directory.
-
-            {Ca.output_formats}
+            Use "<path>{os.sep}*<suffix>" to set the output format.
+            (e.g. "output/*.csv.gz"). If no suffix is provided, will interpret as a directory.
             """
         ),
         replace: bool = Ca.replace,

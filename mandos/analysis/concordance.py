@@ -4,7 +4,7 @@ Calculations of concordance between annotations.
 import abc
 import enum
 import math
-from typing import Collection, Dict, Generator, Sequence, Set, Tuple, Union, Type
+from typing import Generator, Sequence, Type, Union
 
 import numpy as np
 import pandas as pd

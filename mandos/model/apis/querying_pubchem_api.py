@@ -6,21 +6,21 @@ from __future__ import annotations
 import io
 import time
 from datetime import datetime, timezone
-from typing import FrozenSet, Mapping, Optional, Sequence, Union, Any
+from typing import Any, FrozenSet, Mapping, Optional, Sequence, Union
 from urllib.error import HTTPError
 
 import orjson
-import regex
 import pandas as pd
+import regex
 from pocketutils.core.dot_dict import NestedDotDict
-from pocketutils.core.exceptions import LookupFailedError, DataIntegrityError, DownloadError
+from pocketutils.core.exceptions import DataIntegrityError, DownloadError, LookupFailedError
 from pocketutils.core.query_utils import QueryExecutor
 
 from mandos.model import DownloadTimeoutError
-from mandos.model.utils.setup import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.settings import QUERY_EXECUTORS
+from mandos.model.utils.setup import logger
 
 
 class QueryingPubchemApi(PubchemApi):

@@ -1,7 +1,7 @@
 from typing import Sequence
 
-from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import DiseaseHit
+from mandos.search.pubchem import PubchemSearch
 
 
 class DiseaseSearch(PubchemSearch[DiseaseHit]):

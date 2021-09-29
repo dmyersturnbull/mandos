@@ -2,10 +2,9 @@ from typing import Optional, Sequence, Set
 
 from pocketutils.tools.common_tools import CommonTools
 
-from mandos.model.utils.misc_utils import MiscUtils
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.search.pubchem import PubchemSearch
 from mandos.model.concrete_hits import TrialHit
+from mandos.search.pubchem import PubchemSearch
 
 
 class TrialSearch(PubchemSearch[TrialHit]):
@@ -61,7 +60,7 @@ class TrialSearch(PubchemSearch[TrialHit]):
                         object_name=condition,
                         phase=dd.mapped_phase,
                         status=dd.mapped_status,
-                        interventions=MiscUtils.serialize_list(list(dd.interventions)),
+                        interventions=str(list(dd.interventions)),
                     )
                 )
         return hits

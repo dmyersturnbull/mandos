@@ -14,8 +14,8 @@ class FunctionalSearch(_ActivitySearch[FunctionalHit]):
     """
 
     @classmethod
-    def allowed_assay_types(cls) -> Set[str]:
-        return {"F"}
+    def assay_type(cls) -> str:
+        return "F"
 
     def to_hit(
         self,

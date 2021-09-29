@@ -197,7 +197,8 @@ class MandosLogging:
         logger.remove(None)  # get rid of the built-in handler
         cls.set_main_level(level, sink=sink)
         logger.disable("chembl_webresource_client")
-        logger.notice("Started.")
+        logger.disable("requests_cache")
+        logger.info("Started")
 
     @classmethod
     def configure_level(

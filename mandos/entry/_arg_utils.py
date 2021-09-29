@@ -1,4 +1,6 @@
+from __future__ import annotations
 import os
+from dataclasses import dataclass
 from inspect import cleandoc
 from pathlib import Path
 from typing import (
@@ -28,6 +30,18 @@ from mandos.model.taxonomy_caches import TaxonomyFactories
 from mandos.model.utils.setup import logger
 
 T = TypeVar("T", covariant=True)
+
+
+@dataclass(frozen=True, repr=True, order=True)
+class ParsedTaxa:
+    source: str
+    allow: Sequence[Union[int, str]]
+    forbid: Sequence[Union[int, str]]
+    ancestors: Sequence[Union[int, str]]
+
+    @classmethod
+    def empty(cls) -> ParsedTaxa:
+        return ParsedTaxa("", [], [], [])
 
 
 class _Args:
@@ -200,7 +214,63 @@ class ArgUtils:
         return sep.join(x)
 
     @classmethod
+    def get_taxonomy(
+        cls,
+        taxa: Optional[str],
+        *,
+        local_only: bool = False,
+        allow_forbid: bool = True,
+    ) -> Optional[Taxonomy]:
+        if taxa is None or len(taxa) == 0:
+            return None
+        allow, forbid, ancestors = cls.parse_taxa(taxa, allow_forbid=allow_forbid)
+        return TaxonomyFactories.get_smart_taxonomy(
+            allow=allow,
+            forbid=forbid,
+            ancestors=cls.parse_taxa_ids(ancestors),
+            local_only=local_only,
+        )
+
+    @classmethod
+    def parse_taxa(
+        cls,
+        taxa: Optional[str],
+        *,
+        allow_forbid: bool = True,
+    ) -> ParsedTaxa:
+        if taxa is None or taxa == "":
+            return ParsedTaxa.empty()
+        ancestors = f"{Globals.cellular_taxon},{Globals.viral_taxon}"
+        if ":" in taxa:
+            ancestors = taxa.split(":", 1)[1]
+            taxa = taxa.split(":", 1)[0]
+        taxa_objs = [t.strip() for t in taxa.split(",") if len(t.strip()) > 0]
+        allow = [t.strip().lstrip("+") for t in taxa_objs if not t.startswith("-")]
+        forbid = [t.strip().lstrip("-") for t in taxa_objs if t.startswith("-")]
+        if not allow_forbid and len(forbid) > 0:
+            raise XValueError(f"Cannot use '-' in {taxa}")
+        return ParsedTaxa(
+            source=taxa,
+            allow=[ArgUtils.parse_taxon(t, id_only=False) for t in allow],
+            forbid=[ArgUtils.parse_taxon(t, id_only=False) for t in forbid],
+            ancestors=[ArgUtils.parse_taxon(t, id_only=True) for t in ancestors],
+        )
+
+    @classmethod
+    def parse_taxa_ids(cls, taxa: str) -> Sequence[int]:
+        """
+        Does not allow negatives.
+        """
+        if taxa is None or taxa == "":
+            return []
+        taxa = [t.strip() for t in taxa.split(",") if len(t.strip()) > 0]
+        return [ArgUtils.parse_taxon(t, id_only=True) for t in taxa]
+
+    @classmethod
     def parse_taxon(cls, taxon: Union[int, str], *, id_only: bool = False) -> Union[int, str]:
+        std = cls._get_std_taxon(taxon)
+        if isinstance(taxon, str) and taxon in std:
+            return std
         if isinstance(taxon, str) and not id_only:
             return taxon
         elif isinstance(taxon, str) and taxon.isdigit():
@@ -208,22 +278,6 @@ class ArgUtils:
         if id_only:
             raise XTypeError(f"Taxon {taxon} must be an ID")
         raise XTypeError(f"Taxon {taxon} must be an ID or name")
-
-    @classmethod
-    def parse_taxa(cls, taxa: Optional[str]) -> Sequence[Union[int, str]]:
-        if taxa is None or taxa == "":
-            return []
-        taxa = cls._get_std_taxon(taxa)
-        taxa = [t.strip() for t in taxa.split(",") if len(t.strip()) > 0]
-        return [ArgUtils.parse_taxon(t, id_only=False) for t in taxa]
-
-    @classmethod
-    def parse_taxa_ids(cls, taxa: str) -> Sequence[int]:
-        if taxa is None or taxa == "":
-            return []
-        taxa = cls._get_std_taxon(taxa)
-        taxa = [t.strip() for t in taxa.split(",") if len(t.strip()) > 0]
-        return [ArgUtils.parse_taxon(t, id_only=True) for t in taxa]
 
     @classmethod
     def _get_std_taxon(cls, taxa: str) -> str:
@@ -240,24 +294,6 @@ class ArgUtils:
             all=f"{Globals.cellular_taxon},{Globals.viral_taxon}",
         ).get(taxa)
         return taxa if x is None else str(x)
-
-    @classmethod
-    def get_taxonomy(
-        cls,
-        taxa: Optional[str],
-        forbid: Optional[str],
-        ancestors: Optional[str],
-        *,
-        local_only: bool = False,
-    ) -> Optional[Taxonomy]:
-        if taxa is None or len(taxa) == 0:
-            return None
-        return TaxonomyFactories.get_smart_taxonomy(
-            allow=cls.parse_taxa(taxa),
-            forbid=cls.parse_taxa(forbid),
-            ancestors=cls.parse_taxa_ids(ancestors),
-            local_only=local_only,
-        )
 
     @staticmethod
     def get_trial_statuses(st: str) -> Set[str]:

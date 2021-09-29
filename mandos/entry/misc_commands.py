@@ -185,14 +185,15 @@ class MiscCommands:
         to: Path = Ca.out_wildcard,
         log: Optional[Path] = Ca.log,
         stderr: str = CommonArgs.stderr,
-        replace: bool = Opt.flag(r"""Overwrite files if they exist."""),
+        replace: bool = Opt.flag(r"""Overwrite completed and partially completed searches."""),
+        proceed: bool = Opt.flag(r"""Continue partially completed searches."""),
         check: bool = Opt.flag("Check and write docs file only; do not run"),
     ) -> None:
         r"""
         Run multiple searches.
         """
         MANDOS_SETUP(log, stderr)
-        default = "search-" + Globals.start_timestamp_filesys
+        default = path.parent / ("search-" + Globals.start_time.strftime("%Y-%m-%d"))
         # TODO: , suffixes=FileFormat.from_path
         out_dir, suffix = EntryUtils.adjust_dir_name(to, default)
         logger.notice(f"Will write {suffix} to {out_dir}{os.sep}")
@@ -200,7 +201,7 @@ class MiscCommands:
         if config_fmt is not FileFormat.toml:
             logger.caution(f"Config format is {config_fmt}, not toml; trying anyway")
         config = SearchConfigDf.read_file(config)
-        search = MultiSearch(config, path, out_dir, suffix, replace, log)
+        search = MultiSearch(config, path, out_dir, suffix, replace, proceed, log)
         if not check:
             search.run()
 
@@ -344,7 +345,6 @@ class MiscCommands:
     @staticmethod
     def export_taxa(
         taxa: str = Ca.taxa,
-        forbid: str = Ca.ban_taxa,
         to: Path = Opt.out_path(
             rf"""
             {DfCliHelp.help(TaxonomyDf).get_short_text(nl=nl)}
@@ -363,27 +363,20 @@ class MiscCommands:
         Writes a taxonomy of given taxa and their descendants to a table.
         """
         MANDOS_SETUP(log, stderr)
-        concat = taxa + "-" + forbid
-        taxa = ArgUtils.parse_taxa(taxa)
-        ancestors = ArgUtils.parse_taxa_ids(ancestors)
-        forbid = ArgUtils.parse_taxa(forbid)
-        default = concat + "-" + Globals.start_timestamp_filesys + DEF_SUFFIX
+        default = taxa + "-" + Globals.start_timestamp_filesys + DEF_SUFFIX
         to = EntryUtils.adjust_filename(to, default, replace=replace)
-        my_tax = TaxonomyFactories.get_smart_taxonomy(
-            allow=taxa, forbid=forbid, ancestors=ancestors, local_only=in_cache
-        )
-        my_tax = my_tax.to_df()
-        my_tax.write_file(to, mkdirs=True)
+        tax = ArgUtils.get_taxonomy(taxa, local_only=in_cache, allow_forbid=False)
+        tax.to_df().write_file(to, mkdirs=True, file_hash=True)
 
     @staticmethod
     def cache_taxa(
         taxa: str = Opt.val(
             r"""
-            Either "all" or a comma-separated list of UniProt taxon IDs.
+            Either "@all" or a comma-separated list of UniProt taxon IDs.
 
-            Can also be "vertebrata", "cellular", or "viral" for those specific taxa.
-            "all" is only valid when --replace is passed;
+            "@all" is only valid when --replace is passed;
             this will regenerate all taxonomy files that are found in the cache.
+            Aliases "vertebrata", "cellular", and "viral" are permitted.
             """,
             default="",
         ),
@@ -403,11 +396,11 @@ class MiscCommands:
         Puts both the raw data and fixed data in the cache under ``~/.mandos/taxonomy/``.
         """
         MANDOS_SETUP(log, stderr)
-        if taxa == "all" and not replace:
-            raise XValueError(f"Use --replace with 'all'")
+        if taxa == "@all" and not replace:
+            raise XValueError(f"Use --replace with '@all'")
         # we're good to go:
         factory = TaxonomyFactories.main()
-        if taxa == "all":
+        if taxa == "@all":
             taxa = TaxonomyFactories.list_cached_files().keys()
         else:
             taxa = ArgUtils.parse_taxa_ids(taxa)

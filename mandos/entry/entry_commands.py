@@ -56,7 +56,6 @@ class EntryChemblBinding(Entry[BindingSearch]):
         key: str = EntryArgs.key("chembl:binding"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
-        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: int = EntryArgs.min_confidence,
@@ -77,7 +76,7 @@ class EntryChemblBinding(Entry[BindingSearch]):
 
         WEIGHT: The PCHEMBL value
         """
-        tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
+        tax = ArgUtils.get_taxonomy(taxa)
         built = BindingSearch(
             key=key,
             api=Apis.Chembl,
@@ -100,7 +99,6 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
         key: str = EntryArgs.key("chembl:mechanism"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
-        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         min_confidence: Optional[int] = EntryArgs.min_confidence,
@@ -116,7 +114,7 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
 
         PREDICATE: The target action (e.g. "agonist")
         """
-        tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
+        tax = ArgUtils.get_taxonomy(taxa)
         built = MechanismSearch(
             key=key,
             api=Apis.Chembl,
@@ -136,7 +134,6 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
         key: str = EntryArgs.key("chembl:predictions"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
-        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         min_threshold: float = EntryArgs.min_threshold,
@@ -156,7 +153,7 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
         WEIGHT: The square root of the PCHEMBL threshold
                 multiplied by a prediction odds-ratio, normalized
         """
-        tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
+        tax = ArgUtils.get_taxonomy(taxa)
         built = TargetPredictionSearch(
             key=key,
             api=Apis.Chembl,
@@ -232,7 +229,6 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         key: str = EntryArgs.key("<see above>"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
-        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,
@@ -255,7 +251,7 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
             binding_clazz = ReflectionUtils.injection(binding_search, BindingSearch)
             logger.info(f"Passing parameters to {binding_clazz.__qualname__}")
         try:
-            tax = ArgUtils.get_taxonomy(taxa, ban_taxa, "131567,10239")
+            tax = ArgUtils.get_taxonomy(taxa)
             binding_search = binding_clazz(
                 key=key,
                 api=Apis.Chembl,
@@ -284,7 +280,6 @@ class EntryGoFunction(_EntryChemblGo):
         key: str = EntryArgs.key("chembl:go.function"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
-        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,
@@ -318,7 +313,6 @@ class EntryGoProcess(_EntryChemblGo):
         key: str = EntryArgs.key("chembl:go.process"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
-        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,
@@ -352,7 +346,6 @@ class EntryGoComponent(_EntryChemblGo):
         key: str = EntryArgs.key("chembl:go.component"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         taxa: str = CommonArgs.taxa,
-        ban_taxa: str = CommonArgs.ban_taxa,
         traversal: str = EntryArgs.traversal,
         target_types: str = EntryArgs.target_types,
         confidence: Optional[int] = EntryArgs.min_confidence,

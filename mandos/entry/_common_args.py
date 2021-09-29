@@ -103,42 +103,26 @@ class CommonArgs:
 
     taxa = Opt.val(
         r"""
-        UniProt taxa, comma-separated.
+        UniProt ancestor taxa, comma-separated.
 
         Scientific names, common names, and mnemonics can be used for vertebrate species.
-        IDs are preferred.
+        IDs are preferred. To exclude a subtree, prefix with '-'.
+        If including multiple non-vertebrate taxa, consider including the common ancestor
+        by appending ":ancestor" with its ID to improve performance.
+        These aliases are accepted: "all", "viral", "cellular".
+        Case-insensitive.
 
-        [default: 7742] (Euteleostomi)
+        Examples:
+
+        - mammalia,-rodentia,-homo sapiens (mammals except rodents and humans)
+
+        - cyanobacteria,fibrobacteres,acidobacteria:2
+          (various bacteria, specifying the ancestor (all bacteria))
+
+        [default: 7742] (euteleostomi)
         """,
         "7742",
         show_default=False,
-    )
-
-    ban_taxa = Opt.val(
-        r"""
-        UniProt taxa to exclude all descendents of, comma-separated.
-
-        Scientific names, common names, and mnemonics can be used for vertebrate species.
-        IDs are preferred.
-
-        [default: none]
-        """,
-        show_default=False,
-    )
-
-    ancestors = Opt.val(
-        r"""
-        Top-level UniProt taxa, comma-separated.
-
-        All taxa must be under one of these taxa.
-        If the taxa are not all under vertebrata, these ancestors will be downloaded.
-        By default, the full cellular and viral trees will be downloaded.
-        (Viral will be downloaded only if needed.)
-        If set to an empty string, will download every taxon independently,
-        which can be quite slow. Only IDs are allowed.
-        Setting this to common ancestors can greatly improve performance.
-        """,
-        "131567,10239",
     )
 
     in_cache: bool = Opt.flag(

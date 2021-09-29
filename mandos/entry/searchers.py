@@ -71,7 +71,10 @@ class Searcher:
             inchikeys: A list of InChI key strings
             path: Path to write to
         """
+        logger.info(f"Will save every {SETTINGS.save_every} compounds")
+        logger.info(f"Writing {search.key} to {path}")
         annotes = []
+        compounds_run = set()
         cache = SearchCache(path, inchikeys)
         self._save_metadata(path, search)
         while True:
@@ -81,9 +84,10 @@ class Searcher:
                 break
             try:
                 x = search.find(compound)
+                annotes.extend(x)
             except CompoundNotFoundError:
                 logger.info(f"Compound {compound} not found for {search.key}")
-                continue
+                x = []
             except Exception:
                 raise SearchError(
                     f"Failed {search.key} [{search.search_class}] on compound {compound}",
@@ -91,7 +95,7 @@ class Searcher:
                     search_key=search.key,
                     search_class=search.search_class,
                 )
-            annotes.extend(x)
+            compounds_run.add(compound)
             logger.debug(f"Found {len(x)} {search.search_name()} annotations for {compound}")
             # logging, caching, and such:
             on_nth = cache.at % SETTINGS.save_every == SETTINGS.save_every - 1
@@ -103,7 +107,7 @@ class Searcher:
                     + f" for {cache.at} of {len(inchikeys)} compounds",
                 )
                 self._save_annotations(annotes, path, done=is_last)
-                cache.save(compound)  # CRITICAL -- do this AFTER saving
+            cache.save(*compounds_run)  # CRITICAL -- do this AFTER saving
         # done!
         cache.kill()
         logger.info(f"Wrote {search.key} to {path}")
@@ -114,7 +118,7 @@ class Searcher:
         # e.g. if the user had 'inchi' or 'smiles' or 'pretty_name'
         for extra_col in [c for c in self.input_df.columns if c != "inchikey"]:
             extra_mp = self.input_df.set_index("inchikey")[extra_col].to_dict()
-            df[extra_col] = df["lookup"].map(extra_mp.get)
+            df[extra_col] = df["origin_inchikey"].map(extra_mp.get)
         # write the file
         df.write_file(output_path, mkdirs=True, dir_hash=done)
 

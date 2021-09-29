@@ -10,7 +10,7 @@ from typing import Any, Mapping, MutableMapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import typer
-from pocketutils.core.exceptions import PathExistsError
+from pocketutils.core.exceptions import PathExistsError, IllegalStateError
 from typeddfs import TypedDfs
 from typeddfs.abs_dfs import AbsDf
 from typeddfs.checksums import Checksums
@@ -23,7 +23,7 @@ from mandos.entry.entry_commands import Entries
 from mandos.model.hit_dfs import HitDf
 from mandos.model.settings import SETTINGS
 from mandos.model.utils.reflection_utils import InjectionError
-from mandos.model.utils.setup import MandosLogging, logger, LogSinkInfo
+from mandos.model.utils.setup import logger, LogSinkInfo
 
 cli = typer.Typer()
 Apis.set_default()
@@ -77,6 +77,7 @@ class MultiSearch:
     out_dir: Path
     suffix: str
     replace: bool
+    proceed: bool
     log_path: Optional[Path]
 
     @property
@@ -91,8 +92,6 @@ class MultiSearch:
     def __post_init__(self):
         if not self.replace and self.final_path.exists():
             raise PathExistsError(f"Path {self.final_path} exists but --replace is not set")
-        if not self.replace and self.doc_path.exists():
-            raise PathExistsError(f"Path {self.doc_path} exists but --replace is not set")
 
     def run(self) -> None:
         # build up the list of Entry classes first, and run ``test`` on each one
@@ -106,14 +105,14 @@ class MultiSearch:
         # build and test
         for cmd in commands:
             try:
-                cmd.test()
+                cmd.test(replace=self.replace, proceed=self.proceed)
             except Exception:
                 logger.error(f"Bad search {cmd}")
                 raise
         logger.notice("Searches look ok.")
         # start!
         for cmd in commands:
-            cmd.run()
+            cmd.run(replace=self.replace, proceed=self.proceed)
         logger.notice("Done with all searches!")
         # write the final file
         df = HitDf(pd.concat([HitDf.read_file(cmd.output_path) for cmd in commands]))
@@ -129,8 +128,9 @@ class MultiSearch:
                 if v is not None and not pd.isna(v)
             }
             key = data["key"]
-            default_to = self.input_path.parent / (key + SETTINGS.table_suffix)
-            data["to"] = EntryUtils.adjust_filename(None, default=default_to, replace=self.replace)
+            default_to = self.out_dir / (key + SETTINGS.table_suffix)
+            # TODO: produces bad logging about being overwritten
+            data["to"] = EntryUtils.adjust_filename(None, default=default_to, replace=True)
             data["log"] = self._get_log_path(key)
             cmd = CmdRunner.build(data, self.input_path)
             commands[cmd.key] = cmd
@@ -179,20 +179,27 @@ class CmdRunner:
 
     @property
     def done_path(self) -> Path:
-        return Checksums.get_hash_dir(self.output_path.parent)
+        return Checksums.get_hash_dir(self.output_path)
 
     @property
     def was_run(self) -> bool:
         if not self.done_path.exists():
             return False
         sums = Checksums.parse_hash_file_resolved(self.done_path)
-        return self.output_path in sums
+        done = self.output_path in sums
+        if done and not self.output_path.exists():
+            raise IllegalStateError(f"{self.output_path} completed but does not exist")
+        return done
 
-    def test(self) -> None:
+    def test(self, *, replace: bool, proceed: bool) -> None:
+        if self.output_path.exists() and not self.was_run and not proceed and not replace:
+            raise PathExistsError(f"Path {self.output_path} exists but not finished")
         self.cmd.test(self.input_path, **self.params)
 
-    def run(self) -> None:
-        self.cmd.run(self.input_path, **self.params)
+    def run(self, *, replace: bool, proceed: bool) -> None:
+        # we already checked that we're allowed to proceed
+        if replace or not self.was_run:
+            self.cmd.run(self.input_path, **self.params)
 
     @classmethod
     def build(cls, data: Mapping[str, Any], input_path: Path):

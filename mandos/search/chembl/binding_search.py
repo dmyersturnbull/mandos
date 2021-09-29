@@ -14,8 +14,8 @@ class BindingSearch(_ActivitySearch[BindingHit]):
     """
 
     @classmethod
-    def allowed_assay_types(cls) -> Set[str]:
-        return {"B"}
+    def assay_type(cls) -> str:
+        return "B"
 
     def to_hit(
         self,

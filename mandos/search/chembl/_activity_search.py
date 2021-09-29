@@ -35,14 +35,13 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         self.binds_cutoff = binds_cutoff
 
     @classmethod
-    def allowed_assay_types(cls) -> Set[str]:
+    def assay_type(cls) -> str:
         raise NotImplementedError()
 
     def query(self, parent_form: ChemblCompound) -> Sequence[NestedDotDict]:
         filters = dict(
             parent_molecule_chembl_id=parent_form.chid,
-            assay_type__iregex=self._set_to_regex(self.allowed_assay_types()),
-            standard_relation__iregex=self._set_to_regex(self.allowed_relations),
+            assay_type=self.assay_type(),
             pchembl_value__isnull=None if self.min_pchembl is None else False,
             target_organism__isnull=None if len(self.taxa) == 0 else False,
         )
@@ -62,7 +61,7 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         if (
             (data.get_as("data_validity_comment", lambda s: s.lower()) in bad_flags)
             or (data.req_as("standard_relation", str) not in self.allowed_relations)
-            or (data.req_as("assay_type", str) not in self.allowed_assay_types())
+            or (data.req_as("assay_type", str) != self.assay_type())
             or (self.taxa is not None and data.get_as("target_tax_id", int) not in self.taxa)
             or (self.min_pchembl is not None and data.get("pchembl_value") is None)
             or (

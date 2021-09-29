@@ -81,7 +81,8 @@ class ChemblUtils:
             if parent != ch["molecule_chembl_id"]:
                 ch = NestedDotDict(self._get_compound(parent))
         else:
-            logger.caution(f"Missing hierarchy for {ch}")
+            logger.caution(f"Missing hierarchy for {inchikey}")
+            logger.debug(f"Missing hierarchy for {inchikey}: {ch}")
         return ch
 
     def _get_compound_from_smiles(self, smiles: str) -> NestedDotDict:

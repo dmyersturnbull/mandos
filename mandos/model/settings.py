@@ -16,8 +16,9 @@ from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
 from typeddfs import FileFormat
 
+from mandos.model.utils.fancy_logger import LogSinkInfo
 from mandos.model.utils.resources import MandosResources
-from mandos.model.utils.setup import MandosLogging, logger, LogSinkInfo
+from mandos.model.utils.setup import logger
 
 defaults: Mapping[str, Any] = orjson.loads(
     MandosResources.path("default_settings.json").read_text(encoding="utf8")
@@ -61,6 +62,7 @@ class Settings:
     cache_gzip: bool
     cache_checksum_alg: str
     save_every: int
+    sanitize_paths: bool
     chembl_expire_sec: int
     chembl_n_tries: int
     chembl_timeout_sec: int
@@ -167,6 +169,7 @@ class Settings:
             search_checksum_alg=get("search.checksum_algorithm", str),
             log_suffix=get("search.default_log_suffix", str),
             save_every=get("search.save_every", int),
+            sanitize_paths=get("search.sanitize_paths", bool),
             cache_path=Path(get("cache.path", str)).expanduser(),
             chembl_expire_sec=get("cache.chembl.expire_sec", int),
             pubchem_expire_sec=get("cache.pubchem.expire_sec", int),

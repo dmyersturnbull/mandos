@@ -126,7 +126,7 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
             return None, organism
         matches = self.taxa.get_by_id_or_name(organism)
         if len(matches) == 0:
-            logger.debug(f"Taxon {organism} not in set. Excluding.")
+            logger.debug(f"Taxon {organism} not in set; excluding")
             return None, None
         best: Taxon = next(iter(matches))
         if best.scientific_name != organism and best.mnemonic != organism:

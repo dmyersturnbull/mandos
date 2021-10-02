@@ -83,7 +83,8 @@ class Searcher:
             except StopIteration:
                 break
             try:
-                x = search.find(compound)
+                with logger.contextualize(compound=compound):
+                    x = search.find(compound)
                 annotes.extend(x)
             except CompoundNotFoundError:
                 logger.info(f"Compound {compound} not found for {search.key}")
@@ -126,7 +127,7 @@ class Searcher:
         metadata_path = output_path.with_suffix(".metadata.json")
         params = {k: str(v) for k, v in search.get_params().items() if k not in {"key", "api"}}
         metadata = NestedDotDict(dict(key=search.key, search=search.search_class, params=params))
-        metadata.write_json(metadata_path)
+        metadata.write_json(metadata_path, indent=True)
 
 
 __all__ = ["Searcher", "InputCompoundsDf"]

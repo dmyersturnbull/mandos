@@ -19,6 +19,7 @@ from typing import (
 
 import typer
 from pocketutils.core.exceptions import PathExistsError, XTypeError, XValueError
+from pocketutils.tools.path_tools import PathTools
 from regex import regex
 from typeddfs.df_errors import FilenameSuffixError
 
@@ -223,11 +224,11 @@ class ArgUtils:
     ) -> Optional[Taxonomy]:
         if taxa is None or len(taxa) == 0:
             return None
-        allow, forbid, ancestors = cls.parse_taxa(taxa, allow_forbid=allow_forbid)
+        parsed = cls.parse_taxa(taxa, allow_forbid=allow_forbid)
         return TaxonomyFactories.get_smart_taxonomy(
-            allow=allow,
-            forbid=forbid,
-            ancestors=cls.parse_taxa_ids(ancestors),
+            allow=parsed.allow,
+            forbid=parsed.forbid,
+            ancestors=parsed.ancestors,
             local_only=local_only,
         )
 
@@ -247,6 +248,7 @@ class ArgUtils:
         taxa_objs = [t.strip() for t in taxa.split(",") if len(t.strip()) > 0]
         allow = [t.strip().lstrip("+") for t in taxa_objs if not t.startswith("-")]
         forbid = [t.strip().lstrip("-") for t in taxa_objs if t.startswith("-")]
+        ancestors = [t.strip() for t in ancestors.split(",")]
         if not allow_forbid and len(forbid) > 0:
             raise XValueError(f"Cannot use '-' in {taxa}")
         return ParsedTaxa(
@@ -324,6 +326,12 @@ class EntryUtils:
             path = to / default
         else:
             path = Path(to)
+        path = Path(path)
+        if os.name == "nt" and SETTINGS.sanitize_paths:
+            new_path = PathTools.sanitize_path_nodes(path._parts, is_file=True)
+            if new_path.resolve() != path.resolve():
+                logger.warning(f"Sanitized filename {path} → {new_path}")
+                path = new_path
         if (
             path.exists()
             and not path.is_file()
@@ -335,7 +343,7 @@ class EntryUtils:
             raise PathExistsError(f"File {path} already exists")
         cls._check_suffix(path.suffix, suffixes)
         if path.exists() and replace:
-            logger.info(f"Overwriting existing file {path}.")
+            logger.info(f"Overwriting existing file {path}")
         return path
 
     @classmethod
@@ -354,8 +362,13 @@ class EntryUtils:
             out_dir = default if m.group(1) == "" else m.group(1)
             suffix = SETTINGS.table_suffix if m.group(2) == "" else m.group(2)
             if out_dir.startswith("."):
-                logger.warning(f"Writing to {out_dir} - was it meant as a suffix instead?")
+                logger.warning(f"Writing to {out_dir} — was it meant as a suffix instead?")
             out_dir = Path(out_dir)
+        if os.name == "nt" and SETTINGS.sanitize_paths:
+            new_dir = PathTools.sanitize_path_nodes(out_dir._parts, is_file=True)
+            if new_dir.resolve() != out_dir.resolve():
+                logger.warning(f"Sanitized directory {out_dir} → {new_dir}")
+                out_dir = new_dir
         if out_dir.exists() and not out_dir.is_dir():
             raise PathExistsError(f"Path {out_dir} already exists but and is not a directory")
         cls._check_suffix(suffix, suffixes)

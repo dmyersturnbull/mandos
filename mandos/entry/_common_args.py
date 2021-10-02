@@ -10,7 +10,7 @@ from mandos.entry._arg_utils import Arg, Opt
 from mandos.entry.searchers import InputCompoundsDf
 from mandos.model.hit_dfs import HitDf
 from mandos.model.settings import SETTINGS
-from mandos.model.utils.setup import MANDOS_SETUP, MandosLogging
+from mandos.model.utils.setup import Defaults
 
 T = TypeVar("T", covariant=True)
 DEF_SUFFIX = SETTINGS.table_suffix
@@ -47,11 +47,11 @@ class CommonArgs:
         rf"""
         How much logging output to show.
 
-        Choices, from least to most verbose: {", ".join(MandosLogging.levels())}
-        (Aliases: {MANDOS_SETUP.aliases()}.)
+        Choices, from least to most verbose: {", ".join(Defaults.levels_extended)}
+        (Aliases: {Defaults.aliases}.)
         """,
         "--stderr",
-        default=MandosLogging.DEFAULT_LEVEL,
+        default=Defaults.level,
     )
 
     log = Opt.val(
@@ -60,8 +60,8 @@ class CommonArgs:
 
         The suffix can be .log, .log.gz, .log.zip, .json, .json.gz, or .json.gz.
         Prefix with :LEVEL: to control the level for this file (e.g. ":INFO:out.log").
-        The level can be, from least to most verbose: {", ".join(MandosLogging.levels())}
-        (Aliases: {MANDOS_SETUP.aliases()}.)
+        The level can be, from least to most verbose: {", ".join(Defaults.levels_extended)}
+        (Aliases: {Defaults.aliases}.)
         """,
     )
 

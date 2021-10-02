@@ -498,7 +498,7 @@ class Taxonomy:
         else:
             raise XTypeError(f"Unknown type {type(item)} of {item}")
 
-    def req(self, item: int) -> Taxon:
+    def req(self, item: Union[int, Taxon]) -> Taxon:
         """
         Gets a single taxon by its ID.
         Raises an error if it is not found.
@@ -512,7 +512,7 @@ class Taxonomy:
         Corresponds to ``dict.get``.
 
         Args:
-            item: The scientific name or UniProt ID
+            item: The  UniProt ID
 
         Returns:
             The taxon, or None if it was not found
@@ -520,8 +520,6 @@ class Taxonomy:
         if isinstance(item, Taxon):
             item = item.id
         if isinstance(item, int):
-            return self._by_id.get(item)
-        elif isinstance(item, str):
             return self._by_id.get(item)
         else:
             raise XTypeError(f"Type {type(item)} of {item} not applicable")

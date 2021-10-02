@@ -70,22 +70,22 @@ class CompoundIdFiller:
 
     def fill(self, df: IdMatchDf) -> IdMatchDf:
         df = self._prep(df)
-        logger.info(f"Processing {len(df)} input compounds...")
+        logger.info(f"Processing {len(df)} input compounds")
         fill = []
         for i, row in enumerate(df.itertuples()):
             if i % 200 == 0 and i > 0:
                 logger.notice(f"Processed {i:,} / {len(df):,}")
             elif i % 20 == 0 and i > 0:
                 logger.info(f"Processed {i:,} / {len(df):,}")
-            proc = self._process(
-                compound_id=look(row, "compound_id"),
-                library=look(row, "library"),
-                inchi=look(row, "origin_inchi"),
-                inchikey=look(row, "origin_inchikey"),
-                pubchem_id=look(row, "origin_pubchem_id"),
-                chembl_id=look(row, "origin_chembl_id"),
-                line_no=i,
-            )
+            with logger.contextualize(line=i):
+                proc = self._process(
+                    compound_id=look(row, "compound_id"),
+                    library=look(row, "library"),
+                    inchi=look(row, "origin_inchi"),
+                    inchikey=look(row, "origin_inchikey"),
+                    pubchem_id=look(row, "origin_pubchem_id"),
+                    chembl_id=look(row, "origin_chembl_id"),
+                )
             fill.append(proc)
         for c in FILL_IDS:
             df[c] = [r[c] for r in fill]
@@ -94,7 +94,7 @@ class CompoundIdFiller:
             if c in df.columns and "origin_" + c in df.columns:
                 if df[c].values.tolist() == df["origin_" + c].values.tolist():
                     duplicate_cols.append("origin_" + c)
-        logger.notice(f"Done. Filled {len(df):,} rows.")
+        logger.notice(f"Done — filled {len(df):,} rows")
         if len(duplicate_cols) > 0:
             df = df.drop_cols(duplicate_cols)
             logger.notice(f"Dropped duplicated columns {', '.join(duplicate_cols)}")
@@ -116,7 +116,6 @@ class CompoundIdFiller:
         inchikey: Optional[str],
         pubchem_id: Optional[str],
         chembl_id: Optional[str],
-        line_no: int,
     ) -> Mapping[str, Any]:
         if inchikey is pubchem_id is chembl_id is None:
             logger.error(f"[line {line_no}] No data for {compound_id}")

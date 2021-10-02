@@ -4,6 +4,7 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
+import time
 from typing import Type
 
 import typer
@@ -19,7 +20,8 @@ from mandos.entry.plot_commands import PlotCommands
 from mandos.model.settings import SETTINGS
 
 # ALWAYS DO THIS FIRST:
-from mandos.model.utils.setup import MandosLogging, logger
+from mandos.model.utils.fancy_logger import LoguruUtils
+from mandos.model.utils.setup import FancyLoguru, logger, MANDOS_SETUP, MyLogger
 
 cli = typer.Typer()
 
@@ -86,14 +88,17 @@ class MandosCli:
 
     settings = SETTINGS
     logger = logger
-    logging = MandosLogging
+    logging = FancyLoguru
     main = cli
     search_cmds = SearchCommands
     misc_cmds = MiscCommands
 
     @classmethod
     def init(cls) -> Type[MandosCli]:
-        MandosLogging.init()
+        LoguruUtils.force_streams_to_utf8()
+        MANDOS_SETUP.init()
+        logger.disable("chembl_webresource_client")
+        logger.disable("requests_cache")
         Apis.set_default()
         return cls
 

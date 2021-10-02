@@ -80,7 +80,10 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         # So there's no need to filter by it
         assay = self.api.assay.get(data.req_as("assay_chembl_id", str))
         if target.type.name.lower() not in {s.lower() for s in self.allowed_target_types}:
-            logger.debug(f"Excluding {target.name} with type {target.type}")
+            logger.debug(
+                f"Excluding {target.name} with type {target.type}"
+                + f" (compound {compound.chid} [{compound.inchikey}])"
+            )
             return False
         confidence_score = assay.get("confidence_score")
         if self.min_confidence_score is not None:
@@ -97,10 +100,7 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
         if len(self.taxa) == 0:
             tax_id, tax_name = tax_id, organism
         else:
-            taxes = {tax.req(tax_id) for tax in self.taxa if tax.contains(tax_id)}
-            tax = next(iter(taxes))
-            if len(taxes) > 1:
-                logger.warning(f"Multiple matches for taxon {tax_id}: {taxes}; using {tax}")
+            tax = self.taxa.get(tax_id)
             if organism != tax.scientific_name:
                 logger.warning(f"Target organism {organism} is not {tax.scientific_name}")
             tax_id = tax.id

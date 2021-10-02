@@ -21,8 +21,10 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         self, lookup: str, compound: ChemblCompound, data: NestedDotDict, target: ChemblTargetGraph
     ) -> bool:
         if target.type.name.lower() not in {s.lower() for s in self.allowed_target_types}:
-            logger.caution(f"Excluding {target.name} for {compound} with type {target.type}")
-            logger.debug(f"Excluded {target.name} for {compound} with type {target.type}: {data}")
+            logger.caution(
+                f"Excluding {target.name} with type {target.type} ({compound.chid} [{compound.inchi}])"
+            )
+            logger.debug(f" Excluded {target.name} for {compound} with type {target.type}: {data}")
             return False
         return True
 

@@ -220,8 +220,10 @@ class TaxonomyFactories:
     ) -> Taxonomy:
         cache = CachedTaxonomyCache(local_only=local_only, cache_dir=cache_dir)
         vertebrata = cache.load_vertebrate(Globals.vertebrata)
-        return vertebrata.subtrees_by_ids_or_names(allow).exclude_subtrees_by_ids_or_names(forbid)
+        return vertebrata
         # TODO:
+        # return vertebrata.subtrees_by_ids_or_names(allow)
+        # .exclude_subtrees_by_ids_or_names(forbid)
         vertebrates: Set[Union[int, str]] = {t for t in allow if t in vertebrata}
         invertebrates: Set[Union[int, str]] = {t for t in allow if t not in vertebrata}
         trees: Set[Taxonomy] = {cache.load(t) for t in vertebrates}

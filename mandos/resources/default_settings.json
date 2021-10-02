@@ -4,6 +4,7 @@
   "search.default_table_suffix": ".feather",
   "search.checksum_algorithm": "sha256",
   "search.save_every": 10,
+  "search.sanitize_paths": true,
   "search.default_log_suffix": ".log.gz",
   "cache.path": "~/.mandos",
   "cache.gzip": true,

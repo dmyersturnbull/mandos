@@ -337,10 +337,10 @@ class MiscCommands:
         Useful to freeze data before running a search.
         """
         MANDOS_SETUP(log, stderr)
-        logger.error(f"Not implemented fully yet.")
+        logger.error(f"Not implemented yet")
         df = IdMatchDf.read_file(path)
         df = CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
-        logger.notice(f"Done caching.")
+        logger.notice(f"Done caching")
 
     @staticmethod
     def export_taxa(

@@ -1,7 +1,3 @@
-[[search]]
-key = "core.chembl.moa"
-source = "chembl:mechanism"
-traversal = "@null"
 
 [[search]]
 key = "core.binding"
@@ -10,6 +6,11 @@ pchembl = 6
 confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
+traversal = "@null"
+
+[[search]]
+key = "core.chembl.moa"
+source = "chembl:mechanism"
 traversal = "@null"
 
 [[search]]

@@ -7,6 +7,7 @@ from functools import total_ordering
 from pathlib import Path
 from typing import (
     Collection,
+    Dict,
     FrozenSet,
     Iterable,
     List,
@@ -15,16 +16,19 @@ from typing import (
     Sequence,
     Set,
     Union,
-    Dict,
 )
 
 import pandas as pd
-from pocketutils.core.exceptions import DataIntegrityError, LookupFailedError, XTypeError
+from pocketutils.core.enums import CleverEnum
+from pocketutils.core.exceptions import (
+    DataIntegrityError,
+    LookupFailedError,
+    MultipleMatchesError,
+    XTypeError,
+)
 from typeddfs import TypedDfs
 
-from mandos.model import MultipleMatchesError
-from mandos.model.utils import CleverEnum
-from mandos.model.utils.setup import logger
+from mandos import logger
 
 
 class KnownTaxa:

@@ -4,12 +4,13 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
-import time
 from typing import Type
 
 import typer
+from pocketutils.misc.fancy_loguru import FancyLoguruExtras
 from typer.models import CommandInfo
 
+from mandos import logger
 from mandos.entry.api_singletons import Apis
 from mandos.entry.calc_commands import CalcCommands
 from mandos.entry.entry_commands import Entries
@@ -20,8 +21,7 @@ from mandos.entry.plot_commands import PlotCommands
 from mandos.model.settings import SETTINGS
 
 # ALWAYS DO THIS FIRST:
-from mandos.model.utils.fancy_logger import LoguruUtils
-from mandos.model.utils.setup import FancyLoguru, logger, MANDOS_SETUP, MyLogger
+from mandos.model.utils import MANDOS_SETUP
 
 cli = typer.Typer()
 
@@ -88,14 +88,12 @@ class MandosCli:
 
     settings = SETTINGS
     logger = logger
-    logging = FancyLoguru
     main = cli
     search_cmds = SearchCommands
     misc_cmds = MiscCommands
 
     @classmethod
     def init(cls) -> Type[MandosCli]:
-        LoguruUtils.force_streams_to_utf8()
         MANDOS_SETUP.init()
         logger.disable("chembl_webresource_client")
         logger.disable("requests_cache")

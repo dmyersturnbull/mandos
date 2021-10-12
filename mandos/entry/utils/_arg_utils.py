@@ -1,7 +1,7 @@
 from __future__ import annotations
+
 import os
 from dataclasses import dataclass
-from inspect import cleandoc
 from pathlib import Path
 from typing import (
     AbstractSet,
@@ -17,18 +17,18 @@ from typing import (
     Union,
 )
 
-import typer
 from pocketutils.core.exceptions import PathExistsError, XTypeError, XValueError
+from pocketutils.misc.typer_utils import Arg, Opt
 from pocketutils.tools.path_tools import PathTools
 from regex import regex
 from typeddfs.df_errors import FilenameSuffixError
 
+from mandos import logger
 from mandos.model.apis.chembl_support.chembl_targets import TargetType
 from mandos.model.apis.pubchem_support.pubchem_models import ClinicalTrialsGovUtils
 from mandos.model.settings import SETTINGS, Globals
 from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.model.utils.setup import logger
 
 T = TypeVar("T", covariant=True)
 
@@ -43,143 +43,6 @@ class ParsedTaxa:
     @classmethod
     def empty(cls) -> ParsedTaxa:
         return ParsedTaxa("", [], [], [])
-
-
-class _Args:
-    @staticmethod
-    def _arg(doc: str, *names, default: Optional[T] = None, req: bool = False, **kwargs):
-        kwargs = dict(
-            help=cleandoc(doc),
-            **kwargs,
-            allow_dash=True,
-        )
-        if req:
-            return typer.Argument(default, **kwargs)
-        else:
-            return typer.Option(default, *names, **kwargs)
-
-    @staticmethod
-    def _path(
-        doc: str, *names, default: Optional[str], f: bool, d: bool, out: bool, req: bool, **kwargs
-    ):
-        # if it's None, we're going to have a special default set afterward, so we'll explain it in the doc
-        if out and default is None:
-            kwargs = dict(show_default=False, **kwargs)
-        kwargs = {
-            **dict(
-                exists=not out,
-                dir_okay=d,
-                file_okay=f,
-                readable=out,
-                writable=not out,
-            ),
-            **kwargs,
-        }
-        return _Args._arg(doc, *names, default=default, req=req, **kwargs)
-
-
-class Arg(_Args):
-    @staticmethod
-    def out_file(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=False, out=True, req=True, **kwargs
-        )
-
-    @staticmethod
-    def out_dir(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=True, out=True, req=True, **kwargs
-        )
-
-    @staticmethod
-    def out_path(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=True, out=False, req=True, **kwargs
-        )
-
-    @staticmethod
-    def in_file(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=False, out=False, req=True, **kwargs
-        )
-
-    @staticmethod
-    def in_dir(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=False, d=True, out=False, req=True, **kwargs
-        )
-
-    @staticmethod
-    def in_path(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=True, out=False, req=True, **kwargs
-        )
-
-    @staticmethod
-    def val(doc: str, *names, default: Optional[T] = None, **kwargs):
-        return _Args._arg(doc, *names, default=default, req=True, **kwargs)
-
-
-class Opt(_Args):
-    @staticmethod
-    def out_file(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=False, out=True, req=False, **kwargs
-        )
-
-    @staticmethod
-    def out_dir(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=True, out=True, req=False, **kwargs
-        )
-
-    @staticmethod
-    def out_path(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc,
-            *names,
-            default=default,
-            f=True,
-            d=True,
-            out=False,
-            req=False,
-            exists=False,
-            **kwargs,
-        )
-
-    @staticmethod
-    def in_file(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=True, d=False, out=False, req=False, **kwargs
-        )
-
-    @staticmethod
-    def in_dir(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc, *names, default=default, f=False, d=True, out=False, req=False, **kwargs
-        )
-
-    @staticmethod
-    def in_path(doc: str, *names, default: Optional[str] = None, **kwargs):
-        return _Args._path(
-            doc,
-            *names,
-            default=default,
-            f=True,
-            d=True,
-            out=False,
-            req=False,
-            exists=False,
-            **kwargs,
-        )
-
-    @staticmethod
-    def val(doc: str, *names, default: Optional[T] = None, **kwargs):
-        return _Args._arg(doc, *names, default=default, req=False, **kwargs)
-
-    @staticmethod
-    def flag(doc: str, *names, **kwargs):
-        return _Args._arg(doc, *names, default=False, req=False, **kwargs)
 
 
 class ArgUtils:
@@ -328,7 +191,7 @@ class EntryUtils:
             path = Path(to)
         path = Path(path)
         if os.name == "nt" and SETTINGS.sanitize_paths:
-            new_path = PathTools.sanitize_path_nodes(path._parts, is_file=True)
+            new_path = Path(*PathTools.sanitize_nodes(path._parts, is_file=True))
             if new_path.resolve() != path.resolve():
                 logger.warning(f"Sanitized filename {path} → {new_path}")
                 path = new_path
@@ -365,7 +228,7 @@ class EntryUtils:
                 logger.warning(f"Writing to {out_dir} — was it meant as a suffix instead?")
             out_dir = Path(out_dir)
         if os.name == "nt" and SETTINGS.sanitize_paths:
-            new_dir = PathTools.sanitize_path_nodes(out_dir._parts, is_file=True)
+            new_dir = Path(*PathTools.sanitize_nodes(out_dir._parts, is_file=True))
             if new_dir.resolve() != out_dir.resolve():
                 logger.warning(f"Sanitized directory {out_dir} → {new_dir}")
                 out_dir = new_dir

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from mandos.model.utils import TrueFalseUnknown
+from pocketutils.core.enums import TrueFalseUnknown
 
 
 @dataclass

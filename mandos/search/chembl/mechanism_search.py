@@ -2,10 +2,10 @@ from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 
+from mandos import logger
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
 from mandos.model.concrete_hits import MechanismHit
-from mandos.model.utils.setup import logger
 from mandos.search.chembl._protein_search import ProteinSearch
 
 
@@ -50,6 +50,7 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
             object_name=best_target.name,
             record_id=data["mec_id"],
             exact_target_id=data.req_as("target_chembl_id", str),
+            exact_target_name=data.req_as("target_pref_name", str),
             action_type=data.req_as("action_type", str),
         )
         return [hit]

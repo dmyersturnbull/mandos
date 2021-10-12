@@ -4,29 +4,8 @@ import abc
 from dataclasses import dataclass
 from typing import TypeVar
 
-from pocketutils.core.exceptions import DownloadError, LookupFailedError
-from pocketutils.core.exceptions import MultipleMatchesError as _MME
-
 
 class Api(metaclass=abc.ABCMeta):
-    """ """
-
-
-class DownloadTimeoutError(DownloadError, TimeoutError):
-    """
-    User-supplied files.
-    """
-
-
-class DbLookupError(LookupFailedError):
-    """"""
-
-
-class CompoundNotFoundError(DbLookupError):
-    """ """
-
-
-class MultipleMatchesError(_MME):
     """ """
 
 
@@ -54,7 +33,4 @@ class CompoundStruct:
 __all__ = [
     "Api",
     "CompoundStruct",
-    "CompoundNotFoundError",
-    "MultipleMatchesError",
-    "DownloadTimeoutError",
 ]

@@ -9,11 +9,11 @@ from typing import Collection, Sequence, Type, Union
 
 import numpy as np
 import pandas as pd
+from pocketutils.core.enums import CleverEnum
 
 from mandos.analysis import AnalysisUtils as Au
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.model.hits import AbstractHit
-from mandos.model.utils import CleverEnum
 
 # note that most of these math functions are much faster than their numpy counterparts
 # if we're not broadcasting, it's almost always better to use them

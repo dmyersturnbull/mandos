@@ -12,16 +12,16 @@ from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import ConfigError, DirDoesNotExistError, XValueError
 from pocketutils.core.query_utils import QueryExecutor
+from pocketutils.misc.fancy_loguru import LogSinkInfo
 from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
 from typeddfs import FileFormat
 
-from mandos.model.utils.fancy_logger import LogSinkInfo
-from mandos.model.utils.resources import MandosResources
-from mandos.model.utils.setup import logger
+from mandos import logger
+from mandos.model.utils import MandosResources
 
 defaults: Mapping[str, Any] = orjson.loads(
-    MandosResources.path("default_settings.json").read_text(encoding="utf8")
+    MandosResources.path("default_settings.json").read_text(encoding="utf8", errors="strict")
 )
 T = TypeVar("T")
 

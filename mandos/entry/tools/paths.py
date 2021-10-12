@@ -3,9 +3,9 @@ from typing import Optional
 
 from pocketutils.tools.path_tools import PathTools
 
+from mandos import logger
 from mandos.model.searches import Search
 from mandos.model.settings import SETTINGS
-from mandos.model.utils.setup import logger
 
 
 class EntryPaths:

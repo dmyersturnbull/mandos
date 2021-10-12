@@ -9,6 +9,7 @@ from typing import Any, Mapping, Optional, Tuple, Union
 import numpy as np
 from matplotlib.colors import Colormap
 from pocketutils.core.chars import Chars
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import (
     ImmutableError,
     MissingResourceError,
@@ -24,7 +25,6 @@ from mandos.analysis.io_defns import (
     PsiProjectedDf,
     SimilarityDfShortForm,
 )
-from mandos.model.utils import CleverEnum
 
 
 @enum.unique

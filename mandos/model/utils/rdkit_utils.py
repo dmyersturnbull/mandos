@@ -5,7 +5,7 @@ from typing import Iterator, List, Set
 import numpy as np
 from pocketutils.core.exceptions import DataIntegrityError
 
-from mandos.model.utils.setup import logger
+from mandos import logger
 
 try:
     import rdkit.Chem.inchi as Inchi

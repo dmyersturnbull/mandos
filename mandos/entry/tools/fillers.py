@@ -7,12 +7,12 @@ from pocketutils.core.exceptions import XValueError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 
+from mandos import logger
 from mandos.entry.api_singletons import Apis
-from mandos.model import CompoundNotFoundError, CompoundStruct
+from mandos.model import CompoundStruct
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
-from mandos.model.utils.setup import logger
-
+from mandos.model.utils import CompoundNotFoundError
 
 IdMatchDf = (
     TypedDfs.typed("IdMatchDf")
@@ -118,7 +118,7 @@ class CompoundIdFiller:
         chembl_id: Optional[str],
     ) -> Mapping[str, Any]:
         if inchikey is pubchem_id is chembl_id is None:
-            logger.error(f"[line {line_no}] No data for {compound_id}")
+            logger.error(f"No data for {compound_id}")
             return dict(
                 inchi=inchi,
                 inchikey=inchikey,
@@ -154,11 +154,11 @@ class CompoundIdFiller:
         inchi, inchi_choices = self._choose(db_to_struct, "inchi")
         about = " ; ".join([x.simple_str for x in prioritize_choices if x is not None])
         if len(inchikey_choices) == 0:
-            logger.error(f"[line {line_no}] no database inchikeys found :: {about}")
+            logger.error(f"no database inchikeys found :: {about}")
         elif len(inchikey_choices) > 1:
-            logger.error(f"[line {line_no}] inchikey mismatch :: {about} :: {inchikey_choices}")
+            logger.error(f"inchikey mismatch :: {about} :: {inchikey_choices}")
         elif len(inchi_choices) > 1:
-            logger.debug(f"[line {line_no}] inchi mismatch :: {about} :: {inchi_choices}")
+            logger.debug(f"inchi mismatch :: {about} :: {inchi_choices}")
         return dict(
             inchi=inchi,
             inchikey=inchikey,

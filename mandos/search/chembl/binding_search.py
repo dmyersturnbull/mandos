@@ -53,12 +53,13 @@ class BindingSearch(_ActivitySearch[BindingHit]):
             object_name=best_target.name,
             record_id=from_super.req_as("activity_id", str),
             exact_target_id=from_super.req_as("target_chembl_id", str),
+            exact_target_name=from_super.req_as("target_pref_name", str),
             taxon_id=from_super.get("taxon_id"),
             taxon_name=from_super.get("taxon_name"),
             src_id=from_super.req_as("src_id", str),
             pchembl=pchembl,
             std_type=from_super.req_as("standard_type", str),
-            standard_relation=rel,
+            std_rel=rel,
         )
         return [hit]
 

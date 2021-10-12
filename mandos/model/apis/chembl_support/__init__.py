@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mandos.model import CompoundNotFoundError, CompoundStruct
+from mandos.model import CompoundStruct
+from mandos.model.utils import CompoundNotFoundError
 
 
 class ChemblCompoundLookupError(CompoundNotFoundError):

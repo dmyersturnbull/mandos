@@ -8,10 +8,14 @@ from typing import Generator, Sequence, Type, Union
 
 import numpy as np
 import pandas as pd
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import MismatchedDataError
 
-from mandos.analysis.io_defns import ConcordanceDf, SimilarityDfLongForm, SimilarityDfShortForm
-from mandos.model.utils import CleverEnum
+from mandos.analysis.io_defns import (
+    ConcordanceDf,
+    SimilarityDfLongForm,
+    SimilarityDfShortForm,
+)
 
 
 class ConcordanceCalculator(metaclass=abc.ABCMeta):

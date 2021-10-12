@@ -4,13 +4,13 @@ Common argument processing and arguments for Typer.
 import os
 from typing import Optional, TypeVar
 
+from pocketutils.misc.fancy_loguru import FancyLoguruDefaults
 from typeddfs.cli_help import DfCliHelp
 
-from mandos.entry._arg_utils import Arg, Opt
-from mandos.entry.searchers import InputCompoundsDf
+from mandos.entry.tools.searchers import InputCompoundsDf
+from mandos.entry.utils._arg_utils import Arg, Opt
 from mandos.model.hit_dfs import HitDf
 from mandos.model.settings import SETTINGS
-from mandos.model.utils.setup import Defaults
 
 T = TypeVar("T", covariant=True)
 DEF_SUFFIX = SETTINGS.table_suffix
@@ -47,11 +47,11 @@ class CommonArgs:
         rf"""
         How much logging output to show.
 
-        Choices, from least to most verbose: {", ".join(Defaults.levels_extended)}
-        (Aliases: {Defaults.aliases}.)
+        Choices, from least to most verbose: {", ".join(FancyLoguruDefaults.levels_extended)}
+        (Aliases: {FancyLoguruDefaults.aliases}.)
         """,
         "--stderr",
-        default=Defaults.level,
+        default=FancyLoguruDefaults.level,
     )
 
     log = Opt.val(
@@ -60,8 +60,8 @@ class CommonArgs:
 
         The suffix can be .log, .log.gz, .log.zip, .json, .json.gz, or .json.gz.
         Prefix with :LEVEL: to control the level for this file (e.g. ":INFO:out.log").
-        The level can be, from least to most verbose: {", ".join(Defaults.levels_extended)}
-        (Aliases: {Defaults.aliases}.)
+        The level can be, from least to most verbose: {", ".join(FancyLoguruDefaults.levels_extended)}
+        (Aliases: {FancyLoguruDefaults.aliases}.)
         """,
     )
 
@@ -72,7 +72,7 @@ class CommonArgs:
         If provided, "compound_id"
         will be copied in the results to facilitate lookups.
         Some commands require "inchi" or "smiles".
-        """
+        """,
     )
 
     in_annotations_file = Arg.in_file(

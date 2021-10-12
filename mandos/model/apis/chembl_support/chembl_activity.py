@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import Set, Union
 
-from mandos.model.utils import CleverEnum
+from pocketutils.core.enums import CleverEnum
 
 
 class ActivityRelation(CleverEnum):

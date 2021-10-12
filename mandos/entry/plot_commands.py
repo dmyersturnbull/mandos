@@ -37,13 +37,13 @@ from mandos.analysis.plots import (
     ScorePlotter,
     TauPlotter,
 )
+from mandos.entry.calc_commands import Aa
 
 # noinspection PyProtectedMember
-from mandos.entry._arg_utils import Arg, EntryUtils, Opt
-from mandos.entry._common_args import CommonArgs
-from mandos.entry.calc_commands import Aa
+from mandos.entry.utils._arg_utils import Arg, EntryUtils, Opt
+from mandos.entry.utils._common_args import CommonArgs
 from mandos.model.settings import SETTINGS
-from mandos.model.utils.setup import MANDOS_SETUP
+from mandos.model.utils import MANDOS_SETUP
 
 DEF_SUFFIX = SETTINGS.table_suffix
 nl = "\n\n"

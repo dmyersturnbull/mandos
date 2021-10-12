@@ -6,6 +6,7 @@ import numpy as np
 from pocketutils.core.exceptions import OutOfRangeError
 from typeddfs import TypedDf
 
+from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_scrape_api import (
     ChemblScrapeApi,
@@ -22,7 +23,6 @@ from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 from mandos.model.concrete_hits import ChemblTargetPredictionHit
 from mandos.model.taxonomy import Taxon, Taxonomy
-from mandos.model.utils.setup import logger
 from mandos.search.chembl import ChemblScrapeSearch
 
 P = ChemblScrapePage.target_predictions

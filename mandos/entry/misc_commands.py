@@ -14,21 +14,22 @@ from typeddfs import FileFormat
 from typeddfs.cli_help import DfCliHelp
 from typeddfs.utils import Utils as TypedDfsUtils
 
+from mandos import logger
 from mandos.analysis.filtration import Filtration
 from mandos.analysis.reification import Reifier
-from mandos.entry._arg_utils import Arg, ArgUtils, EntryUtils, Opt
-from mandos.entry._common_args import CommonArgs
-from mandos.entry._common_args import CommonArgs as Ca
-from mandos.entry.docs import Documenter
-from mandos.entry.fillers import CompoundIdFiller, IdMatchDf
-from mandos.entry.multi_searches import MultiSearch, SearchConfigDf
-from mandos.entry.searchers import InputCompoundsDf
+from mandos.entry.tools.docs import Documenter
+from mandos.entry.tools.fillers import CompoundIdFiller, IdMatchDf
+from mandos.entry.tools.multi_searches import MultiSearch, SearchConfigDf
+from mandos.entry.tools.searchers import InputCompoundsDf
+from mandos.entry.utils._arg_utils import Arg, ArgUtils, EntryUtils, Opt
+from mandos.entry.utils._common_args import CommonArgs
+from mandos.entry.utils._common_args import CommonArgs as Ca
 from mandos.model.apis.g2p_api import CachingG2pApi
 from mandos.model.hit_dfs import HitDf
 from mandos.model.settings import SETTINGS, Globals
 from mandos.model.taxonomy import TaxonomyDf
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.model.utils.setup import MANDOS_SETUP, logger
+from mandos.model.utils import MANDOS_SETUP
 
 DEF_SUFFIX = SETTINGS.table_suffix
 nl = "\n\n"

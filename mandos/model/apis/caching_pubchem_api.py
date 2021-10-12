@@ -12,11 +12,11 @@ import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import XValueError
 
+from mandos import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 from mandos.model.settings import SETTINGS
-from mandos.model.utils.setup import logger
 
 
 class CachingPubchemApi(PubchemApi):
@@ -30,7 +30,7 @@ class CachingPubchemApi(PubchemApi):
 
     def follow_link(self, inchikey_or_cid: Union[int, str]) -> Optional[Path]:
         link = self.link_path(inchikey_or_cid)
-        cid = link.read_text(encoding="utf8").strip()
+        cid = link.read_text(encoding="utf8", errors="strict").strip()
         if len(cid) == 0:
             return None
         return self.data_path(int(cid))
@@ -63,7 +63,7 @@ class CachingPubchemApi(PubchemApi):
         links = {inchikey_or_cid, *self.get_links(cid)}
         for link in links:
             if not link.exists():
-                link.write_text(str(cid), encoding="utf8")
+                link.write_text(str(cid), encoding="utf8", errors="strict")
         logger.debug(f"Wrote PubChem data to {path.absolute()}")
         return data
 
@@ -82,7 +82,7 @@ class CachingPubchemApi(PubchemApi):
 
     def _write_json(self, encoded: str, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(gzip.compress(encoded.encode(encoding="utf8")))
+        path.write_bytes(gzip.compress(encoded.encode(encoding="utf8", errors="strict")))
 
     def _read_json(self, path: Path) -> Optional[PubchemData]:
         deflated = gzip.decompress(path.read_bytes())

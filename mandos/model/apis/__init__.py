@@ -39,13 +39,13 @@ class _Source:
             query_args = {} if query_args is None else query_args
 
             def load():
-                return path.read_text(encoding="utf8") if path.exists() else None
+                return path.read_text(encoding="utf8", errors="strict") if path.exists() else None
 
             def save():
-                data = query(url, encoding="utf8", **query_args)
+                data = query(url, encoding="utf8", errors="strict", **query_args)
                 if data is not None:
                     if not path.exists():
-                        path.write_text(data, encoding="utf8")
+                        path.write_text(data, encoding="utf8", errors="strict")
                 return data
 
             # noinspection PyArgumentList
@@ -57,7 +57,7 @@ class _Source:
         path = Path(path)
 
         def one():
-            return path.read_text(encoding="utf8") if path.exists() else None
+            return path.read_text(encoding="utf8", errors="strict") if path.exists() else None
 
         # noinspection PyArgumentList
         return cls(one, name=f"Cache({path})")

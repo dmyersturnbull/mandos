@@ -6,7 +6,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import metadata as __load
 from pathlib import Path
 
-from mandos.model.utils.setup import logger
+from mandos.model.utils import logger
 
 pkg = "mandos"
 _metadata = None
@@ -42,4 +42,4 @@ if __name__ == "__main__":  # pragma: no cover
         print("Unknown project info")
 
 
-__all__ = ["MandosMetadata", "logger"]
+__all__ = ["MandosMetadata"]

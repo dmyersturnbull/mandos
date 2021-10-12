@@ -15,10 +15,10 @@ from pocketutils.core.exceptions import LookupFailedError, XValueError
 from typeddfs import TypedDfs
 from typeddfs.checksums import Checksums
 
+from mandos import logger
 from mandos.model.settings import SETTINGS, Globals
 from mandos.model.taxonomy import Taxonomy, TaxonomyDf
-from mandos.model.utils.resources import MandosResources
-from mandos.model.utils.setup import logger
+from mandos.model.utils import MandosResources
 
 
 class TaxonomyFactory(metaclass=abc.ABCMeta):

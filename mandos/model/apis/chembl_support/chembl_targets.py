@@ -8,11 +8,11 @@ from dataclasses import dataclass
 from typing import Mapping, Optional, Set
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import LookupFailedError
 from urllib3.util.retry import MaxRetryError
 
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.utils import CleverEnum
 
 
 class TargetNotFoundError(LookupFailedError):
@@ -50,6 +50,7 @@ class TargetType(CleverEnum):
     protein_nucleic_acid_complex = enum.auto()
     metal = enum.auto()
     small_molecule = enum.auto()
+    oligosaccharide = enum.auto()
     cell_line = enum.auto()
     macromolecule = enum.auto()
     subcellular = enum.auto()
@@ -137,6 +138,7 @@ class TargetType(CleverEnum):
             TargetType.metal,
             TargetType.small_molecule,
             TargetType.macromolecule,
+            TargetType.oligosaccharide,
         }
 
     @classmethod

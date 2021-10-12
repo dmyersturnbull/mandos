@@ -9,17 +9,22 @@ import inspect
 from pathlib import Path
 from typing import Optional, TypeVar
 
-from mandos.entry._arg_utils import ArgUtils
-from mandos.entry._common_args import CommonArgs
-from mandos.entry._entry_args import EntryArgs
+from pocketutils.core.exceptions import InjectionError
+from pocketutils.tools.reflection_tools import ReflectionTools
+
+from mandos import logger
 from mandos.entry.abstract_entries import Entry
 from mandos.entry.api_singletons import Apis
-from mandos.entry.searchers import Searcher
+from mandos.entry.tools.searchers import Searcher
+from mandos.entry.utils._arg_utils import ArgUtils
+from mandos.entry.utils._common_args import CommonArgs
+from mandos.entry.utils._entry_args import EntryArgs
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.pubchem_support.pubchem_models import CoOccurrenceType, DrugbankTargetType
+from mandos.model.apis.pubchem_support.pubchem_models import (
+    CoOccurrenceType,
+    DrugbankTargetType,
+)
 from mandos.model.concrete_hits import GoType
-from mandos.model.utils.reflection_utils import InjectionError, ReflectionUtils
-from mandos.model.utils.setup import logger
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.binding_search import BindingSearch
 from mandos.search.chembl.go_search import GoSearch
@@ -248,7 +253,7 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         if binding_search is None:
             binding_clazz = BindingSearch
         else:
-            binding_clazz = ReflectionUtils.injection(binding_search, BindingSearch)
+            binding_clazz = ReflectionTools.injection(binding_search, BindingSearch)
             logger.info(f"Passing parameters to {binding_clazz.__qualname__}")
         try:
             tax = ArgUtils.get_taxonomy(taxa)

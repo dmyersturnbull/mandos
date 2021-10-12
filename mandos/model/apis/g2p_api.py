@@ -6,15 +6,16 @@ from typing import Optional, Type
 import numpy as np
 import orjson
 import pandas as pd
+from pocketutils.core.enums import TrueFalseUnknown
 from pocketutils.core.exceptions import UnsupportedOpError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDf, TypedDfs
 
-from mandos.model import Api, CompoundNotFoundError
+from mandos import logger
+from mandos.model import Api
 from mandos.model.apis.g2p_support.g2p_data import G2pData, G2pInteraction
 from mandos.model.settings import SETTINGS
-from mandos.model.utils import TrueFalseUnknown
-from mandos.model.utils.setup import logger
+from mandos.model.utils import CompoundNotFoundError
 
 LIGANDS_URL = "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.tsv"
 INTERACTIONS_URL = "https://www.guidetopharmacology.org/DATA/interactions.tsv"
@@ -100,8 +101,8 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
                 self.interactions = InteractionDf.read_file(INTERACTIONS_URL, sep="\t")
                 self.interactions.write_file(self.interactions_path)
                 info = dict(dt_downloaded=datetime.now().isoformat())
-                info = orjson.dumps(info).decode(encoding="utf8")
-                (self.cache_path / "info.json").write_text(info)
+                info = orjson.dumps(info).decode(encoding="utf8", errors="strict")
+                (self.cache_path / "info.json").write_text(info, encoding="utf8", errors="strict")
                 if exists:
                     logger.notice(f"Cached missing G2P data to {self.cache_path}")
                 else:

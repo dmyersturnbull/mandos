@@ -11,14 +11,15 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import IllegalStateError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
+from typeddfs.checksums import Checksums
 
-from mandos.model import CompoundNotFoundError
+from mandos import logger
 from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit
 from mandos.model.search_caches import SearchCache
 from mandos.model.searches import Search, SearchError
 from mandos.model.settings import SETTINGS
-from mandos.model.utils.setup import logger
+from mandos.model.utils import CompoundNotFoundError
 
 
 def _fix_cols(df):
@@ -76,6 +77,8 @@ class Searcher:
         annotes = []
         compounds_run = set()
         cache = SearchCache(path, inchikeys)
+        # refresh so we know it's (no longer) complete
+        Checksums.delete_dir_hashes(Checksums.get_hash_dir(path), [path], missing_ok=True)
         self._save_metadata(path, search)
         while True:
             try:
@@ -121,6 +124,7 @@ class Searcher:
             extra_mp = self.input_df.set_index("inchikey")[extra_col].to_dict()
             df[extra_col] = df["origin_inchikey"].map(extra_mp.get)
         # write the file
+        df = HitDf.of(df)
         df.write_file(output_path, mkdirs=True, dir_hash=done)
 
     def _save_metadata(self, output_path: Path, search: Search):

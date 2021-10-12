@@ -9,12 +9,12 @@ from pathlib import Path
 from typing import Optional, Type
 
 import pandas as pd
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.query_utils import QueryExecutor
 from typeddfs import TypedDf, TypedDfs
 
 from mandos.model import Api
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
-from mandos.model.utils import CleverEnum
 from mandos.model.utils.scrape import By, Scraper
 
 

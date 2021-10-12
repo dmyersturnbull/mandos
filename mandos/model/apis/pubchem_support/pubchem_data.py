@@ -13,11 +13,16 @@ from urllib.parse import unquote as url_unescape
 import orjson
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
-from pocketutils.core.exceptions import DataIntegrityError, XValueError
+from pocketutils.core.exceptions import (
+    DataIntegrityError,
+    MultipleMatchesError,
+    XValueError,
+)
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
-from mandos.model import CompoundStruct, MultipleMatchesError
+from mandos import logger
+from mandos.model import CompoundStruct
 
 # noinspection PyProtectedMember
 from mandos.model.apis.pubchem_support._nav import FlatmapError, JsonNavigator
@@ -47,7 +52,6 @@ from mandos.model.apis.pubchem_support.pubchem_models import (
     Publication,
     PubmedEntry,
 )
-from mandos.model.utils.setup import logger
 
 
 class Misc:
@@ -79,7 +83,7 @@ class PubchemDataView(metaclass=abc.ABCMeta):
         # noinspection PyProtectedMember
         data = dict(self._data._x)
         encoded = orjson.dumps(data, default=default, option=orjson.OPT_INDENT_2)
-        encoded = encoded.decode(encoding="utf8")
+        encoded = encoded.decode(encoding="utf8", errors="strict")
         encoded = StringTools.retab(encoded, 2)
         return encoded
 

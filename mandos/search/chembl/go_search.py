@@ -28,7 +28,7 @@ class GoSearch(ChemblSearch[GoHit]):
             terms.extend(self._process(compound, match, target))
         return terms
 
-    def _process(self, lookup: str, compound: BindingHit, target: NestedDotDict) -> Sequence[GoHit]:
+    def _process(self, lookup: str, binding: BindingHit, target: NestedDotDict) -> Sequence[GoHit]:
         terms = set()
         if target.get("target_components") is not None:
             for comp in target["target_components"]:
@@ -43,15 +43,24 @@ class GoSearch(ChemblSearch[GoHit]):
             hits.append(
                 self._create_hit(
                     c_origin=lookup,
-                    c_matched=compound.matched_inchikey,
-                    c_id=compound.compound_id,
-                    c_name=compound.compound_name,
+                    c_matched=binding.matched_inchikey,
+                    c_id=binding.compound_id,
+                    c_name=binding.compound_name,
                     data_source=source,
                     predicate=predicate,
                     object_id=xref_id,
                     object_name=xref_name,
                     go_type=self.go_type.name,
-                    binding=compound,
+                    taxon_id=binding.taxon_id,
+                    taxon_name=binding.taxon_name,
+                    src_id=binding.src_id,
+                    pchembl=binding.pchembl,
+                    std_type=binding.std_type,
+                    std_rel=binding.std_rel,
+                    target_id=binding.object_id,
+                    target_name=binding.object_name,
+                    exact_target_id=binding.exact_target_id,
+                    exact_target_name=binding.exact_target_name,
                 )
             )
         return hits

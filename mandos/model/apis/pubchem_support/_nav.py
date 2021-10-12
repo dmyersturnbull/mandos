@@ -16,10 +16,9 @@ from typing import (
 )
 
 from pocketutils.core.dot_dict import NestedDotDict
-from pocketutils.core.exceptions import XValueError
+from pocketutils.core.exceptions import MultipleMatchesError, XValueError
 from pocketutils.tools.base_tools import BaseTools
 
-from mandos.model import MultipleMatchesError
 from mandos.model.apis.pubchem_support._nav_model import FilterFn
 
 T = TypeVar("T", covariant=True)
@@ -202,10 +201,10 @@ class JsonNavigatorListOfLists(AbstractJsonNavigator):
                     got2.append(fn(value))
                 except (MapError, ValueError, KeyError, TypeError, AttributeError):
                     raise MapError(
-                        f"Failed mapping on field {i}/{len(fields_and_funcs)} (value: {value} ; fn: {fn})"
+                        f"Failed mapping on field {i}/{len(fields_and_funcs)}"
+                        + f"(value: {value} ; fn: {fn})"
                         + "\n"
-                        + "Full data is: "
-                        + str(contents)
+                        + f"Full data is: {contents}"
                     )
                 gotcha.append(got2)
         return JsonNavigatorListOfLists(gotcha)

@@ -3,14 +3,15 @@ from pathlib import Path
 from typing import Generic, Mapping, Optional, Type, TypeVar, Union
 
 import typer
+from pocketutils.tools.reflection_tools import ReflectionTools
 from typer.models import OptionInfo
 
-from mandos.entry._arg_utils import EntryUtils
-from mandos.entry.searchers import Searcher
+from mandos import logger
+from mandos.entry.tools.searchers import Searcher
+from mandos.entry.utils._arg_utils import EntryUtils
 from mandos.model.searches import Search
 from mandos.model.settings import SETTINGS
-from mandos.model.utils.reflection_utils import ReflectionUtils
-from mandos.model.utils.setup import MANDOS_SETUP, logger
+from mandos.model.utils import MANDOS_SETUP
 
 S = TypeVar("S", bound=Search, covariant=True)
 
@@ -37,7 +38,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
     @classmethod
     def get_search_type(cls) -> Type[S]:
         # noinspection PyTypeChecker
-        return ReflectionUtils.get_generic_arg(cls, Search)
+        return ReflectionTools.get_generic_arg(cls, Search)
 
     # noinspection PyUnusedLocal
     @classmethod
@@ -69,13 +70,13 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
     def default_param_values(cls) -> Mapping[str, Union[str, float, int, Path]]:
         return {
             param: (value.default if isinstance(value, OptionInfo) else value)
-            for param, value in ReflectionUtils.default_arg_values(cls.run).items()
+            for param, value in ReflectionTools.default_arg_values(cls.run).items()
             if param not in {"key", "path"}
         }
 
     @classmethod
     def _get_default_key(cls) -> str:
-        vals = ReflectionUtils.default_arg_values(cls.run)
+        vals = ReflectionTools.default_arg_values(cls.run)
         try:
             return vals["key"]
         except KeyError:

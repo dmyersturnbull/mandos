@@ -4,17 +4,27 @@ Scoring (regression and enrichment) calculations.
 import abc
 import enum
 import math
-from typing import Any, Generic, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import (
+    Any,
+    Generic,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
 from numpy.random import RandomState
+from pocketutils.core.enums import CleverEnum
 
 from mandos.analysis import AnalysisUtils as Au
 from mandos.analysis.io_defns import EnrichmentDf, ScoreDf
 from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit, KeyPredObj
-from mandos.model.utils import CleverEnum
 
 S = TypeVar("S", bound=Union[int, float, bool])
 

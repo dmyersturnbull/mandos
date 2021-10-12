@@ -5,8 +5,9 @@ import enum
 from dataclasses import dataclass
 from typing import Optional, Union
 
+from pocketutils.tools.reflection_tools import ReflectionTools
+
 from mandos.model.hits import AbstractHit
-from mandos.model.utils.reflection_utils import ReflectionUtils
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -21,6 +22,7 @@ class ProteinHit(ChemblHit, metaclass=abc.ABCMeta):
     """
 
     exact_target_id: str
+    exact_target_name: str
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -47,7 +49,7 @@ class BindingHit(_ActivityHit):
 
     pchembl: float
     std_type: str
-    standard_relation: str
+    std_rel: str
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -80,7 +82,16 @@ class GoHit(ChemblHit, metaclass=abc.ABCMeta):
     """
 
     go_type: str
-    binding: BindingHit
+    taxon_id: int
+    taxon_name: str
+    src_id: str
+    pchembl: float
+    std_type: str
+    std_rel: str
+    target_id: str
+    target_name: str
+    exact_target_id: str
+    exact_target_name: str
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -258,4 +269,4 @@ class ChemblTargetPredictionHit(ChemblHit):
     confidence_set: int
 
 
-HIT_CLASSES = ReflectionUtils.subclass_dict(AbstractHit, concrete=True)
+HIT_CLASSES = ReflectionTools.subclass_dict(AbstractHit, concrete=True)

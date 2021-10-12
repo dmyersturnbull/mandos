@@ -6,8 +6,9 @@ from __future__ import annotations
 import abc
 from typing import FrozenSet, Union
 
-from mandos.model import Api, CompoundNotFoundError
+from mandos.model import Api
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
+from mandos.model.utils import CompoundNotFoundError
 
 
 class PubchemCompoundLookupError(CompoundNotFoundError):

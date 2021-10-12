@@ -10,6 +10,7 @@ from typing import Type
 
 import regex
 from pocketutils.core.exceptions import ParsingError
+from pocketutils.tools.reflection_tools import ReflectionTools
 
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
@@ -19,8 +20,7 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
     TargetRelType,
 )
 from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType
-from mandos.model.utils.reflection_utils import ReflectionUtils
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils import MandosResources
 
 
 class Acceptance(enum.Enum):
@@ -95,7 +95,7 @@ class StandardStrategyParser:
     def read_lines(cls, path: Path) -> Sequence[str]:
         return [
             line
-            for line in path.read_text(encoding="utf8").splitlines()
+            for line in path.read_text(encoding="utf8", errors="strict").splitlines()
             if not line.startswith("#") and len(line.strip()) > 0
         ]
 
@@ -183,7 +183,7 @@ class TargetTraversalStrategies:
 
     @classmethod
     def by_classname(cls, fully_qualified: str, api: ChemblApi) -> TargetTraversalStrategy:
-        clazz = ReflectionUtils.injection(fully_qualified, TargetTraversalStrategy)
+        clazz = ReflectionTools.injection(fully_qualified, TargetTraversalStrategy)
         return cls.create(clazz, api)
 
     @classmethod

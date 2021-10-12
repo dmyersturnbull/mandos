@@ -5,12 +5,12 @@ import dataclasses
 from typing import Any, Generic, Mapping, Sequence, TypeVar
 
 from pocketutils.core.exceptions import XTypeError
+from pocketutils.tools.reflection_tools import ReflectionTools
 from suretime import Suretime
 
 from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit
-from mandos.model.utils.reflection_utils import ReflectionUtils
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils import MandosResources
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -90,7 +90,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         Returns the underlying hit TypeVar, ``H``.
         """
         # noinspection PyTypeChecker
-        return ReflectionUtils.get_generic_arg(cls, AbstractHit)
+        return ReflectionTools.get_generic_arg(cls, AbstractHit)
 
     def _format_source(self, **kwargs) -> str:
         s = MandosResources.strings[self.search_class]["source"]

@@ -13,15 +13,16 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, LinearSegmentedColormap, ListedColormap, to_hex
 from matplotlib.figure import Figure
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import BadCommandError, LengthError, LookupFailedError
 from pocketutils.tools.common_tools import CommonTools
 
 # noinspection PyProtectedMember
+from pocketutils.tools.unit_tools import UnitTools
 from seaborn.palettes import SEABORN_PALETTES
 from typeddfs import TypedDfs
 
-from mandos.model.utils import CleverEnum
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils import MandosResources
 
 try:
     import seaborn as sns
@@ -181,7 +182,7 @@ class MandosPlotStyling:
         except ValueError:
             pass
         x = standards.get(s, s)
-        return MandosResources.canonicalize_quantity(x, "[length]").to("inch").magnitude
+        return UnitTools.canonicalize_quantity(x, "[length]").to("inch").magnitude
 
 
 class MandosPlotUtils:

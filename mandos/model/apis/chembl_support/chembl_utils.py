@@ -3,16 +3,16 @@ from __future__ import annotations
 import enum
 
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import XTypeError
 from pocketutils.tools.common_tools import CommonTools
 from requests.exceptions import RequestException
 from urllib3.exceptions import HTTPError
 
-from mandos.model import CompoundNotFoundError
+from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
-from mandos.model.utils import CleverEnum
-from mandos.model.utils.setup import logger
+from mandos.model.utils import CompoundNotFoundError
 
 
 class MolStructureType(CleverEnum):

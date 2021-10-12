@@ -15,7 +15,7 @@ class SearchCache:
     def __init__(self, path: Path, compounds: Sequence[str]):
         self._path = path
         if self._meta_path.exists():
-            self._data = orjson.loads(self._meta_path.read_text(encoding="utf8"))
+            self._data = orjson.loads(self._meta_path.read_text(encoding="utf8", errors="strict"))
             logger.caution(f"Resuming {path} with {self.at} completed compounds")
         else:
             self._data = dict(
@@ -35,8 +35,8 @@ class SearchCache:
             self._data["done"].add(c)
         if self.at % SETTINGS.save_every == 0:
             dat = {k: (list(v) if isinstance(v, set) else v) for k, v in self._data.items()}
-            dat = orjson.dumps(dat).decode(encoding="utf8")
-            self._meta_path.write_text(dat)
+            dat = orjson.dumps(dat).decode(encoding="utf8", errors="utf8")
+            self._meta_path.write_text(dat, encoding="utf8", errors="strict")
             logger.debug(f"Saved to {self._meta_path}")
 
     @property

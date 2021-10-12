@@ -3,7 +3,7 @@ from typing import Mapping
 
 import typer
 
-from mandos.entry._arg_utils import ArgUtils, Opt
+from mandos.entry.utils._arg_utils import ArgUtils, Opt
 from mandos.model.apis.chembl_support.chembl_targets import ConfidenceLevel, TargetType
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 

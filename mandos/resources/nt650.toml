@@ -1,19 +1,5 @@
 
 [[search]]
-key = "core.binding"
-source = "chembl:binding"
-pchembl = 6
-confidence = 5
-target_types = "@protein"
-taxa = "euteleostomi"
-traversal = "@null"
-
-[[search]]
-key = "core.chembl.moa"
-source = "chembl:mechanism"
-traversal = "@null"
-
-[[search]]
 key = "core.chembl.process"
 source = "chembl:go.process"
 pchembl = 6
@@ -37,6 +23,20 @@ pchembl = 6
 confidence = 5
 target_types = "@protein"
 taxa = "euteleostomi"
+traversal = "@null"
+
+[[search]]
+key = "core.binding"
+source = "chembl:binding"
+pchembl = 6
+confidence = 5
+target_types = "@protein"
+taxa = "euteleostomi"
+traversal = "@null"
+
+[[search]]
+key = "core.chembl.moa"
+source = "chembl:mechanism"
 traversal = "@null"
 
 #[[search]]

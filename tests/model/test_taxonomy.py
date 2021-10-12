@@ -2,7 +2,7 @@ import pytest
 
 from mandos.model.taxonomy import Taxon, Taxonomy, _Taxon
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils import MandosResources
 
 
 class TestFind:

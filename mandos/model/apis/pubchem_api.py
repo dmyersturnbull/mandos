@@ -6,6 +6,8 @@ from __future__ import annotations
 import abc
 from typing import FrozenSet, Union
 
+import decorateme
+
 from mandos.model import Api
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.utils import CompoundNotFoundError
@@ -15,6 +17,7 @@ class PubchemCompoundLookupError(CompoundNotFoundError):
     """ """
 
 
+@decorateme.auto_repr_str()
 class PubchemApi(Api, metaclass=abc.ABCMeta):
     def fetch_data(self, inchikey: Union[str, int]) -> PubchemData:
         """

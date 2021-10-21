@@ -1,58 +1,5 @@
 
 [[search]]
-key = "core.chembl.process"
-source = "chembl:go.process"
-pchembl = 6
-confidence = 5
-target_types = "@protein"
-taxa = "euteleostomi"
-traversal = "@null"
-
-[[search]]
-key = "core.chembl.function"
-source = "chembl:go.function"
-pchembl = 6
-confidence = 5
-taxa = "euteleostomi"
-traversal = "@null"
-
-[[search]]
-key = "extra.chembl.component"
-source = "chembl:go.component"
-pchembl = 6
-confidence = 5
-target_types = "@protein"
-taxa = "euteleostomi"
-traversal = "@null"
-
-[[search]]
-key = "core.binding"
-source = "chembl:binding"
-pchembl = 6
-confidence = 5
-target_types = "@protein"
-taxa = "euteleostomi"
-traversal = "@null"
-
-[[search]]
-key = "core.chembl.moa"
-source = "chembl:mechanism"
-traversal = "@null"
-
-#[[search]]
-#key = "extra.chembl.predictions"
-#source = "chembl:predictions"
-#taxa = "euteleostomi"
-
-[[search]]
-key = "core.chembl.trials"
-source = "chembl:trial"
-
-[[search]]
-key = "core.chembl.atc"
-source = "chembl:atc"
-
-[[search]]
 key = "core.ctd.mesh"
 source = "disease.ctd:mesh"
 
@@ -110,3 +57,57 @@ level = 1
 key = "extra.chemidplus.specific-effects"
 source = "tox.chemidplus:acute"
 level = 2
+
+
+[[search]]
+key = "core.chembl.process"
+source = "chembl:go.process"
+pchembl = 8
+confidence = 5
+target_types = "@protein"
+taxa = "euteleostomi"
+traversal = "@null"
+
+[[search]]
+key = "core.chembl.function"
+source = "chembl:go.function"
+pchembl = 8
+confidence = 5
+taxa = "euteleostomi"
+traversal = "@null"
+
+[[search]]
+key = "extra.chembl.component"
+source = "chembl:go.component"
+pchembl = 8
+confidence = 5
+target_types = "@protein"
+taxa = "euteleostomi"
+traversal = "@null"
+
+[[search]]
+key = "core.binding"
+source = "chembl:binding"
+pchembl = 6
+confidence = 5
+target_types = "@protein"
+taxa = "euteleostomi"
+traversal = "@null"
+
+[[search]]
+key = "core.chembl.moa"
+source = "chembl:mechanism"
+traversal = "@null"
+
+#[[search]]
+#key = "extra.chembl.predictions"
+#source = "chembl:predictions"
+#taxa = "euteleostomi"
+
+[[search]]
+key = "core.chembl.trials"
+source = "chembl:trial"
+
+[[search]]
+key = "core.chembl.atc"
+source = "chembl:atc"

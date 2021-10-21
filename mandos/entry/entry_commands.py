@@ -67,6 +67,8 @@ class EntryChemblBinding(Entry[BindingSearch]):
         binding: float = EntryArgs.binds_cutoff,
         pchembl: float = EntryArgs.min_pchembl,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -93,7 +95,7 @@ class EntryChemblBinding(Entry[BindingSearch]):
             min_pchembl=pchembl,
             binds_cutoff=binding,
         )
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryChemblMechanism(Entry[MechanismSearch]):
@@ -108,6 +110,8 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
         target_types: str = EntryArgs.target_types,
         min_confidence: Optional[int] = EntryArgs.min_confidence,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -128,7 +132,7 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
             allowed_target_types=ArgUtils.get_target_types(target_types),
             min_confidence_score=min_confidence,
         )
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
@@ -143,6 +147,8 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
         target_types: str = EntryArgs.target_types,
         min_threshold: float = EntryArgs.min_threshold,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -168,7 +174,7 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
             target_types=ArgUtils.get_target_types(target_types),
             min_threshold=min_threshold,
         )
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryChemblTrials(Entry[IndicationSearch]):
@@ -180,6 +186,8 @@ class EntryChemblTrials(Entry[IndicationSearch]):
         to: Optional[Path] = CommonArgs.out_annotations_file,
         min_phase: Optional[int] = EntryArgs.chembl_trial,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -190,7 +198,7 @@ class EntryChemblTrials(Entry[IndicationSearch]):
         OBJECT: The name of the disease (in MeSH)
         """
         built = IndicationSearch(key=key, api=Apis.Chembl, min_phase=min_phase)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryChemblAtc(Entry[AtcSearch]):
@@ -202,6 +210,8 @@ class EntryChemblAtc(Entry[AtcSearch]):
         to: Optional[Path] = CommonArgs.out_annotations_file,
         levels: str = EntryArgs.atc_level,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -214,7 +224,7 @@ class EntryChemblAtc(Entry[AtcSearch]):
         built = AtcSearch(
             key=key, api=Apis.Chembl, levels={int(x.strip()) for x in levels.split(",")}
         )
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
@@ -240,6 +250,8 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -270,7 +282,7 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         except (TypeError, ValueError):
             raise InjectionError(f"Failed to build {binding_clazz.__qualname__}")
         built = GoSearch(key, api, cls.go_type(), binding_search)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryGoFunction(_EntryChemblGo):
@@ -291,6 +303,8 @@ class EntryGoFunction(_EntryChemblGo):
         pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -324,6 +338,8 @@ class EntryGoProcess(_EntryChemblGo):
         pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -357,6 +373,8 @@ class EntryGoComponent(_EntryChemblGo):
         pchembl: float = EntryArgs.min_pchembl,
         binding_search: Optional[str] = EntryArgs.binding_search_name,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -380,6 +398,8 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
         key: str = EntryArgs.key("disease.ctd:mesh"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -393,7 +413,7 @@ class EntryPubchemDisease(Entry[DiseaseSearch]):
 
         """
         built = DiseaseSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
@@ -416,6 +436,8 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -423,7 +445,7 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
         """See the docstrings for the individual entries."""
         clazz = cls.get_search_type()
         built = clazz(key, Apis.Pubchem, min_score=min_score, min_articles=min_articles)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSearch]):
@@ -436,6 +458,8 @@ class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSea
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -463,6 +487,8 @@ class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurre
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -490,6 +516,8 @@ class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccur
         min_score: float = EntryArgs.min_cooccurrence_score,
         min_articles: int = EntryArgs.min_cooccurring_articles,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -515,6 +543,8 @@ class EntryPubchemDgi(Entry[DgiSearch]):
         key: str = EntryArgs.key("inter.dgidb:gene"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -530,7 +560,7 @@ class EntryPubchemDgi(Entry[DgiSearch]):
         PREDICATE: "interaction:generic" or "interaction:<type>"
         """
         built = DgiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryPubchemCgi(Entry[CtdGeneSearch]):
@@ -540,6 +570,8 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.ctd:gene"),
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
@@ -556,7 +588,7 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
         PREDICATE: derived from the interaction type (e.g. "downregulation")
         """
         built = CtdGeneSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
@@ -566,6 +598,8 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:targ"),
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
@@ -579,7 +613,7 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
         PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankTargetSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
@@ -589,6 +623,8 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:targ-fn"),
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
@@ -602,7 +638,7 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         PREDICATE: "<target_type>:<action>"
         """
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, {DrugbankTargetType.target})
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
@@ -612,6 +648,8 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:pk"),
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
@@ -630,7 +668,7 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
             DrugbankTargetType.enzyme,
         }
         built = DrugbankTargetSearch(key, Apis.Pubchem, target_types)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
@@ -640,6 +678,8 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("inter.drugbank:pk-fn"),
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         to: Optional[Path] = CommonArgs.out_annotations_file,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
@@ -658,7 +698,7 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
             DrugbankTargetType.enzyme,
         }
         built = DrugbankGeneralFunctionSearch(key, Apis.Pubchem, target_types)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
@@ -669,6 +709,8 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
         key: str = EntryArgs.key("inter.drugbank:ddi"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -684,7 +726,7 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
         PREDICATE: typically increase/decrease/change followed by risk/activity/etc.
         """
         built = DrugbankDdiSearch(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryPubchemAssay(Entry[BioactivitySearch]):
@@ -697,6 +739,8 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
         match_name: bool = EntryArgs.match_name,
         ban_sources: Optional[str] = EntryArgs.banned_sources,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -715,7 +759,7 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
         WEIGHT: 2 for confirmatory; 1 otherwise
         """
         built = BioactivitySearch(key, Apis.Pubchem, compound_name_must_match=match_name)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryDeaSchedule(Entry[BioactivitySearch]):
@@ -726,6 +770,8 @@ class EntryDeaSchedule(Entry[BioactivitySearch]):
         key: str = EntryArgs.key("drug.dea:schedule"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -746,6 +792,8 @@ class EntryDeaClass(Entry[BioactivitySearch]):
         key: str = EntryArgs.key("drug.dea:class"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -767,6 +815,8 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
         to: Optional[Path] = CommonArgs.out_annotations_file,
         level: int = EntryArgs.acute_effect_level,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -781,7 +831,7 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
             Apis.Pubchem,
             top_level=level == 1,
         )
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryChemidPlusLd50(Entry[Ld50Search]):
@@ -792,6 +842,8 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
         key: str = EntryArgs.key("tox.chemidplus:ld50"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -804,7 +856,7 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
         PREDICATE: "LD50:<route>" (e.g. "LD50:intravenous")
         """
         built = Ld50Search(key, Apis.Pubchem)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryG2pInteractions(Entry[G2pInteractionSearch]):
@@ -815,6 +867,8 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
         key: str = EntryArgs.key("g2p:interactions"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -829,7 +883,7 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
         WEIGHT: 1.0
         """
         built = G2pInteractionSearch(key, Apis.G2p)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryHmdbTissue(Entry[BioactivitySearch]):
@@ -841,6 +895,8 @@ class EntryHmdbTissue(Entry[BioactivitySearch]):
         to: Optional[Path] = CommonArgs.out_annotations_file,
         min_nm: Optional[float] = EntryArgs.min_nanomolar,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -864,6 +920,8 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
         to: Optional[Path] = CommonArgs.out_annotations_file,
         min_nm: Optional[float] = None,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -889,6 +947,8 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         keys: str = EntryArgs.pubchem_computed_keys,
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -912,7 +972,7 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         }
         keys = {known.get(s.strip(), s) for s in keys.split(",")}
         built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys)
-        return cls._run(built, path, to, check, log, stderr)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
@@ -923,6 +983,8 @@ class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
         key: str = EntryArgs.key("drugbank.admet:properties"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -944,6 +1006,8 @@ class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
         key: str = EntryArgs.key("drugbank.admet:metabolites"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -965,6 +1029,8 @@ class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
         key: str = EntryArgs.key("drugbank.admet:dosage"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -990,6 +1056,8 @@ class EntryMetaRandom(Entry[BioactivitySearch]):
         key: str = EntryArgs.key("meta:random"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
         as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
         check: bool = EntryArgs.check,
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,

@@ -1,5 +1,7 @@
 from typing import Any, Mapping
 
+import decorateme
+
 try:
     from umap import UMAP
 except ImportError:
@@ -8,6 +10,7 @@ except ImportError:
 from mandos.analysis.io_defns import PsiProjectedDf, SimilarityDfLongForm
 
 
+@decorateme.auto_repr_str()
 class UmapCalc:
     """
     Calculates UMAP.

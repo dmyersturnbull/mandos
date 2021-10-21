@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 
+import decorateme
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import XTypeError
@@ -21,6 +22,7 @@ class MolStructureType(CleverEnum):
     none = enum.auto()
 
 
+@decorateme.auto_obj()
 class ChemblUtils:
     def __init__(self, api: ChemblApi):
         self.api = api

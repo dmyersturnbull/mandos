@@ -7,13 +7,13 @@ from __future__ import annotations
 import abc
 import shutil
 from pathlib import Path
-from typing import AbstractSet, Collection, Iterable, Mapping, Optional, Set, Union
+from typing import Collection, Iterable, Mapping, Optional, Set, Union
 
+import decorateme
 import pandas as pd
 import requests
-from pocketutils.core.exceptions import LookupFailedError, XValueError
-from typeddfs import TypedDfs
-from typeddfs.checksums import Checksums
+from pocketutils.core.exceptions import XValueError
+from typeddfs import Checksums, TypedDfs
 
 from mandos import logger
 from mandos.model.settings import SETTINGS, Globals
@@ -21,6 +21,7 @@ from mandos.model.taxonomy import Taxonomy, TaxonomyDf
 from mandos.model.utils import MandosResources
 
 
+@decorateme.auto_repr_str()
 class TaxonomyFactory(metaclass=abc.ABCMeta):
     def load(self, taxon: Union[int, str]) -> Taxonomy:
         raise NotImplementedError()
@@ -111,7 +112,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             p.unlink()
             logger.warning(f"Deleted cached taxonomy file {p}")
         # delete either way:
-        checksum_file = Checksums.get_hash_file(p, algorithm=SETTINGS.checksum_algorithm)
+        checksum_file = Checksums.get_hash_file(p)
         checksum_file.unlink(missing_ok=True)
 
     def resolve_path(self, taxon: int) -> Path:

@@ -3,6 +3,8 @@ Tool to export reified mandos triples.
 """
 from typing import Generator, Sequence
 
+import decorateme
+
 from mandos.model.hits import AbstractHit, Triple
 
 
@@ -10,6 +12,7 @@ def _camelcase(s: str):
     return "".join(w.title() if i > 0 else w for i, w in enumerate(s.split("_")))
 
 
+@decorateme.auto_repr_str()
 class Reifier:
     def reify(self, hits: Sequence[AbstractHit]) -> Generator[Triple, None, None]:
         for hit in hits:

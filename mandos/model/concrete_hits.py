@@ -110,6 +110,7 @@ class MechanismHit(ProteinHit):
     """
 
     action_type: str
+    description: str
 
 
 @dataclass(frozen=True, order=True, repr=True)

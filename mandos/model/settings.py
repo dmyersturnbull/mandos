@@ -15,14 +15,13 @@ from pocketutils.core.query_utils import QueryExecutor
 from pocketutils.misc.fancy_loguru import LogSinkInfo
 from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
-from typeddfs import FileFormat
+from typeddfs import FileFormat, FrozeDict
 
 from mandos import logger
 from mandos.model.utils import MandosResources
 
-defaults: Mapping[str, Any] = orjson.loads(
-    MandosResources.path("default_settings.json").read_text(encoding="utf8", errors="strict")
-)
+defaults: Mapping[str, Any] = FrozeDict(MandosResources.json_dict("default_settings.json"))
+max_coeff = 1.1
 T = TypeVar("T")
 
 
@@ -56,11 +55,9 @@ class Settings:
     is_testing: bool
     ntp_continent: str
     table_suffix: str
-    search_checksum_alg: str
     log_suffix: str
     cache_path: Path
     cache_gzip: bool
-    cache_checksum_alg: str
     save_every: int
     sanitize_paths: bool
     chembl_expire_sec: int
@@ -162,11 +159,13 @@ class Settings:
         _selenium_path = get("query.selenium_driver_path", Path)
         if _selenium_path is not None:
             _selenium_path = _selenium_path.expanduser()
+        chembl_delay = get("query.chembl.delay_sec", float)
+        pubchem_delay = get("query.pubchem.delay_sec", float)
+        hmdb_delay = get("query.hmdb.delay_sec", float)
         data = cls(
             is_testing=get("is_testing", bool),
             ntp_continent=get("search.ntp_continent_code", _continent),
             table_suffix=get("search.default_table_suffix", str),
-            search_checksum_alg=get("search.checksum_algorithm", str),
             log_suffix=get("search.default_log_suffix", str),
             save_every=get("search.save_every", int),
             sanitize_paths=get("search.sanitize_paths", bool),
@@ -174,25 +173,24 @@ class Settings:
             chembl_expire_sec=get("cache.chembl.expire_sec", int),
             pubchem_expire_sec=get("cache.pubchem.expire_sec", int),
             taxon_expire_sec=get("cache.taxa.expire_sec", int),
-            cache_checksum_alg=get("cache.checksum_algorithm", str),
             cache_gzip=get("cache.gzip", bool),
             archive_filename_suffix=get("cache.archive_filename_suffix", str),
             chembl_n_tries=get("query.chembl.n_tries", int),
             chembl_fast_save=get("query.chembl.fast_save", bool),
             chembl_timeout_sec=get("query.chembl.timeout_sec", int),
             chembl_backoff_factor=get("query.chembl.backoff_factor", float),
-            chembl_query_delay_min=get("query.chembl.delay_sec", float),
-            chembl_query_delay_max=get("query.chembl.delay_sec", float),
+            chembl_query_delay_min=chembl_delay,
+            chembl_query_delay_max=chembl_delay * max_coeff,
             pubchem_timeout_sec=get("query.pubchem.timeout_sec", int),
             hmdb_expire_sec=get("cache.hmdb.expire_sec", int),
             pubchem_backoff_factor=get("query.pubchem.backoff_factor", float),
             pubchem_query_delay_min=get("query.pubchem.delay_sec", float),
-            pubchem_query_delay_max=get("query.pubchem.delay_sec", float),
+            pubchem_query_delay_max=pubchem_delay * max_coeff,
             pubchem_n_tries=get("query.pubchem.n_tries", int),
             hmdb_timeout_sec=get("query.hmdb.timeout_sec", int),
             hmdb_backoff_factor=get("query.hmdb.backoff_factor", float),
-            hmdb_query_delay_min=get("query.hmdb.delay_sec", float),
-            hmdb_query_delay_max=get("query.hmdb.delay_sec", float),
+            hmdb_query_delay_min=hmdb_delay,
+            hmdb_query_delay_max=hmdb_delay * max_coeff,
             selenium_driver=get("query.selenium_driver", str).title(),
             selenium_driver_path=_selenium_path,
         )
@@ -207,7 +205,7 @@ class Settings:
 
     @classmethod
     def defaults(cls) -> Mapping[str, Any]:
-        return dict(defaults)
+        return defaults
 
     def configure(self):
         """ """

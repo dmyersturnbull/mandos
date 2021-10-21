@@ -17,8 +17,10 @@ from typing import (
     Union,
 )
 
+import decorateme
 from pocketutils.core.exceptions import PathExistsError, XTypeError, XValueError
 from pocketutils.misc.typer_utils import Arg, Opt
+from pocketutils.tools.filesys_tools import FilesysTools
 from pocketutils.tools.path_tools import PathTools
 from regex import regex
 from typeddfs.df_errors import FilenameSuffixError
@@ -45,6 +47,7 @@ class ParsedTaxa:
         return ParsedTaxa("", [], [], [])
 
 
+@decorateme.auto_utils()
 class ArgUtils:
     @classmethod
     def definition_bullets(cls, dct: Mapping[Any, Any], colon: str = ": ", indent: int = 12) -> str:
@@ -169,6 +172,7 @@ class ArgUtils:
         return {s.name for s in TargetType.resolve(st)}
 
 
+@decorateme.auto_utils()
 class EntryUtils:
     @classmethod
     def adjust_filename(
@@ -178,6 +182,7 @@ class EntryUtils:
         replace: bool,
         *,
         suffixes: Union[None, AbstractSet[str], Callable[[Union[Path, str]], Any]] = None,
+        quiet: bool = False,
     ) -> Path:
         if to is None:
             path = Path(default)
@@ -193,19 +198,16 @@ class EntryUtils:
         if os.name == "nt" and SETTINGS.sanitize_paths:
             new_path = Path(*PathTools.sanitize_nodes(path._parts, is_file=True))
             if new_path.resolve() != path.resolve():
-                logger.warning(f"Sanitized filename {path} → {new_path}")
+                if not quiet:
+                    logger.warning(f"Sanitized filename {path} → {new_path}")
                 path = new_path
-        if (
-            path.exists()
-            and not path.is_file()
-            and not path.is_socket()
-            and not path.is_char_device()
-        ):
+        info = FilesysTools.get_info(path)
+        if info.exists and not info.is_file and not info.is_socket and not info.is_char_device:
             raise PathExistsError(f"Path {path} exists and is not a file")
-        if path.exists() and not replace:
+        if info.exists and not replace:
             raise PathExistsError(f"File {path} already exists")
         cls._check_suffix(path.suffix, suffixes)
-        if path.exists() and replace:
+        if info.exists and replace and not quiet:
             logger.info(f"Overwriting existing file {path}")
         return path
 
@@ -216,28 +218,31 @@ class EntryUtils:
         default: Union[str, Path],
         *,
         suffixes: Union[None, AbstractSet[str], Callable[[Union[Path, str]], Any]] = None,
+        quiet: bool = False,
     ) -> Tuple[Path, str]:
         out_dir = Path(default)
         suffix = SETTINGS.table_suffix
         if to is not None:
-            pat = regex.compile(r"([^\*]*)(?:\*(\..+))", flags=regex.V1)
-            m: regex.Match = pat.fullmatch(to)
+            pat = regex.compile(r"([^*]*)(?:\*(\..+))?", flags=regex.V1)
+            m: regex.Match = pat.fullmatch(str(to))
             out_dir = default if m.group(1) == "" else m.group(1)
-            suffix = SETTINGS.table_suffix if m.group(2) == "" else m.group(2)
-            if out_dir.startswith("."):
+            if m.group(2) is not None and m.group(2) != "":
+                suffix = m.group(2)
+            if out_dir.startswith(".") and not quiet:
                 logger.warning(f"Writing to {out_dir} — was it meant as a suffix instead?")
             out_dir = Path(out_dir)
         if os.name == "nt" and SETTINGS.sanitize_paths:
-            new_dir = Path(*PathTools.sanitize_nodes(out_dir._parts, is_file=True))
+            new_dir = Path(*PathTools.sanitize_nodes(out_dir._parts, is_file=False))
             if new_dir.resolve() != out_dir.resolve():
                 logger.warning(f"Sanitized directory {out_dir} → {new_dir}")
                 out_dir = new_dir
-        if out_dir.exists() and not out_dir.is_dir():
+        info = FilesysTools.get_info(out_dir)
+        if info.exists and not info.is_dir:
             raise PathExistsError(f"Path {out_dir} already exists but and is not a directory")
         cls._check_suffix(suffix, suffixes)
-        if out_dir.exists():
+        if info.exists:
             n_files = len(list(out_dir.iterdir()))
-            if n_files > 0:
+            if n_files > 0 and not quiet:
                 logger.debug(f"Directory {out_dir} is non-emtpy")
         return out_dir, suffix
 

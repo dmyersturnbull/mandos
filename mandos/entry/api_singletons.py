@@ -1,3 +1,5 @@
+import decorateme
+
 from mandos.model.apis.caching_pubchem_api import CachingPubchemApi
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_scrape_api import (
@@ -11,6 +13,7 @@ from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 from mandos.model.settings import SETTINGS
 
 
+@decorateme.auto_repr_str()
 class Apis:
 
     Pubchem: PubchemApi = None

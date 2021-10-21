@@ -7,6 +7,7 @@ import enum
 from pathlib import Path
 from typing import Any, Generator, Mapping, Optional, Sequence, Set, Tuple, Union
 
+import decorateme
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -40,6 +41,7 @@ class DataType(CleverEnum):
     divergent = enum.auto()
 
 
+@decorateme.auto_repr_str()
 class VizResources:
     def __init__(self):
         self.override_settings = MandosResources.json_dict("viz", "style_override.json")
@@ -68,6 +70,7 @@ class VizResources:
 VIZ_RESOURCES = VizResources()
 
 
+@decorateme.auto_repr_str()
 class MandosPlotStyling:
     @classmethod
     def list_named_palettes(cls) -> Set[str]:
@@ -185,6 +188,7 @@ class MandosPlotStyling:
         return UnitTools.canonicalize_quantity(x, "[length]").to("inch").magnitude
 
 
+@decorateme.auto_utils()
 class MandosPlotUtils:
     @classmethod
     def save(cls, figure: Figure, path: Path) -> None:

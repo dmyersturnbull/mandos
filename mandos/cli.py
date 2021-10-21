@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import Type
 
 import typer
-from pocketutils.misc.fancy_loguru import FancyLoguruExtras
 from typer.models import CommandInfo
 
 from mandos import logger

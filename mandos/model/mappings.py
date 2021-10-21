@@ -1,14 +1,13 @@
 from pathlib import Path
 from typing import Sequence
 
+import decorateme
 import pandas as pd
 import regex
 from pocketutils.core.exceptions import ParsingError
 from typeddfs import TypedDfs
 
 from mandos.model.utils import MandosResources
-
-MappingDf = TypedDfs.untyped("MappingDf")
 
 
 def _patterns(self: pd.DataFrame) -> Sequence[str]:
@@ -30,7 +29,7 @@ def _get(self: pd.DataFrame, s: str) -> Sequence[str]:
     return s
 
 
-MappingDf.__doc__ = r"""
+_doc = r"""
 A list of regex patterns and replacements.
 The first column is the pattern, and the next n columns are the targets.
 Has an important function, ``MappingFrame.get``, describe below.
@@ -47,11 +46,17 @@ Example:
     The first returned element (here "Cytochrome P450 2"), is considered the primary,
     while the second are -- for most usages -- considered optional extras.
 """
-MappingDf.targets = _targets
-MappingDf.patterns = _patterns
-MappingDf.get = _get
+
+MappingDf = (
+    TypedDfs.typed("MappingDf")
+    .doc(_doc)
+    .add_methods(targets=_targets, patterns=_patterns, get=_get)
+    .post(lambda dfx: dfx.astype(str))
+    .secure()
+).build()
 
 
+@decorateme.auto_repr_str()
 class _Compiler:
     """
     Compiles multiple regex patterns, providing nice error messages.
@@ -71,6 +76,7 @@ class _Compiler:
             ) from None
 
 
+@decorateme.auto_repr_str()
 class Mappings:
     """
     Creates MappingDfs.
@@ -87,7 +93,7 @@ class Mappings:
         """
         Reads a mapping from a CSV-like file or ``.regexes`` file.
         Feather and Parquet are fine, too.
-        The ``.regexes`` suffix is a simple extension of CSV that uses ``--->`` as the delimiter.
+        The ``.regexes`` suffix is a simple extension of CSV that uses ``|||`` as the delimiter.
         and ignores empty lines and lines beginning with ``#``.
         It's just nice for easily editing in a text editor.
         """

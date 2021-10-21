@@ -16,6 +16,7 @@ from typing import (
     Union,
 )
 
+import decorateme
 import numpy as np
 import pandas as pd
 from numpy.random import RandomState
@@ -29,6 +30,7 @@ from mandos.model.hits import AbstractHit, KeyPredObj
 S = TypeVar("S", bound=Union[int, float, bool])
 
 
+@decorateme.auto_repr_str()
 class EnrichmentCalculator(Generic[S], metaclass=abc.ABCMeta):
     def calc(
         self, hits: Sequence[AbstractHit], scores: Mapping[str, S]
@@ -164,6 +166,7 @@ class BoolAlg(_Alg):
         }[self]
 
 
+@decorateme.auto_repr_str()
 class EnrichmentCalculation:
     def __init__(
         self,

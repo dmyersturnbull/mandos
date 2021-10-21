@@ -8,6 +8,7 @@ from typing import Dict, Mapping, MutableMapping, Optional, Sequence, Set
 from typing import Tuple as Tup
 from typing import Type
 
+import decorateme
 import regex
 from pocketutils.core.exceptions import ParsingError
 from pocketutils.tools.reflection_tools import ReflectionTools
@@ -30,6 +31,7 @@ class Acceptance(enum.Enum):
     at_end = enum.auto()
 
 
+@decorateme.auto_repr_str()
 class TargetTraversalStrategy(metaclass=abc.ABCMeta):
     """ """
 
@@ -42,9 +44,7 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
 
     def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTargetGraph]:
         """
-
-        Returns:
-
+        Run the strategy.
         """
         raise NotImplementedError()
 
@@ -95,7 +95,7 @@ class StandardStrategyParser:
     def read_lines(cls, path: Path) -> Sequence[str]:
         return [
             line
-            for line in path.read_text(encoding="utf8", errors="strict").splitlines()
+            for line in path.read_text(encoding="utf8").splitlines()
             if not line.startswith("#") and len(line.strip()) > 0
         ]
 
@@ -189,23 +189,22 @@ class TargetTraversalStrategies:
     @classmethod
     def from_resource(cls, name: str, api: ChemblApi) -> TargetTraversalStrategy:
         path = MandosResources.file("strategies", name, suffix=".strat")
-        lines = StandardStrategyParser.read_lines(path)
-        return cls._from_lines(lines, api, path.stem)
+        return cls.from_file(path, api)
 
     @classmethod
     def from_file(cls, path: Path, api: ChemblApi) -> TargetTraversalStrategy:
         lines = StandardStrategyParser.read_lines(path)
-        return cls._from_lines(lines, api, path.stem)
+        return cls._from_lines(lines, api, name="TraversalStrategy" + path.stem.capitalize())
 
     @classmethod
     def from_lines(
-        cls, lines: Sequence[str], api: ChemblApi, name: Optional[str]
+        cls, lines: Sequence[str], api: ChemblApi, *, name: str
     ) -> TargetTraversalStrategy:
-        return cls._from_lines(lines, api, "" if name is None else name)
+        return cls._from_lines(lines, api, name=name)
 
     @classmethod
     def _from_lines(
-        cls, lines: Sequence[str], api: ChemblApi, name: str
+        cls, lines: Sequence[str], api: ChemblApi, *, name: str
     ) -> TargetTraversalStrategy:
         edges, accept = StandardStrategyParser.parse(lines)
 
@@ -222,7 +221,13 @@ class TargetTraversalStrategies:
             def api(cls) -> ChemblApi:
                 return api
 
-        Strategy.__name__ = StandardTargetTraversalStrategy.__class__.__name__ + "_" + name
+            def __repr__(self) -> str:
+                return name + "(" + str(self.api()) + ")"
+
+            def __str__(self) -> str:
+                return repr(self)
+
+        Strategy.__name__ = name
         return Strategy()
 
     @classmethod
@@ -237,17 +242,6 @@ class TargetTraversalStrategies:
     # noinspection PyAbstractClass
     @classmethod
     def create(cls, clz: Type[TargetTraversalStrategy], api: ChemblApi) -> TargetTraversalStrategy:
-        """
-        Factory method.
-
-        Args:
-            clz:
-            api:
-
-        Returns:
-
-        """
-
         class X(clz):
             @classmethod
             def api(cls) -> ChemblApi:

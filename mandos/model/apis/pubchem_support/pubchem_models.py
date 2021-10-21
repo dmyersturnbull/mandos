@@ -15,7 +15,7 @@ from pocketutils.tools.string_tools import StringTools
 from mandos.model.apis.pubchem_support._nav_fns import Mapx
 from mandos.model.utils import MandosResources
 
-hazards = MandosResources.file("hazards.json").read_text(encoding="utf8", errors="strict")
+hazards = MandosResources.file("hazards.json").read_text(encoding="utf8")
 hazards = NestedDotDict(orjson.loads(hazards))
 hazards = {d["code"]: d for d in hazards["signals"]}
 

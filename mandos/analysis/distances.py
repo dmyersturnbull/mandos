@@ -7,6 +7,7 @@ import math
 from collections import defaultdict
 from typing import Collection, Sequence, Type, Union
 
+import decorateme
 import numpy as np
 import pandas as pd
 from pocketutils.core.enums import CleverEnum
@@ -21,6 +22,7 @@ from mandos.model.hits import AbstractHit
 # e.g. we're using fsum rather than sum
 
 
+@decorateme.auto_repr_str()
 class MatrixCalculator(metaclass=abc.ABCMeta):
     def calc_all(self, hits: Sequence[AbstractHit]) -> SimilarityDfLongForm:
         raise NotImplemented()
@@ -76,6 +78,7 @@ class MatrixAlg(CleverEnum):
         return {MatrixAlg.j: JPrimeMatrixCalculator}[self]
 
 
+@decorateme.auto_utils()
 class MatrixCalculation:
     @classmethod
     def create(cls, algorithm: Union[str, MatrixAlg]) -> MatrixCalculator:

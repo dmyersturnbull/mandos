@@ -1,6 +1,7 @@
 from inspect import cleandoc
 from typing import Mapping
 
+import decorateme
 import typer
 
 from mandos.entry.utils._arg_utils import ArgUtils, Opt
@@ -12,6 +13,7 @@ def _stringify(keys: Mapping[str, str]):
     return ", ".join((k if v is None else f"{k} ({v.lower()})" for k, v in keys.items()))
 
 
+@decorateme.auto_utils()
 class EntryArgs:
     @staticmethod
     def key(name: str) -> typer.Option:

@@ -5,11 +5,12 @@ Metadata for this project.
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import metadata as __load
 from pathlib import Path
+from typing import Optional
 
 from mandos.model.utils import logger
 
-pkg = "mandos"
 _metadata = None
+__version__ = None
 try:
     _metadata = __load(Path(__file__).absolute().parent.name)
     __status__ = "Development"
@@ -24,11 +25,11 @@ try:
     __maintainer__ = _metadata["maintainer"]
     __contact__ = _metadata["maintainer"]
 except PackageNotFoundError:  # pragma: no cover
-    logger.error(f"Could not load package metadata for {pkg}. Is it installed?")
+    logger.error("Could not load package metadata for mandos. Is it installed?")
 
 
 class MandosMetadata:
-    version = __version__
+    version: Optional[str] = __version__
 
 
 # weird as hell, but it works
@@ -37,7 +38,7 @@ class MandosMetadata:
 
 if __name__ == "__main__":  # pragma: no cover
     if _metadata is not None:
-        print(f"{pkg} (v{_metadata['version']})")
+        print(f"mandos v{__version__}")
     else:
         print("Unknown project info")
 

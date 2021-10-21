@@ -5,7 +5,16 @@ from __future__ import annotations
 
 import abc
 from datetime import date, datetime
-from typing import Any, Dict, FrozenSet, Mapping, MutableMapping, Optional, Sequence
+from typing import (
+    AbstractSet,
+    Any,
+    Dict,
+    FrozenSet,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+)
 from typing import Tuple as Tup
 from typing import Union
 from urllib.parse import unquote as url_unescape
@@ -75,17 +84,7 @@ class PubchemDataView(metaclass=abc.ABCMeta):
         self._data = data
 
     def to_json(self) -> str:
-        def default(obj: Any) -> Any:
-            if isinstance(obj, NestedDotDict):
-                # noinspection PyProtectedMember
-                return dict(obj._x)
-
-        # noinspection PyProtectedMember
-        data = dict(self._data._x)
-        encoded = orjson.dumps(data, default=default, option=orjson.OPT_INDENT_2)
-        encoded = encoded.decode(encoding="utf8", errors="strict")
-        encoded = StringTools.retab(encoded, 2)
-        return encoded
+        return self._data.to_json(indent=True)
 
     @property
     def cid(self) -> int:
@@ -1020,8 +1019,8 @@ class PubchemData(PubchemDataView):
         return self.cid if parent is None else parent
 
     @property
-    def siblings(self) -> Sequence[int]:
-        return self._data["related_records"]["same_parent_stereo"]
+    def siblings(self) -> AbstractSet[int]:
+        return {c for c in self._data["linked_records"]["CID"] if c != self.cid}
 
     @property
     def title_and_summary(self) -> TitleAndSummary:

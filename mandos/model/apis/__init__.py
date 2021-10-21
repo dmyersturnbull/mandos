@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 
+import decorateme
 import defusedxml.ElementTree as Xml
 import orjson
 from pocketutils.core.dot_dict import NestedDotDict
@@ -8,6 +9,7 @@ from pocketutils.core.exceptions import LookupFailedError, XValueError
 from pocketutils.core.query_utils import QueryExecutor
 
 
+@decorateme.auto_obj()
 class _Source:
     def __init__(self, *getters: Callable[[], Optional[str]], name: str = "unknown"):
         self._getters = getters
@@ -39,13 +41,13 @@ class _Source:
             query_args = {} if query_args is None else query_args
 
             def load():
-                return path.read_text(encoding="utf8", errors="strict") if path.exists() else None
+                return path.read_text(encoding="utf8") if path.exists() else None
 
             def save():
-                data = query(url, encoding="utf8", errors="strict", **query_args)
+                data = query(url, encoding="utf8", **query_args)
                 if data is not None:
                     if not path.exists():
-                        path.write_text(data, encoding="utf8", errors="strict")
+                        path.write_text(data, encoding="utf8")
                 return data
 
             # noinspection PyArgumentList
@@ -57,7 +59,7 @@ class _Source:
         path = Path(path)
 
         def one():
-            return path.read_text(encoding="utf8", errors="strict") if path.exists() else None
+            return path.read_text(encoding="utf8") if path.exists() else None
 
         # noinspection PyArgumentList
         return cls(one, name=f"Cache({path})")

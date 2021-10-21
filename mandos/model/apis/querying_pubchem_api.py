@@ -24,7 +24,7 @@ from pocketutils.core.query_utils import QueryExecutor
 from mandos import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
-from mandos.model.settings import QUERY_EXECUTORS
+from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
 
 
 class QueryingPubchemApi(PubchemApi):
@@ -148,7 +148,12 @@ class QueryingPubchemApi(PubchemApi):
             flags=regex.V1,
         )
         try:
-            html = self._executor(url)
+            for i in range(SETTINGS.pubchem_n_tries):
+                try:
+                    html = self._executor(url)
+                except ConnectionAbortedError:
+                    logger.warning(f"Connection aborted for {inchikey} [url: {url}]", exc_info=True)
+                    continue
         except HTTPError:
             raise PubchemCompoundLookupError(
                 f"Failed finding pubchem compound (HTML) from {inchikey} [url: {url}]"
@@ -209,7 +214,7 @@ class QueryingPubchemApi(PubchemApi):
     def _get_linked_records(self, cid: int) -> NestedDotDict:
         results = {}
         for kind in ["same_parent_stereo"]:
-            url = f"{self._pug_view}/compound/cid/{cid}/cids/JSON?cids_type={kind}"
+            url = f"{self._pug}/compound/cid/{cid}/cids/JSON?cids_type={kind}"
             data = self._query_json(url).sub("IdentifierList")
             results[kind] = data.get_list_as("CID", str, [])
         return NestedDotDict(data)

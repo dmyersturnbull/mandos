@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
+import decorateme
 from pocketutils.core.exceptions import ResourceError
 from typeddfs.cli_help import DfCliHelp
 
@@ -46,6 +47,7 @@ else:
     }
 
 
+@decorateme.auto_utils()
 class Aa:
 
     in_scores_table: Path = Opt.in_file(

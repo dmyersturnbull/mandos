@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence, Union
 
+import decorateme
 import orjson
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
@@ -29,6 +30,7 @@ class HmdbProperty:
     experimental: bool
 
 
+@decorateme.auto_repr_str()
 class HmdbApi(Api, metaclass=abc.ABCMeta):
     def fetch(self, hmdb_id: str) -> NestedDotDict:
         raise NotImplementedError()

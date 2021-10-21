@@ -4,6 +4,7 @@ Common argument processing and arguments for Typer.
 import os
 from typing import Optional, TypeVar
 
+import decorateme
 from pocketutils.misc.fancy_loguru import FancyLoguruDefaults
 from typeddfs.cli_help import DfCliHelp
 
@@ -17,11 +18,18 @@ DEF_SUFFIX = SETTINGS.table_suffix
 nl = "\n\n"
 
 
+@decorateme.auto_utils()
 class CommonArgs:
 
     replace: bool = Opt.flag(
         r"""
         Replace output file(s) if they exist.
+        """
+    )
+
+    proceed: bool = Opt.flag(
+        r"""
+        Continue partially completed results.
         """
     )
 

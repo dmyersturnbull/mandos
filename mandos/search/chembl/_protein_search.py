@@ -122,11 +122,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         if data.get("target_chembl_id") is None:
             logger.debug(f"target_chembl_id missing from '{data}' for compound {lookup}")
             return []
-        chembl_id = data["target_chembl_id"]
-        factory = TargetFactory(self.api)
-        target_obj = factory.find(chembl_id)
-        graph_factory = ChemblTargetGraphFactory.create(self.api, factory)
-        graph = graph_factory.at_target(target_obj)
+        graph = self._graph_factory.at_chembl_id(data["target_chembl_id"])
         if not self.should_include(lookup, compound, data, graph):
             return []
         # traverse() will return the source target if it's a non-traversable type (like DNA)

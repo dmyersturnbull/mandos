@@ -7,9 +7,11 @@ from __future__ import annotations
 import abc
 from typing import Any, Callable, Iterator, Mapping, Optional, Sequence
 
+import decorateme
 from pocketutils.core.dot_dict import NestedDotDict
 
 
+@decorateme.auto_repr_str()
 class ChemblFilterQuery(metaclass=abc.ABCMeta):
     """
     Wraps the result of calling ``filter`` on a ChEMBL query.
@@ -93,6 +95,7 @@ class ChemblFilterQuery(metaclass=abc.ABCMeta):
         return F()
 
 
+@decorateme.auto_repr_str()
 class ChemblEntrypoint:
     """
     Wraps just part of a node in the ChEMBL REST API.
@@ -156,6 +159,7 @@ class ChemblEntrypoint:
         return X()
 
 
+@decorateme.auto_repr_str()
 class ChemblApi(metaclass=abc.ABCMeta):
     """
     Wraps the whole ChEMBL API.

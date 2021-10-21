@@ -4,7 +4,17 @@ Support classes to help with querying and processing web data.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Callable, FrozenSet, Iterable, Optional, Set, Type, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    FrozenSet,
+    Iterable,
+    Optional,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import regex
 from pocketutils.core.exceptions import XTypeError, XValueError
@@ -139,7 +149,7 @@ class Mapx:
         def n_bar_items(value: str) -> int:
             if null_is_zero and value is None:
                 return 0
-            return len(value.split(sep))
+            return len(str(value).split(sep))
 
         return n_bar_items
 

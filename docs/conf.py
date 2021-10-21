@@ -11,7 +11,7 @@ import tomlkit
 
 # This assumes that we have the full project root above, containing pyproject.toml
 _root = Path(__file__).parent.parent.absolute()
-_toml = tomlkit.loads((_root / "pyproject.toml").read_text(encoding="utf8", errors="strict"))
+_toml = tomlkit.loads((_root / "pyproject.toml").read_text(encoding="utf8"))
 
 T = TypeVar("T")
 

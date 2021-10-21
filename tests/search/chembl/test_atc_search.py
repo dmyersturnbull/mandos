@@ -12,9 +12,7 @@ Chembl = ChemblApi.wrap(_Chembl)
 class TestAtcs:
     def test_find(self):
         search = AtcSearch("", {0, 1}, Chembl)
-        inchikeys = (
-            get_test_resource("inchis.txt").read_text(encoding="utf8", errors="strict").splitlines()
-        )
+        inchikeys = get_test_resource("inchis.txt").read_text(encoding="utf8").splitlines()
         df = search.find_to_df(inchikeys)
         assert len(df) == 2
         """

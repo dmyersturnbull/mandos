@@ -8,11 +8,16 @@ from typing import Optional, Sequence, Set
 from typing import Tuple as Tup
 from typing import Type
 
+import decorateme
 import regex
 from pocketutils.core.exceptions import XTypeError
 
 from mandos.model.apis.chembl_api import ChemblApi
-from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetFactory, TargetType
+from mandos.model.apis.chembl_support.chembl_targets import (
+    ChemblTarget,
+    TargetFactory,
+    TargetType,
+)
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -193,6 +198,12 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
         return self.node.__lt__(target.node)
 
     @classmethod
+    def at_chembl_id(cls, chembl_id: str) -> ChemblTargetGraph:
+        target = cls.factory().find(chembl_id)
+        # noinspection PyTypeChecker
+        return cls(TargetNode(0, None, target, None, None))
+
+    @classmethod
     def at_node(cls, target: TargetNode) -> ChemblTargetGraph:
         if not isinstance(target, TargetNode):
             raise XTypeError(f"Bad type {type(target)} for {target}")
@@ -353,6 +364,7 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
         # we're done now
 
 
+@decorateme.auto_utils()
 class ChemblTargetGraphFactory:
     def __init__(self, graph_type: Type[ChemblTargetGraph]):
         self.graph_type = graph_type
@@ -369,6 +381,9 @@ class ChemblTargetGraphFactory:
                 return target_factory
 
         return ChemblTargetGraphFactory(CreatedChemblTargetGraph)
+
+    def at_chembl_id(self, chembl_id: str) -> ChemblTargetGraph:
+        return self.graph_type.at_chembl_id(chembl_id)
 
     def at_node(self, target: TargetNode) -> ChemblTargetGraph:
         return self.graph_type.at_node(target)

@@ -5,6 +5,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 from mandos import logger
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
+from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.concrete_hits import MechanismHit
 from mandos.search.chembl._protein_search import ProteinSearch
 
@@ -35,6 +36,8 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
         data: NestedDotDict,
         best_target: ChemblTargetGraph,
     ) -> Sequence[MechanismHit]:
+        # ChEMBL recently dropped target_pref_name, so we'll need to find it
+        exact_target_obj = self._target_factory.find(data["target_chembl_id"])
         # these must match the constructor of the Hit,
         # EXCEPT for object_id and object_name, which come from traversal
         source = self._format_source()
@@ -49,9 +52,10 @@ class MechanismSearch(ProteinSearch[MechanismHit]):
             object_id=best_target.chembl,
             object_name=best_target.name,
             record_id=data["mec_id"],
-            exact_target_id=data.req_as("target_chembl_id", str),
-            exact_target_name=data.req_as("target_pref_name", str),
+            exact_target_id=exact_target_obj.chembl,
+            exact_target_name=exact_target_obj.name,
             action_type=data.req_as("action_type", str),
+            description=data.req_as("mechanism_of_action", str),
         )
         return [hit]
 

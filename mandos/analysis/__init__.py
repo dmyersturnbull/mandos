@@ -5,9 +5,12 @@ import math
 from collections import defaultdict
 from typing import Collection, MutableMapping, Sequence, Tuple
 
+import decorateme
+
 from mandos.model.hits import AbstractHit, KeyPredObj
 
 
+@decorateme.auto_utils()
 class AnalysisUtils:
     @classmethod
     def elle(cls, x: float) -> float:

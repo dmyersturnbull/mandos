@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import abc
 import dataclasses
-from typing import Any, Generic, Mapping, Sequence, TypeVar
+from datetime import datetime
+from typing import Generic, Mapping, Sequence, TypeVar, Union
 
 from pocketutils.core.exceptions import XTypeError
 from pocketutils.tools.reflection_tools import ReflectionTools
@@ -56,12 +57,16 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
     def search_name(cls) -> str:
         return cls.__name__.lower().replace("search", "")
 
-    def get_params(self) -> Mapping[str, Any]:
+    def get_params(self) -> Mapping[str, Union[None, str, int, float, datetime]]:
         """
         Returns the *parameters* of this ``Search`` their values.
         Parameters are attributes that do not begin with an underscore.
         """
-        return {key: value for key, value in vars(self).items() if not key.startswith("_")}
+        return {
+            key: value
+            for key, value in vars(self).items()
+            if not key.startswith("_") and key not in ["api", "key"]
+        }
 
     def find(self, inchikey: str) -> Sequence[H]:
         # override this

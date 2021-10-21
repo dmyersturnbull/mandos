@@ -7,7 +7,7 @@ from pocketutils.tools.reflection_tools import ReflectionTools
 from typer.models import OptionInfo
 
 from mandos import logger
-from mandos.entry.tools.searchers import Searcher
+from mandos.entry.tools.searchers import InputCompoundsDf, Searcher
 from mandos.entry.utils._arg_utils import EntryUtils
 from mandos.model.searches import Search
 from mandos.model.settings import SETTINGS
@@ -51,19 +51,25 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         built: S,
         path: Path,
         to: Optional[Path],
+        replace: bool,
+        proceed: bool,
         check: bool,
         log: Optional[Path],
         level: str,
     ) -> Searcher:
         MANDOS_SETUP(log, level)
         default_to = path.parent / (built.key + SETTINGS.table_suffix)
-        to = EntryUtils.adjust_filename(to, default=default_to, replace=True)
-        searcher = Searcher([built], [to], path)
+        # keep quiet -- we'll log in Searcher
+        to = EntryUtils.adjust_filename(
+            to, default=default_to, replace=replace or proceed, quiet=True
+        )
+        input_df = InputCompoundsDf.read_file(path)
+        logger.info(f"Read {len(input_df)} input compounds")
+        searcher = Searcher(built, input_df, to, restart=replace, proceed=proceed)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
-        out = searcher.output_paths[built.key]
         if not check:
             searcher.search()
-        logger.notice(f"Done! Wrote to {out}")
+            logger.notice(f"Done! Wrote to {to}")
         return searcher
 
     @classmethod

@@ -18,10 +18,10 @@ class GoSearch(ChemblSearch[GoHit]):
     def __init__(self, key: str, api: ChemblApi, go_type: GoType, binding_search: BindingSearch):
         super().__init__(key, api)
         self.go_type = go_type
-        self.binding_search = binding_search
+        self._binding_search = binding_search
 
     def find(self, compound: str) -> Sequence[GoHit]:
-        matches = self.binding_search.find(compound)
+        matches = self._binding_search.find(compound)
         terms = []
         for match in matches:
             target = self.api.target.get(match.object_id)

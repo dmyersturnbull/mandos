@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping, Optional, Tuple, TypeVar
 
+import decorateme
 import pandas as pd
 from pocketutils.core.chars import Chars
 from pocketutils.core.exceptions import XValueError
@@ -53,6 +54,7 @@ T = TypeVar("T", bound=TypedDf)
 V = TypeVar("V", bound=TypedDf)
 
 
+@decorateme.auto_utils()
 class Pa:
 
     in_style: str = Opt.val(

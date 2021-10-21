@@ -12,7 +12,7 @@ from .. import get_test_resource
 class TestIndicationSearch:
     def test_find(self):
         search = IndicationSearch(key="indications", api=Apis.Chembl, min_phase=0)
-        inchikeys = get_test_resource("inchis.txt").read_text(encoding="utf8", errors="strict").splitlines()
+        inchikeys = get_test_resource("inchis.txt").read_text(encoding="utf8").splitlines()
         hits: Sequence[AbstractHit] = search.find_all(inchikeys)
         assert len(hits) == 6
         assert {t.compound_name.lower() for t in hits} == {"alprazolam"}

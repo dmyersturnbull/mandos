@@ -6,6 +6,7 @@ import enum
 import math
 from typing import Generator, Sequence, Type, Union
 
+import decorateme
 import numpy as np
 import pandas as pd
 from pocketutils.core.enums import CleverEnum
@@ -18,6 +19,7 @@ from mandos.analysis.io_defns import (
 )
 
 
+@decorateme.auto_repr_str()
 class ConcordanceCalculator(metaclass=abc.ABCMeta):
     def __init__(self, n_samples: int, seed: int):
         self.n_samples = n_samples
@@ -83,6 +85,7 @@ class ConcordanceAlg(CleverEnum):
         return {ConcordanceAlg.tau: TauConcordanceCalculator}[self]
 
 
+@decorateme.auto_utils()
 class ConcordanceCalculation:
     @classmethod
     def create(

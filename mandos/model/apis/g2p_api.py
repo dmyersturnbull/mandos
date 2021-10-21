@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Type
 
+import decorateme
 import numpy as np
 import orjson
 import pandas as pd
@@ -55,6 +56,7 @@ InteractionDf = (
 ).build()
 
 
+@decorateme.auto_repr_str()
 class G2pApi(Api, metaclass=abc.ABCMeta):
     def fetch(self, inchikey: str) -> G2pData:
         raise NotImplementedError()
@@ -101,8 +103,8 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
                 self.interactions = InteractionDf.read_file(INTERACTIONS_URL, sep="\t")
                 self.interactions.write_file(self.interactions_path)
                 info = dict(dt_downloaded=datetime.now().isoformat())
-                info = orjson.dumps(info).decode(encoding="utf8", errors="strict")
-                (self.cache_path / "info.json").write_text(info, encoding="utf8", errors="strict")
+                info = orjson.dumps(info).decode(encoding="utf8")
+                (self.cache_path / "info.json").write_text(info, encoding="utf8")
                 if exists:
                     logger.notice(f"Cached missing G2P data to {self.cache_path}")
                 else:

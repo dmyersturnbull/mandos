@@ -11,7 +11,7 @@ from suretime import Suretime
 
 from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit
-from mandos.model.utils import MandosResources
+from mandos.model.utils.resources import MandosResources
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 

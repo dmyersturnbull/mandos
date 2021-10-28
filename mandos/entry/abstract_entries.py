@@ -6,12 +6,11 @@ import typer
 from pocketutils.tools.reflection_tools import ReflectionTools
 from typer.models import OptionInfo
 
-from mandos import logger
 from mandos.entry.tools.searchers import InputCompoundsDf, Searcher
 from mandos.entry.utils._arg_utils import EntryUtils
 from mandos.model.searches import Search
 from mandos.model.settings import SETTINGS
-from mandos.model.utils import MANDOS_SETUP
+from mandos.model.utils.setup import LOG_SETUP, logger
 
 S = TypeVar("S", bound=Search, covariant=True)
 
@@ -43,7 +42,8 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
     # noinspection PyUnusedLocal
     @classmethod
     def test(cls, path: Path, **params) -> None:
-        cls.run(path, **{**params, **dict(check=True, log=None, stderr="ERROR")})
+        # TODO: lower stderr level?
+        cls.run(path, **{**params, **dict(check=True)})
 
     @classmethod
     def _run(
@@ -55,14 +55,15 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         proceed: bool,
         check: bool,
         log: Optional[Path],
-        level: str,
+        stderr: Optional[str],
     ) -> Searcher:
-        MANDOS_SETUP(log, level)
+        LOG_SETUP(log, stderr)
         default_to = path.parent / (built.key + SETTINGS.table_suffix)
         # keep quiet -- we'll log in Searcher
         to = EntryUtils.adjust_filename(
             to, default=default_to, replace=replace or proceed, quiet=True
         )
+        logger.info(f"Reading compounds from {path}")
         input_df = InputCompoundsDf.read_file(path)
         logger.info(f"Read {len(input_df)} input compounds")
         searcher = Searcher(built, input_df, to, restart=replace, proceed=proceed)

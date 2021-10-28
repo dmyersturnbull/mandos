@@ -4,11 +4,11 @@ import time
 from dataclasses import dataclass
 from typing import Sequence
 
-from pocketutils.core.exceptions import ImportFailedWarning, MissingResourceError
+from pocketutils.core.exceptions import MissingResourceError
 from pocketutils.core.query_utils import QueryExecutor
 
-from mandos import logger
 from mandos.model.settings import SETTINGS
+from mandos.model.utils.setup import logger
 
 try:
     import selenium

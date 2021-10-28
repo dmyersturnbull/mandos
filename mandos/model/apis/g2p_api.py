@@ -12,11 +12,10 @@ from pocketutils.core.exceptions import UnsupportedOpError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDf, TypedDfs
 
-from mandos import logger
-from mandos.model import Api
+from mandos.model import Api, CompoundNotFoundError
 from mandos.model.apis.g2p_support.g2p_data import G2pData, G2pInteraction
 from mandos.model.settings import SETTINGS
-from mandos.model.utils import CompoundNotFoundError
+from mandos.model.utils.setup import logger
 
 LIGANDS_URL = "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.tsv"
 INTERACTIONS_URL = "https://www.guidetopharmacology.org/DATA/interactions.tsv"

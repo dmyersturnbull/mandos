@@ -15,10 +15,11 @@ import requests
 from pocketutils.core.exceptions import XValueError
 from typeddfs import Checksums, TypedDfs
 
-from mandos import logger
-from mandos.model.settings import SETTINGS, Globals
+from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import Taxonomy, TaxonomyDf
-from mandos.model.utils import MandosResources
+from mandos.model.utils.globals import Globals
+from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.setup import logger
 
 
 @decorateme.auto_repr_str()
@@ -77,7 +78,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             return not MandosResources.check_expired(
                 path,
                 max_sec=SETTINGS.taxon_expire_sec,
-                what=f"Cached taxa under {taxon}",
+                what=f"Cached taxa under {taxon} ({path})",
             )
         return False
 
@@ -87,12 +88,13 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         if self._check_has(taxon, path) or self.local_only:
             return Taxonomy.from_path(path)
         else:
+            # raise AssertionError(str(taxon))  # TODO
             logger.notice(f"Downloading new taxonomy file for taxon {taxon}")
             self._download_raw(raw_path, taxon)
             path = self._resolve_non_vertebrate_final(taxon)
             df = self._fix(raw_path, taxon, path)
             logger.notice(f"Cached taxonomy at {path} .")
-            return df
+            return Taxonomy.from_df(df)
 
     def rebuild(self, *taxa: int, replace: bool) -> None:
         if self.local_only:
@@ -112,7 +114,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             p.unlink()
             logger.warning(f"Deleted cached taxonomy file {p}")
         # delete either way:
-        checksum_file = Checksums.get_hash_file(p)
+        checksum_file = Checksums().get_filesum_of_file(p)
         checksum_file.unlink(missing_ok=True)
 
     def resolve_path(self, taxon: int) -> Path:
@@ -146,6 +148,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         # unfortunately it won't include an entry for the root ancestor (`taxon`)
         # so, we'll add it in (in ``df.append`` below)
         # noinspection PyPep8Naming
+        logger.debug("Fixing raw taxonomy download")
         raw_type = TypedDfs.untyped("Raw")
         df = raw_type.read_file(raw_path)
         # find the scientific name of the parent
@@ -229,11 +232,15 @@ class TaxonomyFactories:
         invertebrates: Set[Union[int, str]] = {t for t in allow if t not in vertebrata}
         trees: Set[Taxonomy] = {cache.load(t) for t in vertebrates}
         if len(invertebrates) > 0:
+            logger.debug(
+                f"{len(invertebrates)} invertebrate taxa found with {len(ancestors)} ancestors"
+            )
             if len(ancestors) == 0:
                 new = {cache.load(t) for t in invertebrates}
             else:
                 new = Taxonomy.from_trees({cache.load(t) for t in ancestors})
             trees.add(new.subtrees_by_ids_or_names(invertebrates))
+            logger.debug(f"Added {len(invertebrates)} invertebrate taxa into taxonomy")
         return Taxonomy.from_trees(trees).exclude_subtrees_by_ids_or_names(forbid)
 
 

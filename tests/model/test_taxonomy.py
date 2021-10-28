@@ -2,12 +2,11 @@ import pytest
 
 from mandos.model.taxonomy import Taxon, Taxonomy, _Taxon
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.model.utils import MandosResources
 
 
 class TestFind:
     def test_find(self):
-        tax = TaxonomyFactories.from_vertebrata().load(7742)
+        tax = TaxonomyFactories.get_smart_taxonomy(allow=[7742], forbid=[])
         assert len(tax) == 100670
         assert tax.roots == [Taxon(7742, "Vertebrata", None, None, None, set())]
         assert len(tax.roots[0].descendents) == 100669
@@ -40,7 +39,7 @@ class TestFind:
 
     def test_double(self):
         a = _Taxon(1, "a", None, None, None, set())
-        b = _Taxon(2, "b", a, set())
+        b = _Taxon(2, "b", None, None, a, set())
         a.add_child(b)
         tax = Taxonomy.from_list([a, b])
         assert len(tax) == 2

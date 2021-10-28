@@ -15,7 +15,6 @@ from typeddfs import TypedDf, TypedDfs
 
 from mandos.model import Api
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
-from mandos.model.utils.scrape import By, Scraper
 
 
 class SarPredictionResult(CleverEnum):
@@ -75,6 +74,8 @@ class _ScraperSingleton:
 
     @classmethod
     def get(cls, executor: QueryExecutor):
+        from mandos.model.utils.scrape import By, Scraper
+
         if cls.x is None:
             cls.x = Scraper.create(executor)
         return cls.x
@@ -93,6 +94,10 @@ class ChemblScrapeApi(Api, metaclass=abc.ABCMeta):
 class QueryingChemblScrapeApi(ChemblScrapeApi):
     def __init__(self, executor: QueryExecutor = QUERY_EXECUTORS.chembl):
         self._executor = executor
+        from mandos.model.utils.scrape import By, Scraper
+
+        self.By = By
+        self.Scraper = Scraper
 
     def _fetch_page(
         self, chembl_id: str, page: ChemblScrapePage, table_type: Type[ChemblScrapeTable]
@@ -103,12 +108,12 @@ class QueryingChemblScrapeApi(ChemblScrapeApi):
         rows = []
         i = 2
         while True:
-            table = scraper.find_element("table", By.TAG_NAME)
+            table = scraper.find_element("table", self.By.TAG_NAME)
             for tr in table.find_elements("tr"):
                 rows += [td.text.strip() for td in tr.find_elements("td")]
             # noinspection PyBroadException
             try:
-                scraper.find_elements(str(i), By.LINK_TEXT)
+                scraper.find_elements(str(i), self.By.LINK_TEXT)
             except Exception:
                 break
             i += 1

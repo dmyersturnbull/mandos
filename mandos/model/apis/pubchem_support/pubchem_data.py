@@ -30,7 +30,6 @@ from pocketutils.core.exceptions import (
 from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
-from mandos import logger
 from mandos.model import CompoundStruct
 
 # noinspection PyProtectedMember
@@ -61,6 +60,7 @@ from mandos.model.apis.pubchem_support.pubchem_models import (
     Publication,
     PubmedEntry,
 )
+from mandos.model.utils.setup import logger
 
 
 class Misc:

@@ -1,6 +1,6 @@
-from typing import Any, Mapping
-
 import decorateme
+
+from mandos.model.utils.setup import logger
 
 try:
     from umap import UMAP
@@ -21,6 +21,7 @@ class UmapCalc:
 
     def calc(self, df: SimilarityDfLongForm) -> PsiProjectedDf:
         """"""
+        logger.debug(f"Calculating UMAP on {len(df)} items")
 
 
 __all__ = ["UMAP", "UmapCalc"]

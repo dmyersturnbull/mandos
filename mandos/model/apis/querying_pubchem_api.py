@@ -21,10 +21,10 @@ from pocketutils.core.exceptions import (
 )
 from pocketutils.core.query_utils import QueryExecutor
 
-from mandos import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
+from mandos.model.utils.setup import logger
 
 
 class QueryingPubchemApi(PubchemApi):

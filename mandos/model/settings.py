@@ -7,45 +7,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Collection, Mapping, Optional, Type, TypeVar, Union
 
-import orjson
 from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import ConfigError, DirDoesNotExistError, XValueError
 from pocketutils.core.query_utils import QueryExecutor
-from pocketutils.misc.fancy_loguru import LogSinkInfo
-from pocketutils.tools.common_tools import CommonTools
+from pocketutils.misc.loguru_utils import LogSinkInfo
 from suretime import Suretime
 from typeddfs import FileFormat, FrozeDict
 
-from mandos import logger
-from mandos.model.utils import MandosResources
+from mandos.model.utils.globals import Globals
+from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.setup import LOG_SETUP, logger
 
 defaults: Mapping[str, Any] = FrozeDict(MandosResources.json_dict("default_settings.json"))
 max_coeff = 1.1
 T = TypeVar("T")
-
-
-class Globals:
-    cellular_taxon = 131567
-    viral_taxon = 10239
-    vertebrata = 7742
-    start_time = Suretime.tagged.now_utc_sys().dt
-    start_time_local = start_time.astimezone()
-    start_timestamp = start_time.isoformat(timespec="milliseconds")
-    start_timestamp_filesys = start_time_local.strftime("%Y-%m-%d_%H-%M-%S")
-    chembl_settings = ChemblSettings.Instance()
-    cwd = os.getcwd()
-    where_am_i_installed = Path(__file__).parent.parent.parent
-    is_in_ci = CommonTools.parse_bool(os.environ.get("IS_IN_CI", "false"))
-    if is_in_ci:
-        mandos_path = Path(__file__).parent.parent.parent / "tests" / "resources" / ".mandos-cache"
-    else:
-        _default_mandos_home = Path.home() / ".mandos"
-        env_vars = {k.lower(): v for k, v in os.environ.items()}
-        mandos_path = Path(env_vars.get("MANDOS_HOME", _default_mandos_home))
-    settings_path = mandos_path / "settings.toml"
-    disable_chembl = CommonTools.parse_bool(os.environ.get("MANDOS_NO_CHEMBL", "false"))
-    disable_pubchem = CommonTools.parse_bool(os.environ.get("MANDOS_NO_PUBCHEM", "false"))
 
 
 @dataclass(frozen=True, repr=True)
@@ -137,7 +113,7 @@ class Settings:
         # check these things
         FileFormat.from_suffix(self.table_suffix)
         FileFormat.from_suffix(self.archive_filename_suffix)
-        LogSinkInfo.guess(self.log_suffix)
+        LOG_SETUP.guess_file_sink_info(self.log_suffix)
         for k, v in self.as_dict.items():
             # this happens to work for now -- we have none that can be < 0
             if isinstance(v, (int, float)) and v < 0:
@@ -210,7 +186,7 @@ class Settings:
     def configure(self):
         """ """
         if not Globals.disable_chembl:
-            instance = Globals.chembl_settings
+            instance = ChemblSettings.Instance()
             instance.CACHING = True
             instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
             instance.TOTAL_RETRIES = self.chembl_n_tries
@@ -237,10 +213,10 @@ class Settings:
 
 if Globals.settings_path.exists():
     SETTINGS = Settings.from_file(Globals.settings_path)
-    logger.info(f"Read settings at {Globals.settings_path}")
+    logger.success(f"Read settings at {Globals.settings_path}")
 else:
     SETTINGS = Settings.empty()
-    logger.info(f"Using defaults (no file at {Globals.settings_path})")
+    logger.success(f"Using defaults (no file at {Globals.settings_path})")
 SETTINGS.configure()
 logger.debug(f"Setting ChEMBL cache to {SETTINGS.chembl_cache_path}")
 
@@ -254,4 +230,4 @@ class QueryExecutors:
 QUERY_EXECUTORS = QueryExecutors
 
 
-__all__ = ["SETTINGS", "QUERY_EXECUTORS", "Globals"]
+__all__ = ["SETTINGS", "QUERY_EXECUTORS"]

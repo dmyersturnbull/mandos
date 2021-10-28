@@ -25,12 +25,13 @@ from pocketutils.tools.path_tools import PathTools
 from regex import regex
 from typeddfs.df_errors import FilenameSuffixError
 
-from mandos import logger
 from mandos.model.apis.chembl_support.chembl_targets import TargetType
 from mandos.model.apis.pubchem_support.pubchem_models import ClinicalTrialsGovUtils
-from mandos.model.settings import SETTINGS, Globals
+from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import TaxonomyFactories
+from mandos.model.utils.globals import Globals
+from mandos.model.utils.setup import logger
 
 T = TypeVar("T", covariant=True)
 
@@ -209,6 +210,7 @@ class EntryUtils:
         cls._check_suffix(path.suffix, suffixes)
         if info.exists and replace and not quiet:
             logger.info(f"Overwriting existing file {path}")
+        logger.debug(f"Output path is {path}")
         return path
 
     @classmethod

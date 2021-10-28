@@ -10,10 +10,10 @@ from pocketutils.core.exceptions import XValueError
 from typeddfs import AffinityMatrixDf, TypedDfs
 
 
-def _to_long_form(self: pd.DataFrame, kind: str, key: str):
+def _to_long_form(self: AffinityMatrixDf, kind: str, key: str):
     if kind not in ["phi", "psi"]:
         raise XValueError(f"'type' should be 'phi' or 'psi', not {kind}")
-    df = AffinityMatrixDf(self).long_form()
+    df = self.long_form()
     df = df.rename(columns=dict(row="inchikey_1", column="inchikey_2"))
     df["type"] = kind
     df["key"] = key

@@ -12,7 +12,6 @@ from typing import Optional, TypeVar
 from pocketutils.core.exceptions import InjectionError
 from pocketutils.tools.reflection_tools import ReflectionTools
 
-from mandos import logger
 from mandos.entry.abstract_entries import Entry
 from mandos.entry.api_singletons import Apis
 from mandos.entry.tools.searchers import Searcher
@@ -25,6 +24,7 @@ from mandos.model.apis.pubchem_support.pubchem_models import (
     DrugbankTargetType,
 )
 from mandos.model.concrete_hits import GoType
+from mandos.model.utils.setup import logger
 from mandos.search.chembl.atc_search import AtcSearch
 from mandos.search.chembl.binding_search import BindingSearch
 from mandos.search.chembl.go_search import GoSearch

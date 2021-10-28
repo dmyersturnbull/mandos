@@ -8,8 +8,8 @@ import decorateme
 import orjson
 from pocketutils.core.exceptions import PathExistsError
 
-from mandos import logger
 from mandos.model.settings import SETTINGS
+from mandos.model.utils.setup import logger
 
 
 @decorateme.auto_repr_str()

@@ -13,13 +13,13 @@ from typing import Sequence
 from pocketutils.core.exceptions import IllegalStateError
 from typeddfs import Checksums, TypedDfs
 
-from mandos import logger
+from mandos.model import CompoundNotFoundError
 from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit
 from mandos.model.search_caches import SearchCache
 from mandos.model.searches import Search, SearchError
 from mandos.model.settings import SETTINGS
-from mandos.model.utils import CompoundNotFoundError
+from mandos.model.utils.setup import logger
 
 
 def _fix_cols(df):
@@ -74,7 +74,12 @@ class Searcher:
         cache = SearchCache(self.to, inchikeys, restart=self.restart, proceed=self.proceed)
         # refresh so we know it's (no longer) complete
         # this would only happen if we're forcing this -- which is not currently allowed
-        Checksums.delete_dir_hash(self.to, missing_ok=True)
+        (
+            Checksums()
+            .load_dirsum_of_file(self.to, missing_ok=True)
+            .remove(self.to, missing_ok=True)
+            .write(rm_if_empty=True)
+        )
         t0, n0, n_proc, n_err, n_annot = time.monotonic(), cache.at, 0, 0, 0
         while True:
             try:
@@ -115,7 +120,7 @@ class Searcher:
         i1, t1 = cache.at, time.monotonic()
         assert i1 == len(inchikeys)
         cache.kill()
-        logger.info(f"Wrote {self.what.key} to {self.to}")
+        logger.success(f"Wrote {self.what.key} to {self.to}")
         return SearchReturnInfo(
             n_kept=n0, n_processed=n_proc, n_errored=n_err, time_taken=timedelta(seconds=t1 - t0)
         )
@@ -126,7 +131,7 @@ class Searcher:
 
     @property
     def is_complete(self) -> bool:
-        done = Checksums.get_dir_hash(self.to) is not None
+        done = self.to in Checksums().load_dirsum_of_file(self.to)
         if done and not self.to.exists():
             raise IllegalStateError(f"{self.to} marked complete but does not exist")
         return done
@@ -143,6 +148,7 @@ class Searcher:
         params = self.what.get_params()
         df = df.set_attrs(**params, key=self.what.key)
         df.write_file(self.to, mkdirs=True, attrs=True, dir_hash=done)
+        logger.debug(f"Saved {len(df)} rows to {self.to}")
 
 
 __all__ = ["Searcher", "InputCompoundsDf", "SearchReturnInfo"]

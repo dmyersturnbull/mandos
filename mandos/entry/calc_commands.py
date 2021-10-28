@@ -10,11 +10,11 @@ from typing import List, Optional
 
 import decorateme
 from pocketutils.core.exceptions import ResourceError
-from typeddfs.cli_help import DfCliHelp
+from typeddfs import CompressionFormat
+from typeddfs.utils.cli_help import DfCliHelp
 
-from mandos import logger
 from mandos.analysis.concordance import ConcordanceCalculation
-from mandos.analysis.distances import MatrixCalculation
+from mandos.analysis.distances import MatrixCalculation, MatrixCalculator
 from mandos.analysis.enrichment import BoolAlg, EnrichmentCalculation, RealAlg
 from mandos.analysis.io_defns import (
     ConcordanceDf,
@@ -32,7 +32,7 @@ from mandos.entry.utils._common_args import CommonArgs
 from mandos.entry.utils._common_args import CommonArgs as Ca
 from mandos.model.hit_dfs import HitDf
 from mandos.model.settings import SETTINGS
-from mandos.model.utils import MANDOS_SETUP
+from mandos.model.utils.setup import LOG_SETUP, logger
 
 DEF_SUFFIX = SETTINGS.table_suffix
 nl = "\n\n"
@@ -198,7 +198,7 @@ class CalcCommands:
         to: Optional[Path] = Aa.out_enrichment,
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         """
         Compare annotations to user-supplied values.
@@ -207,8 +207,10 @@ class CalcCommands:
         For booleans, compares annotations for hits and non-hits.
         See the docs for more info.
         """
-        MANDOS_SETUP(log, stderr)
-        default = f"{path}-{scores.name}-{on}{DEF_SUFFIX}"
+        LOG_SETUP(log, stderr)
+        path_base = CompressionFormat.strip_suffix(path).name
+        scores_base = CompressionFormat.strip_suffix(scores).name
+        default = path.parent / f"{path_base}-{scores_base}-{on}{DEF_SUFFIX}"
         to = EntryUtils.adjust_filename(to, default, replace)
         hits = HitDf.read_file(path)
         scores = ScoreDf.read_file(scores)
@@ -234,7 +236,7 @@ class CalcCommands:
         to: Path = Aa.out_matrix_long_form,
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Calculate a similarity matrix from annotations.
@@ -242,13 +244,15 @@ class CalcCommands:
         The data are output to a DataFrame where rows and columns correspond
         to compounds, and the cell i,j is the overlap J' in annotations between compounds i and j.
         """
-        MANDOS_SETUP(log, stderr)
-        default = path.parent / (algorithm + DEF_SUFFIX)
+        LOG_SETUP(log, stderr)
+        in_base = CompressionFormat.strip_suffix(path).name
+        default = path.parent / (in_base + "-" + algorithm + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
         hits = HitDf.read_file(path).to_hits()
-        calculator = MatrixCalculation.create(algorithm)
+        calculator: MatrixCalculator = MatrixCalculation.create(algorithm)
         matrix = calculator.calc_all(hits)
         matrix.write_file(to)
+        logger.notice(f"Wrote results to {to}")
 
     @staticmethod
     def calc_ecfp(
@@ -261,7 +265,7 @@ class CalcCommands:
         to: Path = Aa.out_matrix_long_form,
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Compute a similarity matrix from ECFP fingerprints.
@@ -274,15 +278,17 @@ class CalcCommands:
         See ``:calc:phi`` for more info.
         This is most useful for comparing a phenotypic phi against pure structural similarity.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
+        in_base = CompressionFormat.strip_suffix(path).name
         name = f"ecfp{radius}-n{n_bits}"
-        default = path.parent / (name + DEF_SUFFIX)
+        default = path.parent / (in_base + "-" + name + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
         df = InputCompoundsDf.read_file(path)
         kind = "psi" if psi else "phi"
         short = MatrixPrep.ecfp_matrix(df, radius, n_bits)
         long_form = MatrixPrep(kind, False, False, False).create({name: short})
         long_form.write_file(to)
+        logger.notice(f"Wrote results to {to}")
 
     @staticmethod
     def calc_tau(
@@ -313,7 +319,7 @@ class CalcCommands:
         ),
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Calculate correlation between matrices.
@@ -327,14 +333,17 @@ class CalcCommands:
         See ``:calc:correlation`` or ``:calc:enrichment`` if you have a single variable,
         such as a hit or lead-like score.
         """
-        MANDOS_SETUP(log, stderr)
-        default = phi.parent / f"{psi.stem}-{algorithm}{DEF_SUFFIX}"
+        LOG_SETUP(log, stderr)
+        phi_base = CompressionFormat.strip_suffix(phi).name
+        psi_base = CompressionFormat.strip_suffix(psi).name
+        default = phi.parent / (phi_base + "-" + psi_base + "-" + algorithm + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
         phi = SimilarityDfLongForm.read_file(phi)
         psi = SimilarityDfLongForm.read_file(psi)
         calculator = ConcordanceCalculation.create(algorithm, phi, psi, samples, seed)
         concordance = calculator.calc_all(phi, psi)
         concordance.write_file(to)
+        logger.notice(f"Wrote results to {to}")
 
     @staticmethod
     def calc_projection(
@@ -377,7 +386,7 @@ class CalcCommands:
         ),
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Calculate compound UMAP from psi matrices.
@@ -387,6 +396,7 @@ class CalcCommands:
         """
         if algorithm == "umap" and UMAP is None:
             raise ResourceError(f"UMAP is not available")
+        logger.notice(f"Wrote results to {to}")
 
     @staticmethod
     def calc_phi(
@@ -406,23 +416,23 @@ class CalcCommands:
         log10: bool = Opt.val(r"""Rescales values by log10. (Performed after normalization.)"""),
         invert: bool = Opt.val(r"""Multiplies the values by -1. (Performed first.)"""),
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ):
         r"""
         Convert phi matrices to one long-form matrix.
 
         The keys will be derived from the filenames.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = "."
         if to is None:
-            try:
-                default = next(iter({mx.parent for mx in matrices}))
-            except StopIteration:
+            parents = {mx.parent for mx in matrices}
+            if len(parents) != 0:
                 logger.warning(f"Outputting to {default}")
         to = EntryUtils.adjust_filename(to, default, replace)
         long_form = MatrixPrep(kind, normalize, log10, invert).from_files(matrices)
         long_form.write_file(to)
+        logger.notice(f"Wrote results to {to}")
 
 
 __all__ = ["CalcCommands"]

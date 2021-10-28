@@ -4,6 +4,8 @@ import abc
 from dataclasses import dataclass
 from typing import TypeVar
 
+from pocketutils.core.exceptions import DbLookupError
+
 
 class Api(metaclass=abc.ABCMeta):
     """ """
@@ -34,3 +36,7 @@ __all__ = [
     "Api",
     "CompoundStruct",
 ]
+
+
+class CompoundNotFoundError(DbLookupError):
+    """ """

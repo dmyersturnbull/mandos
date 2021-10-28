@@ -8,9 +8,8 @@ from typing import FrozenSet, Union
 
 import decorateme
 
-from mandos.model import Api
+from mandos.model import Api, CompoundNotFoundError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
-from mandos.model.utils import CompoundNotFoundError
 
 
 class PubchemCompoundLookupError(CompoundNotFoundError):

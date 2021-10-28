@@ -12,10 +12,9 @@ import decorateme
 import typer
 from pocketutils.core.exceptions import XValueError
 from typeddfs import CompressionFormat, FileFormat
-from typeddfs.cli_help import DfCliHelp, DfFormatsHelp
 from typeddfs.utils import Utils as TdfUtils
+from typeddfs.utils.cli_help import DfCliHelp
 
-from mandos import logger
 from mandos.analysis.filtration import Filtration
 from mandos.analysis.reification import Reifier
 from mandos.entry.tools.docs import Documenter
@@ -27,10 +26,11 @@ from mandos.entry.utils._common_args import CommonArgs
 from mandos.entry.utils._common_args import CommonArgs as Ca
 from mandos.model.apis.g2p_api import CachingG2pApi
 from mandos.model.hit_dfs import HitDf
-from mandos.model.settings import SETTINGS, Globals
+from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import TaxonomyDf
 from mandos.model.taxonomy_caches import TaxonomyFactories
-from mandos.model.utils import MANDOS_SETUP
+from mandos.model.utils.globals import Globals
+from mandos.model.utils.setup import LOG_SETUP, logger
 
 DEF_SUFFIX = SETTINGS.table_suffix
 nl = "\n\n"
@@ -61,7 +61,7 @@ class MiscCommands:
         r"""
         Run multiple searches.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = path.parent / ("search-" + Globals.start_time.strftime("%Y-%m-%d"))
         # TODO: , suffixes=FileFormat.from_path
         out_dir, suffix = EntryUtils.adjust_dir_name(to, default)
@@ -82,7 +82,7 @@ class MiscCommands:
         """
         Initializes mandos, creating directories, etc.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         Globals.mandos_path.mkdir(exist_ok=True, parents=True)
         typer.echo(f"Mandos home dir is {Globals.mandos_path}")
         if Globals.settings_path.exists():
@@ -99,7 +99,7 @@ class MiscCommands:
         r"""
         Write the settings to stdout.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         defaults = SETTINGS.defaults()
         width = max((len(k) + 2 + len(v) + 1 for k, v in SETTINGS.items()))
         for k, v in SETTINGS.as_dict():
@@ -170,7 +170,7 @@ class MiscCommands:
         r"""
         Write documentation on commands to a file.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         if level == 5:
             hidden = common = True
         if width is None and style != "table":
@@ -243,7 +243,7 @@ class MiscCommands:
         - Set the final "inchi" and "inchikey" to the best choice,
           falling back to the input inchi and inchikey if they are missing.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = str(Path(path).with_suffix("")) + "-filled" + "".join(path.suffixes)
         to = EntryUtils.adjust_filename(to, default, replace=replace)
         df = IdMatchDf.read_file(path)
@@ -263,7 +263,7 @@ class MiscCommands:
 
         Useful to freeze data before running a search.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         logger.error(f"Not implemented yet")
         df = IdMatchDf.read_file(path)
         df = CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
@@ -289,7 +289,7 @@ class MiscCommands:
 
         Writes a taxonomy of given taxa and their descendants to a table.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = taxa + "-" + Globals.start_timestamp_filesys + DEF_SUFFIX
         to = EntryUtils.adjust_filename(to, default, replace=replace)
         tax = ArgUtils.get_taxonomy(taxa, local_only=in_cache, allow_forbid=False)
@@ -322,7 +322,7 @@ class MiscCommands:
         Then applies fixes and reduces the file size, creating a new file alongside.
         Puts both the raw data and fixed data in the cache under ``~/.mandos/taxonomy/``.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         if taxa == "@all" and not replace:
             raise XValueError(f"Use --replace with '@all'")
         # we're good to go:
@@ -345,7 +345,7 @@ class MiscCommands:
         With --replace set, will overwrite existing cached data.
         Data will generally be stored under``~/.mandos/g2p/``.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         api = CachingG2pApi(SETTINGS.g2p_cache_path)
         api.download(force=replace)
 
@@ -358,7 +358,7 @@ class MiscCommands:
         """
         Deletes all cached data.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         typer.echo(f"Will recursively delete all of these paths:")
         for p in SETTINGS.all_cache_paths:
             typer.echo(f"    {p}")
@@ -388,7 +388,7 @@ class MiscCommands:
         Note that ``:search`` automatically performs this;
         this is needed only if you want to combine results from multiple independent searches.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = path / ("concat" + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
         for found in path.iterdir():
@@ -412,7 +412,7 @@ class MiscCommands:
         """
         Filters by simple expressions.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = str(path) + "-filter-" + by.stem + DEF_SUFFIX
         to = EntryUtils.adjust_filename(to, default, replace)
         df = HitDf.read_file(path)
@@ -444,7 +444,7 @@ class MiscCommands:
 
         `"InChI Key" "predicate" "object" .`
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = f"{path}-statements.nt"
         to = EntryUtils.adjust_filename(to, default, replace)
         hits = HitDf.read_file(path).to_hits()
@@ -475,7 +475,7 @@ class MiscCommands:
         """
         Outputs reified semantic triples.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = f"{path}-reified.nt"
         to = EntryUtils.adjust_filename(to, default, replace)
         hits = HitDf.read_file(path).to_hits()
@@ -504,7 +504,7 @@ class MiscCommands:
 
         Example: ``:export:copy --to .snappy`` to highly compress a data set.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = path.parent / DEF_SUFFIX
         to = EntryUtils.adjust_filename(to, default, replace)
         df = HitDf.read_file(path)
@@ -522,7 +522,7 @@ class MiscCommands:
 
         The connection information is stored in your global settings file.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
 
     @staticmethod
     def export_db(
@@ -545,7 +545,7 @@ class MiscCommands:
 
         See also: ``:serve``.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
 
     @staticmethod
     def init_db(
@@ -564,7 +564,7 @@ class MiscCommands:
         r"""
         Initialize an empty database.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
 
 
 __all__ = ["MiscCommands"]

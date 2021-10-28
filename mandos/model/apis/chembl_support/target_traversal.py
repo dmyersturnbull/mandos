@@ -21,7 +21,7 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
     TargetRelType,
 )
 from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType
-from mandos.model.utils import MandosResources
+from mandos.model.utils.resources import MandosResources
 
 
 class Acceptance(enum.Enum):

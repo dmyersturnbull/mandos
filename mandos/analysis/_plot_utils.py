@@ -23,7 +23,7 @@ from pocketutils.tools.unit_tools import UnitTools
 from seaborn.palettes import SEABORN_PALETTES
 from typeddfs import TypedDfs
 
-from mandos.model.utils import MandosResources
+from mandos.model.utils.resources import MandosResources
 
 try:
     import seaborn as sns

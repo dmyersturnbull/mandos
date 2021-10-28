@@ -12,21 +12,18 @@ from typing import Any, Mapping, MutableMapping, Optional, Sequence, Type, Union
 import pandas as pd
 import typer
 from pocketutils.core.exceptions import InjectionError
-from pocketutils.misc.fancy_loguru import LogSinkInfo
-from typeddfs import Checksums, TypedDfs, Utils
+from typeddfs import Checksums, TypedDfs
 from typeddfs.abs_dfs import AbsDf
 
-from mandos import logger
 from mandos.entry.abstract_entries import Entry
 from mandos.entry.api_singletons import Apis
 from mandos.entry.entry_commands import Entries
 from mandos.entry.utils._arg_utils import EntryUtils
 from mandos.model.hit_dfs import HitDf
-from mandos.model.settings import SETTINGS, Globals
+from mandos.model.settings import SETTINGS
+from mandos.model.utils.setup import LOG_SETUP, logger
 
 cli = typer.Typer()
-Apis.set_default()
-Chembl, Pubchem = Apis.Chembl, Apis.Pubchem
 
 EntriesByCmd: MutableMapping[str, Type[Entry]] = {e.cmd(): e for e in Entries}
 
@@ -86,7 +83,7 @@ class MultiSearch:
 
     @property
     def is_complete(self):
-        return Checksums.get_hash_file(self.final_path).exists()
+        return Checksums().get_filesum_of_file(self.final_path).exists()
 
     @property
     def doc_path(self) -> Path:
@@ -114,6 +111,7 @@ class MultiSearch:
     def _build_and_test(self) -> Sequence[CmdRunner]:
         # build up the list of Entry classes first, and run ``test`` on each one
         # that's to check that the parameters are correct before running anything
+        logger.info("Building commands...")
         commands = self._build_commands()
         if len(commands) == 0:
             logger.warning(f"No searches — nothing to do")
@@ -123,11 +121,12 @@ class MultiSearch:
         # build and test
         for cmd in commands:
             try:
+                logger.info(f"Testing {cmd.key} ({cmd.cmd.__name__})")
                 cmd.test()
             except Exception:
                 logger.error(f"Bad search {cmd}")
                 raise
-        logger.notice("Searches look ok")
+        logger.success("Searches look ok")
         return commands
 
     def _build_commands(self) -> Sequence[CmdRunner]:
@@ -152,6 +151,7 @@ class MultiSearch:
                 None, default=default_to, replace=True, quiet=True
             )
             data["log"] = self._get_log_path(key)
+            data["stderr"] = None  # MANDOS_SETUP.main.level
             cmd = CmdRunner.build(data, self.input_path, restart=self.restart, proceed=self.proceed)
         return cmd
 
@@ -172,7 +172,7 @@ class MultiSearch:
             suffix = SETTINGS.log_suffix
             return self.out_dir / (key + suffix)
         else:
-            suffix = LogSinkInfo.guess(self.log_path).suffix
+            suffix = LOG_SETUP.guess_file_sink_info(self.log_path).suffix
             log_base = self.log_path.name[: -len(suffix)]
             return self.log_path.parent / (log_base + "_" + key + suffix)
 

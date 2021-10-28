@@ -28,7 +28,7 @@ from pocketutils.core.exceptions import (
 )
 from typeddfs import TypedDfs
 
-from mandos import logger
+from mandos.model.utils.setup import logger
 
 
 class KnownTaxa:

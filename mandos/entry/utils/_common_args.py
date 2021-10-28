@@ -5,8 +5,9 @@ import os
 from typing import Optional, TypeVar
 
 import decorateme
-from pocketutils.misc.fancy_loguru import FancyLoguruDefaults
-from typeddfs.cli_help import DfCliHelp
+from pocketutils.misc.loguru_utils import FANCY_LOGURU_DEFAULTS
+from pocketutils.tools.string_tools import StringTools
+from typeddfs.utils.cli_help import DfCliHelp
 
 from mandos.entry.tools.searchers import InputCompoundsDf
 from mandos.entry.utils._arg_utils import Arg, Opt
@@ -51,15 +52,15 @@ class CommonArgs:
         """,
     )
 
-    stderr: bool = Opt.val(
+    stderr: Optional[str] = Opt.val(
         rf"""
         How much logging output to show.
 
-        Choices, from least to most verbose: {", ".join(FancyLoguruDefaults.levels_extended)}
-        (Aliases: {FancyLoguruDefaults.aliases}.)
+        Choices, from least to most verbose: {", ".join(FANCY_LOGURU_DEFAULTS.levels_extended)}
+        (Aliases: {StringTools.join_kv(FANCY_LOGURU_DEFAULTS.aliases, sep=", ")}.)
         """,
         "--stderr",
-        default=FancyLoguruDefaults.level,
+        default=FANCY_LOGURU_DEFAULTS.level,
     )
 
     log = Opt.val(
@@ -68,8 +69,9 @@ class CommonArgs:
 
         The suffix can be .log, .log.gz, .log.zip, .json, .json.gz, or .json.gz.
         Prefix with :LEVEL: to control the level for this file (e.g. ":INFO:out.log").
-        The level can be, from least to most verbose: {", ".join(FancyLoguruDefaults.levels_extended)}
-        (Aliases: {FancyLoguruDefaults.aliases}.)
+        The level can be, from least to most verbose:
+        {", ".join(FANCY_LOGURU_DEFAULTS.levels_extended)}
+        (Aliases: {FANCY_LOGURU_DEFAULTS.aliases}.)
         """,
     )
 

@@ -13,11 +13,11 @@ import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import XValueError
 
-from mandos import logger
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 from mandos.model.settings import SETTINGS
+from mandos.model.utils.setup import logger
 
 
 class CachingPubchemApi(PubchemApi):
@@ -34,6 +34,10 @@ class CachingPubchemApi(PubchemApi):
         if path.exists():
             logger.debug(f"Found cached PubChem data")
             data = self._read_json(path)
+            if data is None:
+                raise PubchemCompoundLookupError(
+                    f"{inchikey_or_cid} previously not found in PubChem"
+                )
             self._write_siblings(data)  # TODO: remove
             return data
         return self._download(inchikey_or_cid)
@@ -41,23 +45,39 @@ class CachingPubchemApi(PubchemApi):
     def _download(self, inchikey_or_cid: Union[int, str]) -> PubchemData:
         if self._query is None:
             raise PubchemCompoundLookupError(f"{inchikey_or_cid} not cached")
-        data: PubchemData = self._query.fetch_data(inchikey_or_cid)
+        # logger.debug(f"Downloading PubChem data for {inchikey_or_cid}")
+        try:
+            data: PubchemData = self._query.fetch_data(inchikey_or_cid)
+        except PubchemCompoundLookupError:
+            data = PubchemData(NestedDotDict({}))
+            path = self.data_path(inchikey_or_cid)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(gzip.compress(data.to_json().encode(encoding="utf8")))
+            logger.debug(f"Wrote empty PubChem data to {path}")
+            raise
         cid = data.parent_or_self  # if there's ever a parent of a parent, this will NOT work
         path = self.data_path(cid)
         if path.exists():
+            logger.debug(f"PubChem data for {inchikey_or_cid} parent CID {cid} exists")
             logger.caution(f"Writing over {path} for {inchikey_or_cid}")
+        else:
+            logger.debug(f"PubChem data for {inchikey_or_cid} parent CID {cid} does not exist")
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(gzip.compress(data.to_json().encode(encoding="utf8")))
         self._write_siblings(data)
         logger.debug(f"Wrote PubChem data to {path.absolute()}")
+        logger.info(f"Got PubChem data for {inchikey_or_cid}")
         return data
 
     def _write_siblings(self, data: PubchemData):
-        path = self.data_path(data.parent_or_self)
-        for sibling in {self.data_path(data.inchikey), *data.siblings}:
+        cid = data.parent_or_self
+        path = self.data_path(cid)
+        aliases = {self.data_path(data.inchikey), *data.siblings}
+        for sibling in aliases:
             link = self.data_path(sibling)
             link.unlink(missing_ok=True)
             path.link_to(link)
+        logger.debug(f"Added aliases {','.join(aliases)} ⇌ {cid} ({path})")
 
     def data_path(self, inchikey_or_cid: Union[int, str]) -> Path:
         return self._cache_dir / "data" / f"{inchikey_or_cid}.json.gz"
@@ -75,6 +95,7 @@ class CachingPubchemApi(PubchemApi):
         return path.with_suffix(SETTINGS.archive_filename_suffix)
 
     def find_similar_compounds(self, inchi: str, min_tc: float) -> FrozenSet[int]:
+        logger.debug(f"Searching for {inchi} with min TC {min_tc}")
         path = self.similarity_path(inchi, min_tc)
         if path.exists():
             df = pd.read_file(path)
@@ -83,6 +104,7 @@ class CachingPubchemApi(PubchemApi):
         df = pd.DataFrame([pd.Series(dict(cid=cid)) for cid in found])
         path.parent.mkdir(parents=True, exist_ok=True)
         df.write_file(path)
+        logger.debug(f"Wrote {len(df)} values for {inchi} with min TC {min_tc}")
         return frozenset(set(df["cid"].values))
 
 

@@ -7,8 +7,6 @@ from importlib.metadata import metadata as __load
 from pathlib import Path
 from typing import Optional
 
-from mandos.model.utils import logger
-
 _metadata = None
 __version__ = None
 try:
@@ -25,7 +23,7 @@ try:
     __maintainer__ = _metadata["maintainer"]
     __contact__ = _metadata["maintainer"]
 except PackageNotFoundError:  # pragma: no cover
-    logger.error("Could not load package metadata for mandos. Is it installed?")
+    pass
 
 
 class MandosMetadata:

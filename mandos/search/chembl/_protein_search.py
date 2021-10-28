@@ -4,7 +4,6 @@ from typing import Optional, Sequence, Set, TypeVar
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
 
-from mandos import logger
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_target_graphs import (
@@ -16,6 +15,7 @@ from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 from mandos.model.concrete_hits import ProteinHit
 from mandos.model.taxonomy import Taxonomy
+from mandos.model.utils.setup import logger
 from mandos.search.chembl import ChemblSearch
 
 H = TypeVar("H", bound=ProteinHit, covariant=True)

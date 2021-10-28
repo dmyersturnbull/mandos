@@ -7,12 +7,11 @@ from pocketutils.core.exceptions import XValueError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
 
-from mandos import logger
 from mandos.entry.api_singletons import Apis
-from mandos.model import CompoundStruct
+from mandos.model import CompoundNotFoundError, CompoundStruct
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
-from mandos.model.utils import CompoundNotFoundError
+from mandos.model.utils.setup import logger
 
 IdMatchDf = (
     TypedDfs.typed("IdMatchDf")

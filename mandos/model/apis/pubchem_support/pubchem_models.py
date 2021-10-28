@@ -13,7 +13,7 @@ from pocketutils.core.exceptions import XTypeError, XValueError
 from pocketutils.tools.string_tools import StringTools
 
 from mandos.model.apis.pubchem_support._nav_fns import Mapx
-from mandos.model.utils import MandosResources
+from mandos.model.utils.resources import MandosResources
 
 hazards = MandosResources.file("hazards.json").read_text(encoding="utf8")
 hazards = NestedDotDict(orjson.loads(hazards))

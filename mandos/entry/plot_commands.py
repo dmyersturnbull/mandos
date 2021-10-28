@@ -12,7 +12,7 @@ import pandas as pd
 from pocketutils.core.chars import Chars
 from pocketutils.core.exceptions import XValueError
 from typeddfs import TypedDf
-from typeddfs.cli_help import DfCliHelp
+from typeddfs.utils.cli_help import DfCliHelp
 
 # noinspection PyProtectedMember
 from mandos.analysis._plot_utils import (
@@ -44,7 +44,7 @@ from mandos.entry.calc_commands import Aa
 from mandos.entry.utils._arg_utils import Arg, EntryUtils, Opt
 from mandos.entry.utils._common_args import CommonArgs
 from mandos.model.settings import SETTINGS
-from mandos.model.utils import MANDOS_SETUP
+from mandos.model.utils.setup import LOG_SETUP
 
 DEF_SUFFIX = SETTINGS.table_suffix
 nl = "\n\n"
@@ -292,7 +292,7 @@ class PlotCommands:
         style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_dir,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Plot correlation to scores.
@@ -301,7 +301,7 @@ class PlotCommands:
         Will output one figure (file) per scoring function.
         Will plot over a grid, one row per key/source pair and column per predicate/object pair.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         kind = CatPlotType.of(kind)
         to, suffix = EntryUtils.adjust_dir_name(to, path.parent, suffixes=IMG_SUFFIXES)
         df = EnrichmentDf.read_file(path)
@@ -343,7 +343,7 @@ class PlotCommands:
         style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Plot line plots of phi against psi.
@@ -358,7 +358,7 @@ class PlotCommands:
         Will show values for all psi variables together.
         If --colors is not set, will choose a palette.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = path.parent / f"{path.name}-{kind}-plot.pdf"
         to = EntryUtils.adjust_filename(to, default, True, suffixes=IMG_SUFFIXES)
         df = PhiPsiSimilarityDfLongForm.read_file(path)
@@ -405,7 +405,7 @@ class PlotCommands:
         style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Plot violin plots or similar from tau values.
@@ -414,7 +414,7 @@ class PlotCommands:
 
         Will plot each (phi, psi) pair over a grid, one row per phi and one column per psi.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         kind = CatPlotType.of(kind)
         default = path.parent / (f"{path.name}-{kind}-plot.pdf")
         to = EntryUtils.adjust_filename(to, default, suffixes=IMG_SUFFIXES)
@@ -449,14 +449,14 @@ class PlotCommands:
         style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Plot a heatmap of correlation between compounds.
 
         Will output one figure / file per correlation definition ('key' column).
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = path.parent / (path.name + "-heatmap-plot.pdf")
         to = EntryUtils.adjust_filename(to, default, True, suffixes=IMG_SUFFIXES)
         df = PsiProjectedDf.read_file(path)
@@ -481,14 +481,14 @@ class PlotCommands:
         style: Optional[str] = Pa.in_style,
         to: Optional[Path] = Pa.out_fig_file,
         log: Optional[Path] = CommonArgs.log,
-        stderr: bool = CommonArgs.stderr,
+        stderr: str = CommonArgs.stderr,
     ) -> None:
         r"""
         Plot UMAP, etc. of compounds from psi matrices.
 
         Will plot the psi variables over a grid.
         """
-        MANDOS_SETUP(log, stderr)
+        LOG_SETUP(log, stderr)
         default = path.parent / (path.name + "-plot.pdf")
         to = EntryUtils.adjust_filename(to, default, True, suffixes=IMG_SUFFIXES)
         df = PsiProjectedDf.read_file(path)

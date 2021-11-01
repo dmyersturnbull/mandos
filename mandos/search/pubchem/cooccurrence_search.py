@@ -41,24 +41,22 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
         all_of_them = self._query(data)
         return [
             self._create_hit(
-                inchikey=inchikey,
-                c_id=str(data.cid),
                 c_origin=inchikey,
+                c_id=str(data.cid),
                 c_matched=data.names_and_identifiers.inchikey,
                 c_name=data.name,
                 data_source=self._source(),
                 predicate=self._predicate(),
                 object_id=dd.neighbor_id,
                 object_name=dd.neighbor_name,
-                value=dd.calc_enrichment,
-                score=dd.calc_enrichment,
+                weight=dd.score,
                 intersect_count=dd.article_count,
                 query_count=dd.query_article_count,
                 neighbor_count=dd.neighbor_article_count,
             )
             for dd in all_of_them
             if (
-                dd.calc_enrichment >= self.min_score
+                dd.score >= self.min_score
                 and dd.neighbor_article_count >= self.min_articles
                 and dd.query_article_count >= self.min_articles
             )

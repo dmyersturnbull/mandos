@@ -5,6 +5,7 @@ import enum
 from dataclasses import dataclass
 from typing import Optional, Union
 
+from pocketutils.core.enums import CleverEnum
 from pocketutils.tools.reflection_tools import ReflectionTools
 
 from mandos.model.hits import AbstractHit
@@ -63,16 +64,10 @@ class FunctionalHit(_ActivityHit):
     subcellular_region: Optional[str]
 
 
-class GoType(enum.Enum):
+class GoType(CleverEnum):
     component = enum.auto()
     function = enum.auto()
     process = enum.auto()
-
-    @classmethod
-    def of(cls, s: Union[str, GoType]) -> GoType:
-        if isinstance(s, GoType):
-            return s
-        return GoType[s.lower()]
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -178,7 +173,6 @@ class ComputedPropertyHit(PubchemHit):
 
 @dataclass(frozen=True, order=True, repr=True)
 class CoOccurrenceHit(PubchemHit, metaclass=abc.ABCMeta):
-    score: int
     intersect_count: int
     query_count: int
     neighbor_count: int

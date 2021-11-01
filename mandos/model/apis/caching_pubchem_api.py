@@ -49,10 +49,8 @@ class CachingPubchemApi(PubchemApi):
         try:
             data: PubchemData = self._query.fetch_data(inchikey_or_cid)
         except PubchemCompoundLookupError:
-            data = PubchemData(NestedDotDict({}))
             path = self.data_path(inchikey_or_cid)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(gzip.compress(data.to_json().encode(encoding="utf8")))
+            NestedDotDict({}).write_json(path, mkdirs=True)
             logger.debug(f"Wrote empty PubChem data to {path}")
             raise
         cid = data.parent_or_self  # if there's ever a parent of a parent, this will NOT work
@@ -77,15 +75,14 @@ class CachingPubchemApi(PubchemApi):
             link = self.data_path(sibling)
             link.unlink(missing_ok=True)
             path.link_to(link)
-        logger.debug(f"Added aliases {','.join(aliases)} ⇌ {cid} ({path})")
+        logger.debug(f"Added aliases {','.join([str(s) for s in aliases])} ⇌ {cid} ({path})")
 
     def data_path(self, inchikey_or_cid: Union[int, str]) -> Path:
         return self._cache_dir / "data" / f"{inchikey_or_cid}.json.gz"
 
     def _read_json(self, path: Path) -> Optional[PubchemData]:
-        deflated = gzip.decompress(path.read_bytes())
-        read = orjson.loads(deflated)
-        return PubchemData(NestedDotDict(read)) if len(read) > 0 else None
+        dot = NestedDotDict.read_json(path)
+        return PubchemData(dot) if len(dot) > 0 else None
 
     def similarity_path(self, inchi: str, min_tc: float) -> Path:
         if not (min_tc * 100).is_integer():

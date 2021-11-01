@@ -11,7 +11,7 @@ from suretime import Suretime
 
 from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.setup import MandosResources
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -45,7 +45,7 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
 
     @classmethod
     def primary_data_source(cls) -> str:
-        z = MandosResources.strings[cls.__name__]["source"]
+        z = MandosResources.from_memory("strings")[cls.__name__]["source"]
         # TODO: really?
         return z.split(":")[0]
 
@@ -98,13 +98,13 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         return ReflectionTools.get_generic_arg(cls, AbstractHit)
 
     def _format_source(self, **kwargs) -> str:
-        s = MandosResources.strings[self.search_class]["source"]
+        s = MandosResources.from_memory("strings")[self.search_class]["source"]
         for k, v in kwargs.items():
             s = s.replace(f"{{{k}}}", str(v))
         return s
 
     def _format_predicate(self, **kwargs) -> str:
-        s = MandosResources.strings[self.search_class]["predicate"]
+        s = MandosResources.from_memory("strings")[self.search_class]["predicate"]
         for k, v in kwargs.items():
             s = s.replace(f"{{{k}}}", str(v))
         return s

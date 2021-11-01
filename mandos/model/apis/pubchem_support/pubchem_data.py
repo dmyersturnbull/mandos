@@ -4,22 +4,13 @@ PubChem data views and processors.
 from __future__ import annotations
 
 import abc
+import time
 from datetime import date, datetime
-from typing import (
-    AbstractSet,
-    Any,
-    Dict,
-    FrozenSet,
-    Mapping,
-    MutableMapping,
-    Optional,
-    Sequence,
-)
+from typing import AbstractSet, FrozenSet, Mapping, MutableMapping, Optional, Sequence
 from typing import Tuple as Tup
 from typing import Union
 from urllib.parse import unquote as url_unescape
 
-import orjson
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import (
@@ -36,10 +27,9 @@ from mandos.model import CompoundStruct
 from mandos.model.apis.pubchem_support._nav import FlatmapError, JsonNavigator
 
 # noinspection PyProtectedMember
-from mandos.model.apis.pubchem_support._nav_fns import Filter, Flatmap, Mapx
+from mandos.model.apis.pubchem_support._nav_fns import Filter, FilterFn, Flatmap, Mapx
 
 # noinspection PyProtectedMember
-from mandos.model.apis.pubchem_support._nav_model import FilterFn
 from mandos.model.apis.pubchem_support.pubchem_models import (
     Activity,
     AcuteEffectEntry,
@@ -172,6 +162,7 @@ class RelatedRecords(PubchemMiniDataView):
             // Flatmap.require_only()
         )
         parent = parent / Mapx.extract_group_1(r"CID (\d+) +.*") // Flatmap.request_only()
+        logger.trace(f"parent {self.cid} is {parent}")
         return self.cid if parent.get is None else int(parent.get)
 
 
@@ -1020,7 +1011,12 @@ class PubchemData(PubchemDataView):
 
     @property
     def siblings(self) -> AbstractSet[int]:
-        return {c for c in self._data["linked_records"]["CID"] if c != self.cid}
+        records = self._data["linked_records"]
+        try:
+            return {c for c in records["CID"] if c != self.cid}
+        except KeyError:
+            logger.error(f"NO CIDs for {self.cid}")
+            return set()
 
     @property
     def title_and_summary(self) -> TitleAndSummary:

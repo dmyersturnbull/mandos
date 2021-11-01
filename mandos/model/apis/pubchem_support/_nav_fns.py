@@ -3,6 +3,7 @@ Support classes to help with querying and processing web data.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date, datetime
 from typing import (
     Any,
@@ -20,8 +21,6 @@ import regex
 from pocketutils.core.exceptions import XTypeError, XValueError
 from pocketutils.tools.base_tools import BaseTools
 from pocketutils.tools.string_tools import StringTools
-
-from mandos.model.apis.pubchem_support._nav_model import FilterFn
 
 T = TypeVar("T")
 
@@ -252,4 +251,12 @@ class Mapx:
         return split
 
 
-__all__ = ["Filter", "Mapx", "Flatmap"]
+@dataclass(frozen=True)
+class FilterFn:
+    keep_if: Callable[[Any], bool]
+
+    def __call__(self, *args, **kwargs):
+        return self.keep_if(*args, **kwargs)
+
+
+__all__ = ["Filter", "Mapx", "Flatmap", "FilterFn"]

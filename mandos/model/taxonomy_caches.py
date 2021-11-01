@@ -13,13 +13,13 @@ import decorateme
 import pandas as pd
 import requests
 from pocketutils.core.exceptions import XValueError
+from pocketutils.tools.filesys_tools import FilesysTools
 from typeddfs import Checksums, TypedDfs
 
 from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import Taxonomy, TaxonomyDf
 from mandos.model.utils.globals import Globals
-from mandos.model.utils.resources import MandosResources
-from mandos.model.utils.setup import logger
+from mandos.model.utils.setup import MandosResources, logger
 
 
 @decorateme.auto_repr_str()
@@ -74,13 +74,13 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         return vertebrate if vertebrate.n_taxa() > 0 else None
 
     def _check_has(self, taxon: Union[str, int], path: Path) -> bool:
-        if path.exists():
-            return not MandosResources.check_expired(
-                path,
-                max_sec=SETTINGS.taxon_expire_sec,
-                what=f"Cached taxa under {taxon} ({path})",
+        return (
+            path.exists()
+            and FilesysTools.check_expired(
+                path, max_sec=SETTINGS.taxon_expire_sec, log=logger.warning
             )
-        return False
+            is not False
+        )
 
     def _load_or_dl(self, taxon: Union[int, str]) -> Taxonomy:
         path = self._resolve_non_vertebrate_final(taxon)

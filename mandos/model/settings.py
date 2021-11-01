@@ -16,8 +16,7 @@ from suretime import Suretime
 from typeddfs import FileFormat, FrozeDict
 
 from mandos.model.utils.globals import Globals
-from mandos.model.utils.resources import MandosResources
-from mandos.model.utils.setup import LOG_SETUP, logger
+from mandos.model.utils.setup import LOG_SETUP, MandosResources, logger
 
 defaults: Mapping[str, Any] = FrozeDict(MandosResources.json_dict("default_settings.json"))
 max_coeff = 1.1

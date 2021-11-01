@@ -14,14 +14,6 @@ from mandos.model import Api
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
 
 
-def _is_float(s):
-    try:
-        float(s)
-        return True
-    except ValueError:
-        return False
-
-
 @dataclass(frozen=True, repr=True, order=True)
 class HmdbProperty:
     name: str
@@ -66,7 +58,7 @@ class JsonBackedHmdbApi(HmdbApi, metaclass=abc.ABCMeta):
             value = False
         elif CommonTools.is_probable_null(value):
             value = None
-        elif _is_float(value):
+        elif CommonTools.is_float(value):
             value = float(value)
         return HmdbProperty(
             name=x["kind"], value=value, source=x["source"], experimental=experimental
@@ -104,22 +96,12 @@ class CachingHmdbApi(JsonBackedHmdbApi):
     def fetch(self, hmdb_id: str) -> NestedDotDict:
         path = self.path(hmdb_id)
         if not path.exists():
-            return self._read_json(path)
+            return NestedDotDict.read_json(path)
         else:
             data = self._query.fetch(hmdb_id)
+            data.write_json(path, mkdirs=True)
             self._write_json(data, path)
             return data
-
-    def path(self, hmdb_id: str):
-        return (self._cache_dir / hmdb_id).with_suffix(".json.gz")
-
-    def _write_json(self, data: NestedDotDict, path: Path) -> None:
-        path.write_bytes(gzip.compress(data.to_json()))
-
-    def _read_json(self, path: Path) -> NestedDotDict:
-        deflated = gzip.decompress(path.read_bytes())
-        read = orjson.loads(deflated)
-        return NestedDotDict(read)
 
 
 __all__ = ["HmdbApi", "QueryingHmdbApi", "HmdbProperty"]

@@ -87,7 +87,7 @@ class MultiSearch:
 
     @property
     def doc_path(self) -> Path:
-        return Path(str(self.final_path.with_suffix("")) + "_doc.tsv")
+        return Path(str(self.final_path.with_suffix("")) + ".doc.tsv")
 
     def test(self) -> None:
         self._build_and_test()

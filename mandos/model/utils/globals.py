@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.tools.common_tools import CommonTools
 from suretime import Suretime
 
@@ -14,7 +13,6 @@ class Globals:
     start_time_local = start_time.astimezone()
     start_timestamp = start_time.isoformat(timespec="milliseconds")
     start_timestamp_filesys = start_time_local.strftime("%Y-%m-%d_%H-%M-%S")
-    chembl_settings = ChemblSettings.Instance()
     cwd = os.getcwd()
     where_am_i_installed = Path(__file__).parent.parent.parent
     is_in_ci = CommonTools.parse_bool(os.environ.get("IS_IN_CI", "false"))

@@ -6,7 +6,7 @@ from __future__ import annotations
 import io
 import time
 from datetime import datetime, timezone
-from typing import Any, FrozenSet, Mapping, Optional, Sequence, Union
+from typing import Any, FrozenSet, List, Mapping, Optional, Sequence, Tuple, Union
 from urllib.error import HTTPError
 
 import orjson
@@ -80,6 +80,7 @@ class QueryingPubchemApi(PubchemApi):
                     return v[t]
 
         props = {k: _get_val(v) for k, v in props.items() if k is not None and v is not None}
+        logger.debug(f"DLed properties for {cid}")
         return props
 
     def fetch_data(self, inchikey: Union[str, int]) -> [PubchemData]:
@@ -100,10 +101,14 @@ class QueryingPubchemApi(PubchemApi):
             # note: this might not be the parent
             # that's ok -- we're about to fix that
             inchikey = self.find_inchikey(cid)
+            logger.debug(f"Matched CID {cid} to {inchikey}")
         else:
             cid = self._scrape_cid(inchikey)
-        data = self._fetch_data(cid, inchikey)
-        data = self._get_parent(cid, inchikey, data)
+            logger.debug(f"Matched inchikey {inchikey} to CID {cid} (scraped)")
+        stack = []
+        data = self._fetch_data(cid, inchikey, stack)
+        logger.debug(f"Downloaded raw data for {cid}/{inchikey}")
+        data = self._get_parent(cid, inchikey, data, stack)
         return data
 
     def find_similar_compounds(self, inchi: str, min_tc: float) -> FrozenSet[int]:
@@ -165,19 +170,25 @@ class QueryingPubchemApi(PubchemApi):
             )
         return int(match.group(1))
 
-    def _get_parent(self, cid: int, inchikey: str, data: PubchemData) -> PubchemData:
+    def _get_parent(
+        self, cid: int, inchikey: str, data: PubchemData, stack: List[Tuple[int, str]]
+    ) -> PubchemData:
         # guard with is not None: we're not caching, so don't do it twice
-        if data.parent_or_none is None:
+        p = data.parent_or_none
+        if p is None:
+            logger.info(f"{cid}/{inchikey} is its own parent")
             return data
         try:
-            return self._fetch_data(data.parent_or_none, inchikey)
+            logger.info(f"{cid}/{inchikey} has parent {p}")
+            del data
+            return self._fetch_data(p, inchikey, stack)
         except HTTPError:
             raise PubchemCompoundLookupError(
                 f"Failed finding pubchem parent compound (JSON)"
-                f"for cid {data.parent_or_none}, child cid {cid}, inchikey {inchikey}"
+                f"for cid {p}, child cid {cid}, inchikey {inchikey}"
             )
 
-    def _fetch_data(self, cid: int, inchikey: str) -> PubchemData:
+    def _fetch_data(self, cid: int, inchikey: str, stack: List[Tuple[int, str]]) -> PubchemData:
         when_started = datetime.now(timezone.utc).astimezone()
         t0 = time.monotonic_ns()
         try:
@@ -188,8 +199,11 @@ class QueryingPubchemApi(PubchemApi):
             )
         t1 = time.monotonic_ns()
         when_finished = datetime.now(timezone.utc).astimezone()
+        logger.trace(f"Downloaded {cid} in {t1-t0} s")
         data["meta"] = self._get_metadata(inchikey, when_started, when_finished, t0, t1)
         self._strip_by_key_in_place(data, "DisplayControls")
+        stack.append((cid, inchikey))
+        logger.trace(f"Stack: {stack}")
         return PubchemData(NestedDotDict(data))
 
     def _fetch_core_data(self, cid: int) -> dict:
@@ -217,11 +231,17 @@ class QueryingPubchemApi(PubchemApi):
             url = f"{self._pug}/compound/cid/{cid}/cids/JSON?cids_type={kind}"
             data = self._query_json(url).sub("IdentifierList")
             results[kind] = data.get_list_as("CID", str, [])
+            logger.debug(f"DLed linked records for {cid}")
+        else:
+            logger.debug(f"No linked records to DL for {cid}")
+            data = NestedDotDict({})
         return NestedDotDict(data)
 
     def _fetch_display_data(self, cid: int) -> Optional[NestedDotDict]:
         url = f"{self._pug_view}/data/compound/{cid}/JSON/?response_type=display"
-        return self._query_json(url)["Record"]
+        data = self._query_json(url)["Record"]
+        logger.debug(f"DLed display data for {cid}")
+        return data
 
     def _fetch_structure_data(self, cid: int) -> NestedDotDict:
         if not self._use_chem_data:
@@ -229,19 +249,24 @@ class QueryingPubchemApi(PubchemApi):
         url = f"{self._pug}/compound/cid/{cid}/JSON"
         data = self._query_json(url)["PC_Compounds"][0]
         del [data["structure"]["props"]]  # redundant with props section in record
+        logger.debug(f"DLed structure for {cid}")
         return data
 
     def _fetch_external_tables(self, cid: int) -> Mapping[str, str]:
-        return {
+        x = {
             ext_table: self._fetch_external_table(cid, ext_table)
             for ext_table in self._tables_to_use.values()
         }
+        logger.debug(f"DLed external tables for {cid}")
+        return x
 
     def _fetch_external_linksets(self, cid: int) -> Mapping[str, str]:
-        return {
+        x = {
             table: self._fetch_external_linkset(cid, table)
             for table in self._linksets_to_use.values()
         }
+        logger.debug(f"DLed external linksets for {cid}")
+        return x
 
     def _fetch_hierarchies(self, cid: int) -> NestedDotDict:
         build_up = {}
@@ -254,14 +279,14 @@ class QueryingPubchemApi(PubchemApi):
         # Some of them are > 1000 items -- they're HUGE
         # We don't expect to need to navigate to children
         self._strip_by_key_in_place(build_up, "ChildID")
+        logger.debug(f"DLed hierarchies for {cid}")
         return NestedDotDict(build_up)
 
     def _fetch_external_table(self, cid: int, table: str) -> Sequence[dict]:
         url = self._external_table_url(cid, table)
         data = self._executor(url)
-        df: pd.DataFrame = pd.read_csv(io.StringIO(data))
-        # TODO: UserWarning: DataFrame columns are not unique, some columns will be omitted.
-        return list(df.T.to_dict().values())
+        df: pd.DataFrame = pd.read_csv(io.StringIO(data)).reset_index()
+        return list(df.to_dict(orient="records"))
 
     def _fetch_external_linkset(self, cid: int, table: str) -> NestedDotDict:
         url = f"{self._link_db}?format=JSON&type={table}&operation=GetAllLinks&id_1={cid}"

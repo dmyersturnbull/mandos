@@ -10,6 +10,7 @@ from typing import Type
 
 import decorateme
 import regex
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import XTypeError
 
 from mandos.model.apis.chembl_api import ChemblApi
@@ -87,9 +88,6 @@ class TargetEdgeReqs(AbstractTargetEdgeReqs):
             source_types:
             rel_types:
             dest_types:
-
-        Returns:
-
         """
         st = set()
         for source in source_types:
@@ -114,13 +112,11 @@ class TargetEdgeReqs(AbstractTargetEdgeReqs):
     ) -> bool:
         """
         Determines whether a (source, rel, dest) triple matches this set of requirements.
+
         Args:
             src:
             rel_type:
             dest:
-
-        Returns:
-
         """
         srcx = src.target
         destx = dest.target
@@ -139,12 +135,11 @@ class TargetEdgeReqs(AbstractTargetEdgeReqs):
         )
 
 
-class TargetRelType(enum.Enum):
+class TargetRelType(CleverEnum):
     """
     A relationship between two targets.
 
     Types:
-
         - subset_of, superset_of, overlaps_with, and equivalent_to are actual types in ChEMBL.
         - any_link means any of the ChEMBL-defined types
         - self_link is an implicit link from any target to itself
@@ -219,20 +214,10 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
 
     @classmethod
     def api(cls) -> ChemblApi:
-        """
-
-        Returns:
-
-        """
         raise NotImplementedError()
 
     @classmethod
     def factory(cls) -> TargetFactory:
-        """
-
-        Returns:
-
-        """
         raise NotImplementedError()
 
     @property

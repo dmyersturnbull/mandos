@@ -61,7 +61,7 @@ class DataValidityComment(CleverEnum):
         }
 
 
-class AssayType(enum.Enum):
+class AssayType(CleverEnum):
     binding = enum.auto()
     functional = enum.auto()
     adme = enum.auto()

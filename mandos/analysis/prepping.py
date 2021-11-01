@@ -15,7 +15,6 @@ from typeddfs.df_errors import UnsupportedOperationError
 
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
 from mandos.entry.tools.searchers import InputCompoundsDf
-from mandos.model.utils.rdkit_utils import RdkitUtils
 
 T = TypeVar("T", bound=BaseDf)
 
@@ -58,6 +57,8 @@ class MatrixPrep:
 
     @classmethod
     def ecfp_matrix(cls, df: InputCompoundsDf, radius: int, n_bits: int) -> SimilarityDfShortForm:
+        from mandos.model.utils.rdkit_utils import RdkitUtils
+
         # TODO: This is inefficient and long
         indices = range(len(df))
         keys = df["inchikey"]

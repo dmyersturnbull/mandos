@@ -15,7 +15,8 @@ from pocketutils.core.dot_dict import NestedDotDict
 class ChemblFilterQuery(metaclass=abc.ABCMeta):
     """
     Wraps the result of calling ``filter`` on a ChEMBL query.
-    Supports iterating over results (``__iter__`), getting a single item (``__getitem__`), and calling ``only(lst)``.
+    Supports iterating over results (``__iter__`), getting a single item (``__getitem__`),
+    and calling ``only(lst)``.
     """
 
     def only(self, items: Sequence[str]) -> ChemblFilterQuery:

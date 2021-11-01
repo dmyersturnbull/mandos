@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, MutableMapping, Optional, Tuple
 
+import pandas as pd
 from pocketutils.core.exceptions import XValueError
 from pocketutils.tools.common_tools import CommonTools
 from typeddfs import TypedDfs
@@ -77,6 +78,7 @@ class CompoundIdFiller:
             elif i % 20 == 0 and i > 0:
                 logger.info(f"Processed {i:,} / {len(df):,}")
             with logger.contextualize(line=i):
+                logger.debug(f"Processing {row}")
                 proc = self._process(
                     compound_id=look(row, "compound_id"),
                     library=look(row, "library"),
@@ -205,6 +207,7 @@ class CompoundIdFiller:
         return df
 
     def _get_pubchem(self, inchikey: Optional[str], cid: Optional[int]) -> Optional[CompoundStruct]:
+        logger.info(f"Fetching PubChem {inchikey} / {cid}")
         api = Apis.Pubchem
         if cid is not None:
             # let it raise a CompoundNotFoundError
@@ -219,6 +222,7 @@ class CompoundIdFiller:
             return None if data is None else data.struct_view
 
     def _get_chembl(self, inchikey: Optional[str], cid: Optional[str]) -> Optional[CompoundStruct]:
+        logger.info(f"Fetching ChEMBL {inchikey} / {cid}")
         util = ChemblUtils(Apis.Chembl)
         if cid is not None:
             # let it raise a CompoundNotFoundError

@@ -4,6 +4,7 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
+import threading
 from typing import Type
 
 import typer
@@ -106,7 +107,7 @@ class MandosCli:
         LOG_SETUP.logger.remove(None)
         (
             LOG_SETUP.set_control(True)
-            .disable("chembl_webresource_client", "requests_cache", "urllib3")
+            .disable("chembl_webresource_client", "requests_cache", "urllib3", "numba")
             .config_levels(
                 levels=LOG_SETUP.defaults.levels_extended,
                 icons=LOG_SETUP.defaults.icons_extended,
@@ -114,6 +115,7 @@ class MandosCli:
             )
             .add_log_methods()
             .config_main(fmt=LOG_SETUP.defaults.fmt_simplified)
+            .intercept_std()
         )
         cls.start()
         cls.commands = CmdNamespace.make()

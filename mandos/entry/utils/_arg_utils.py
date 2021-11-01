@@ -210,7 +210,7 @@ class EntryUtils:
         cls._check_suffix(path.suffix, suffixes)
         if info.exists and replace and not quiet:
             logger.info(f"Overwriting existing file {path}")
-        logger.debug(f"Output path is {path}")
+        logger.debug(f"Output file is {path}")
         return path
 
     @classmethod
@@ -246,6 +246,7 @@ class EntryUtils:
             n_files = len(list(out_dir.iterdir()))
             if n_files > 0 and not quiet:
                 logger.debug(f"Directory {out_dir} is non-emtpy")
+        logger.debug(f"Output dir is {out_dir} (suffix: {suffix})")
         return out_dir, suffix
 
     @classmethod

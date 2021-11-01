@@ -19,7 +19,7 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import MultipleMatchesError, XValueError
 from pocketutils.tools.base_tools import BaseTools
 
-from mandos.model.apis.pubchem_support._nav_model import FilterFn
+from mandos.model.apis.pubchem_support._nav_fns import FilterFn
 
 T = TypeVar("T", covariant=True)
 V = TypeVar("V", covariant=True)

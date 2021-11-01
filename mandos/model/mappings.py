@@ -7,7 +7,7 @@ import regex
 from pocketutils.core.exceptions import ParsingError
 from typeddfs import TypedDfs
 
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.setup import MandosResources
 
 
 def _patterns(self: pd.DataFrame) -> Sequence[str]:

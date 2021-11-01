@@ -9,9 +9,13 @@ from pathlib import Path
 from typing import Optional
 
 import decorateme
+import pandas as pd
 import typer
+from pocketutils.core.chars import Chars
 from pocketutils.core.exceptions import XValueError
+from pocketutils.tools.string_tools import StringTools
 from typeddfs import CompressionFormat, FileFormat
+from typeddfs.df_errors import InvalidDfError
 from typeddfs.utils import Utils as TdfUtils
 from typeddfs.utils.cli_help import DfCliHelp
 
@@ -264,9 +268,8 @@ class MiscCommands:
         Useful to freeze data before running a search.
         """
         LOG_SETUP(log, stderr)
-        logger.error(f"Not implemented yet")
         df = IdMatchDf.read_file(path)
-        df = CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
+        CompoundIdFiller(chembl=not no_chembl, pubchem=not no_pubchem).fill(df)
         logger.notice(f"Done caching")
 
     @staticmethod
@@ -389,10 +392,41 @@ class MiscCommands:
         this is needed only if you want to combine results from multiple independent searches.
         """
         LOG_SETUP(log, stderr)
-        default = path / ("concat" + DEF_SUFFIX)
+        files_ = []
+        for file in path.iterdir():
+            ff = FileFormat.from_path_or_none(file)
+            if ff not in [None, FileFormat.json, FileFormat.toml] and not ff.name.endswith(
+                ".doc.tsv"
+            ):
+                files_.append(file)
+        logger.info(f"Looking under {path} (NOT recursive)")
+        logger.debug(f"Found {len(files_)} potential input files: {[f.name for f in files_]}")
+        files, dfs = [], []
+        for file in files_:
+            try:
+                df: HitDf = HitDf.read_file(file, attrs=True)
+            except InvalidDfError:
+                logger.warning(f"Skipping {file} {Chars.en} not a valid hit list")
+                logger.debug(f"Error reading {file}", exc_info=True)
+                continue
+            df = df.set_attrs({file.name: df.attrs})
+            dfs.append(df)
+            files.append(file)
+        names = [CompressionFormat.strip_suffix(f).name for f in files]
+        default = path / (",".join(names) + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
-        for found in path.iterdir():
-            pass
+        logger.notice(f"Concatenated {len(files)} files")
+        for f_, df_ in zip(files, dfs):
+            logger.success(f"Included: {f_.name} with {len(df_)} rows")
+        df = HitDf.of(pd.concat(dfs))
+        counts = {k: v for k, v in df.group_by("universal_id").count().to_dict() if v > 0}
+        if len(counts) > 0:
+            logger.error(
+                f"There are {len(counts)} universal IDs with duplicates!"
+                + f": {StringTools.join_kv(counts)}"
+            )
+        logger.notice(f"Wrote {len(df)} rows to {to}")
+        df.write_file(to)
 
     @staticmethod
     def filter(

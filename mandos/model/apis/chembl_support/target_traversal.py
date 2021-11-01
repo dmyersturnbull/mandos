@@ -10,6 +10,7 @@ from typing import Type
 
 import decorateme
 import regex
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import ParsingError
 from pocketutils.tools.reflection_tools import ReflectionTools
 
@@ -21,10 +22,10 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
     TargetRelType,
 )
 from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.setup import MandosResources
 
 
-class Acceptance(enum.Enum):
+class Acceptance(CleverEnum):
     always = enum.auto()
     never = enum.auto()
     at_start = enum.auto()

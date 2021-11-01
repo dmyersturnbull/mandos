@@ -9,11 +9,12 @@ from typing import FrozenSet, Mapping, Optional, Sequence, Set, Union
 import orjson
 import regex
 from pocketutils.core.dot_dict import NestedDotDict
+from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import XTypeError, XValueError
 from pocketutils.tools.string_tools import StringTools
 
 from mandos.model.apis.pubchem_support._nav_fns import Mapx
-from mandos.model.utils.resources import MandosResources
+from mandos.model.utils.setup import MandosResources
 
 hazards = MandosResources.file("hazards.json").read_text(encoding="utf8")
 hazards = NestedDotDict(orjson.loads(hazards))
@@ -161,7 +162,7 @@ class Codes:
         """ """
 
 
-class CoOccurrenceType(enum.Enum):
+class CoOccurrenceType(CleverEnum):
     chemical = enum.auto()
     gene = enum.auto()
     disease = enum.auto()
@@ -333,7 +334,7 @@ class AtcCode:
         return [g for g in match.groups() if g is not None]
 
 
-class DrugbankTargetType(enum.Enum):
+class DrugbankTargetType(CleverEnum):
     target = enum.auto()
     carrier = enum.auto()
     transporter = enum.auto()
@@ -362,7 +363,7 @@ class DrugbankDdi:
     description: str
 
 
-class Activity(enum.Enum):
+class Activity(CleverEnum):
     active = enum.auto()
     inactive = enum.auto()
     inconclusive = enum.auto()

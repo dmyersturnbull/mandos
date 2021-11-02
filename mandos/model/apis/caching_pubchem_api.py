@@ -32,16 +32,16 @@ class CachingPubchemApi(PubchemApi):
     def fetch_data(self, inchikey_or_cid: Union[str, int]) -> Optional[PubchemData]:
         path = self.data_path(inchikey_or_cid)
         if path.exists():
-            logger.debug(f"Found cached PubChem data for {inchikey_or_cid}")
             data = self._read_json(path)
             if data is None:
                 raise PubchemCompoundLookupError(
                     f"{inchikey_or_cid} previously not found in PubChem"
                 )
-            self._write_siblings(data)  # TODO: remove
+            logger.info(f"Found cached PubChem data for {inchikey_or_cid}: {data.cid}")
+            # self._write_siblings(data)  # TODO: remove
             return data
         else:
-            logger.debug(f"Did NOT find cached PubChem data for {inchikey_or_cid}")
+            logger.info(f"No cached PubChem data for {inchikey_or_cid}")
         return self._download(inchikey_or_cid)
 
     def _download(self, inchikey_or_cid: Union[int, str]) -> PubchemData:
@@ -53,19 +53,20 @@ class CachingPubchemApi(PubchemApi):
         except PubchemCompoundLookupError:
             path = self.data_path(inchikey_or_cid)
             NestedDotDict({}).write_json(path, mkdirs=True)
-            logger.debug(f"Wrote empty PubChem data to {path}")
+            logger.info(f"No PubChem compound found for {inchikey_or_cid}")
+            logger.trace(f"Wrote empty PubChem data to {path}")
             raise
         cid = data.parent_or_self  # if there's ever a parent of a parent, this will NOT work
         path = self.data_path(cid)
         if path.exists():
-            logger.debug(f"PubChem data for {inchikey_or_cid} parent CID {cid} exists")
-            logger.warning(f"Writing over {path} for {inchikey_or_cid}")
+            logger.error(f"PubChem data for {inchikey_or_cid} parent CID {cid} exists")
+            logger.error(f"Writing over {path} for {inchikey_or_cid}")
         else:
             logger.debug(f"PubChem data for {inchikey_or_cid} parent CID {cid} does not exist")
         data._data.write_json(path, mkdirs=True)
         self._write_siblings(data, inchikey_or_cid)
         logger.debug(f"Wrote PubChem data to {path.absolute()}")
-        logger.info(f"Got PubChem data for {inchikey_or_cid}")
+        logger.success(f"Downloaded PubChem data {cid} for {inchikey_or_cid}")
         return data
 
     def _write_siblings(self, data: PubchemData, *others: str):

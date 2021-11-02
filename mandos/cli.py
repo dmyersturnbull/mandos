@@ -13,11 +13,23 @@ import orjson
 import typer
 from pocketutils.core import DictNamespace
 from pocketutils.misc.loguru_utils import FancyLoguru
+from pocketutils.tools.filesys_tools import FilesysTools
 from typer.models import CommandInfo
 
 from mandos.model.utils.globals import Globals
 
 cli = typer.Typer()
+_my_colors = dict(
+    TRACE="<dim>",
+    DEBUG="<bold>",
+    INFO="<cyan>",
+    CAUTION="<yellow>",
+    SUCCESS="<blue>",
+    WARNING="<bold><yellow>",
+    NOTICE="<bold><blue>",
+    ERROR="<red>",
+    CRITICAL="<bold><red>",
+)
 
 
 class CmdNamespace(DictNamespace):
@@ -110,13 +122,13 @@ class MandosCli:
 
         Globals.is_cli = True
         cls.log_setup = LOG_SETUP.logger.remove(None)
-        (
+        cls.log_setup = (
             LOG_SETUP.set_control(True)
             .disable("chembl_webresource_client", "requests_cache", "urllib3", "numba")
             .config_levels(
                 levels=LOG_SETUP.defaults.levels_extended,
                 icons=LOG_SETUP.defaults.icons_extended,
-                colors=LOG_SETUP.defaults.colors_red_green_safe,
+                colors=_my_colors,
             )
             .add_log_methods()
             .config_main(fmt=LOG_SETUP.defaults.fmt_simplified)
@@ -144,49 +156,38 @@ class MandosCli:
             logger.info(f"Mandos v{MandosMetadata.version}")
 
 
-def _write_exc_info(mandos_: Type[MandosCli], e: BaseException) -> Path:
-    s_ = mandos_.log_setup
-    s_.logger.exception(f"Command failed: {str(e)}")
-    log_path_: Optional[Path] = next(iter(s_.paths)) if len(s_.paths) > 0 else None
-    if log_path_ is None:
-        log_path_ = Path(f"mandos-err-{Globals.start_timestamp_filesys}.log")
-        log_path_.write_text(str(e) + os.linesep + traceback.format_exc(), encoding="utf8")
-    return log_path_.resolve()
+class MandosTyperCli:
+    def __init__(self):
+        self._mandos = None
 
+    def main(self) -> None:
+        self._mandos = MandosCli.as_cli()
+        try:
+            self._mandos.cli()
+        except KeyboardInterrupt:
+            raise typer.Abort()
+        except BaseException as e:
+            typer.echo(f"Command failed: {str(e)}", err=True)
+            logger = self._mandos.log_setup.logger
+            logger.critical(f"Command failed: {str(e)}", exc_info=True)
+            log_path = self._log_path()
+            if log_path is not None:
+                typer.echo(f"See the log file at {log_path}", err=True)
+            dmp_path = Path(f"mandos-err-dump-{Globals.start_timestamp_filesys}.json")
+            FilesysTools.dump_error(e, dmp_path)
+            typer.echo(f"See {dmp_path.resolve()} for details", err=True)
+            raise typer.Exit(code=1)
 
-def _write_sys_info() -> Optional[Path]:
-    try:
-        from pocketutils.tools.filesys_tools import FilesysTools
-
-        info_ = FilesysTools.get_env_info()
-        info_path_ = Path(f"mandos-err-{Globals.start_timestamp_filesys}-sys.json")
-        info_ = orjson.dumps(info_, option=orjson.OPT_INDENT_2).decode(encoding="utf8")
-        info_path_.write_text(info_, encoding="utf8")
-        return info_path_.resolve()
-    except BaseException:
-        return None
-
-
-def main() -> None:
-    mandos_ = MandosCli.as_cli()
-    try:
-        mandos_.cli()
-    except KeyboardInterrupt:
-        raise typer.Abort()
-    except BaseException as e:
-        typer.echo(f"Command failed: {str(e)}", err=True)
-        lg_path_ = _write_exc_info(mandos_, e)
-        typer.echo(f"See {lg_path_} for details", err=True)
-        inf_path_ = _write_sys_info()
-        if inf_path_ is None:
-            typer.echo(f"Could not get system info", err=True)
-        else:
-            typer.echo(f"Wrote system info to {inf_path_}")
-        raise typer.Exit(code=1)
+    def _log_path(self) -> Optional[Path]:
+        s_ = self._mandos.log_setup
+        try:
+            return next(iter(s_.paths)).path.resolve()
+        except (StopIteration, AttributeError):
+            return None
 
 
 if __name__ == "__main__":
-    main()
+    MandosTyperCli().main()
 
 
 __all__ = ["CmdNamespace", "MandosCli"]

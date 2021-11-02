@@ -106,8 +106,9 @@ class QueryingPubchemApi(PubchemApi):
             logger.debug(f"Matched inchikey {inchikey} to CID {cid} (scraped)")
         stack = []
         data = self._fetch_data(cid, inchikey, stack)
-        logger.debug(f"Downloaded raw data for {cid}/{inchikey}")
+        logger.debug(f"DLed raw data for {cid}/{inchikey}")
         data = self._get_parent(cid, inchikey, data, stack)
+        logger.debug(f"DLed PubChem compound {cid}")
         return data
 
     def _scrape_cid(self, inchikey: str) -> int:
@@ -139,7 +140,7 @@ class QueryingPubchemApi(PubchemApi):
         try:
             for i in range(SETTINGS.pubchem_n_tries):
                 try:
-                    html = self._executor(url)
+                    html = self._query(url)
                 except ConnectionAbortedError:
                     logger.warning(f"Connection aborted for {inchikey} [url: {url}]", exc_info=True)
                     continue
@@ -174,14 +175,14 @@ class QueryingPubchemApi(PubchemApi):
 
     def _fetch_data(self, cid: int, inchikey: str, stack: List[Tuple[int, str]]) -> PubchemData:
         when_started = datetime.now(timezone.utc).astimezone()
-        t0 = time.monotonic_ns()
+        t0 = time.monotonic()
         try:
             data = self._fetch_core_data(cid, stack)
         except HTTPError:
             raise PubchemCompoundLookupError(
                 f"Failed finding pubchem compound (JSON) from cid {cid}, inchikey {inchikey}"
             )
-        t1 = time.monotonic_ns()
+        t1 = time.monotonic()
         when_finished = datetime.now(timezone.utc).astimezone()
         logger.trace(f"Downloaded {cid} in {t1-t0} s")
         data["meta"] = self._get_metadata(inchikey, when_started, when_finished, t0, t1)
@@ -267,25 +268,25 @@ class QueryingPubchemApi(PubchemApi):
 
     def _fetch_external_table(self, cid: int, table: str) -> Sequence[dict]:
         url = self._external_table_url(cid, table)
-        data = self._executor(url)
+        data = self._query(url)
         df: pd.DataFrame = pd.read_csv(io.StringIO(data)).reset_index()
-        logger.debug(f"Downloaded table {table} with {len(df)} rows for {cid}")
+        logger.debug(f"DLed table {table} with {len(df)} rows for {cid}")
         return list(df.to_dict(orient="records"))
 
     def _fetch_external_linkset(self, cid: int, table: str) -> NestedDotDict:
         url = f"{self._link_db}?format=JSON&type={table}&operation=GetAllLinks&id_1={cid}"
-        data = self._executor(url)
-        logger.debug(f"Downloaded linkset {table} rows for {cid}")
+        data = self._query(url)
+        logger.debug(f"DLed linkset {table} rows for {cid}")
         return NestedDotDict(orjson.loads(data))
 
     def _fetch_hierarchy(self, cid: int, hname: str, hid: int) -> Sequence[dict]:
         url = f"{self._classifications}?format=json&hid={hid}&search_uid_type=cid&search_uid={cid}&search_type=list&response_type=display"
-        data: Sequence[dict] = orjson.loads(self._executor(url))["Hierarchies"]
+        data: Sequence[dict] = orjson.loads(self._query(url))["Hierarchies"]
         # underneath Hierarchies is a list of Hierarchy
         logger.debug(f"Found data for classifier {hid}, compound {cid}")
         if len(data) == 0:
             raise LookupFailedError(f"Failed getting hierarchy {hid}")
-        logger.debug(f"Downloaded hierarchy {hname} ({hid}) for {cid}")
+        logger.debug(f"DLed hierarchy {hname} ({hid}) for {cid}")
         return data
 
     @property
@@ -363,13 +364,23 @@ class QueryingPubchemApi(PubchemApi):
         ).replace(" ", "%22")
 
     def _query_json(self, url: str) -> NestedDotDict:
-        data = self._executor(url)
+        data = self._query(url)
         data = NestedDotDict(orjson.loads(data))
         if "Fault" in data:
             raise DownloadError(
-                f"Request failed ({data.get('Code')}) on {url}: {data.get('Message')}"
+                f"PubChem query failed ({data.get('Code')}) on {url}: {data.get('Message')}"
             )
-        logger.trace(f"Queried {url}")
+        logger.trace(
+            f"Fetched JSON has {data.n_bytes_total()} bytes and {data.n_elements_total()} elements"
+        )
+        return data
+
+    def _query(self, url: str):
+        data = self._executor(url)
+        tt = self._executor.last_time_taken
+        wt, qt = tt.wait.total_seconds(), tt.query.total_seconds()
+        bts = int(len(data) * 8 / 1024)
+        logger.trace(f"Queried {bts} kb from {url} in {qt:.1} s with {wt:.1} s of wait")
         return data
 
     def _strip_by_key_in_place(self, data: Union[dict, list], bad_key: str) -> None:

@@ -37,7 +37,7 @@ class ConcordanceCalculator(metaclass=abc.ABCMeta):
     def calc(
         self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm, phi_name: str, psi_name: str
     ) -> ConcordanceDf:
-        logger.debug(f"Calculating {phi_name} / {psi_name}")
+        logger.info(f"Calculating {phi_name} / {psi_name}")
         phi_cols, psi_cols = phi.columns.tolist(), psi.columns.tolist()
         if phi_cols != psi_cols:
             raise MismatchedDataError(f"Mismatched compounds: {phi_cols} != {psi_cols}")

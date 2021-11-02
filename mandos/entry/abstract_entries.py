@@ -63,9 +63,9 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         to = EntryUtils.adjust_filename(
             to, default=default_to, replace=replace or proceed, quiet=True
         )
-        logger.info(f"Reading compounds from {path}")
+        logger.debug(f"Reading compounds from {path}")
         input_df = InputCompoundsDf.read_file(path)
-        logger.info(f"Read {len(input_df)} input compounds")
+        logger.info(f"Read {len(input_df)} compounds from {path}")
         searcher = Searcher(built, input_df, to, restart=replace, proceed=proceed)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
         if not check:

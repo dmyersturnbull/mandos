@@ -22,7 +22,7 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
     TargetRelType,
 )
 from mandos.model.apis.chembl_support.chembl_targets import ChemblTarget, TargetType
-from mandos.model.utils.setup import MandosResources
+from mandos.model.utils.setup import MandosResources, logger
 
 
 class Acceptance(CleverEnum):
@@ -76,19 +76,24 @@ class StandardTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABC
         raise NotImplementedError()
 
     def __call__(self, target: ChemblTargetGraph) -> Sequence[ChemblTarget]:
+        logger.debug(f"Starting {self} on {target.target}")
         found = target.traverse(self.edges())
         return [f.target for f in found if self.accept(f)]
 
     def accept(self, target: TargetNode) -> bool:
         if target.link_reqs is None:
             # typically for root nodes -- we'll have a self-loop to check, too
+            logger.trace(f"Rejected probable root: {target}")
             return False
         acceptance_type = self.acceptance()[target.link_reqs]
-        return (
+        b = (
             acceptance_type is Acceptance.always
             or (acceptance_type is Acceptance.at_start and target.is_start)
             or (acceptance_type is Acceptance.at_end and target.is_end)
         )
+        x = "accepted" if b else "rejected"
+        logger.trace(f"{x.capitalize()}: {target}")
+        return b
 
 
 class StandardStrategyParser:
@@ -185,6 +190,7 @@ class TargetTraversalStrategies:
     @classmethod
     def by_classname(cls, fully_qualified: str, api: ChemblApi) -> TargetTraversalStrategy:
         clazz = ReflectionTools.injection(fully_qualified, TargetTraversalStrategy)
+        logger.info(f"Loaded strategy {clazz} by injection: {fully_qualified}")
         return cls.create(clazz, api)
 
     @classmethod
@@ -195,6 +201,7 @@ class TargetTraversalStrategies:
     @classmethod
     def from_file(cls, path: Path, api: ChemblApi) -> TargetTraversalStrategy:
         lines = StandardStrategyParser.read_lines(path)
+        logger.debug(f"Loaded strategy from {path} with {len(lines)} lines")
         return cls._from_lines(lines, api, name="TraversalStrategy" + path.stem.capitalize())
 
     @classmethod
@@ -208,6 +215,9 @@ class TargetTraversalStrategies:
         cls, lines: Sequence[str], api: ChemblApi, *, name: str
     ) -> TargetTraversalStrategy:
         edges, accept = StandardStrategyParser.parse(lines)
+        logger.info(f"Loaded strategy {name} with {len(edges)} edge types")
+        for edge in edges:
+            logger.trace(f"Edge: {edge} ({accept[edge]})")
 
         class Strategy(StandardTargetTraversalStrategy):
             @classmethod

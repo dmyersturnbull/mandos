@@ -11,7 +11,7 @@ from suretime import Suretime
 
 from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit
-from mandos.model.utils.setup import MandosResources
+from mandos.model.utils.setup import MandosResources, logger
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -141,7 +141,9 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         entry.update(kwargs)
         clazz = self.__class__.get_h()
         # noinspection PyArgumentList
-        return clazz(**entry)
+        inst = clazz(**entry)
+        logger.trace(f"Hit: {inst}")
+        return inst
 
     def __repr__(self) -> str:
         return ", ".join([k + "=" + str(v) for k, v in self.get_params().items()])

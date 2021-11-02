@@ -69,6 +69,7 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
                 and data.req_as("pchembl_value", float) < self.min_pchembl
             )
         ):
+            logger.trace(f"Excluding {data}")
             return False
         if data.get("data_validity_comment") is not None:
             logger.debug(
@@ -86,9 +87,11 @@ class _ActivitySearch(ProteinSearch[H], metaclass=abc.ABCMeta):
             )
             return False
         confidence_score = assay.get("confidence_score")
-        if self.min_confidence_score is not None:
-            if confidence_score is None or confidence_score < self.min_confidence_score:
-                return False
+        if self.min_confidence_score is not None and (
+            confidence_score is None or confidence_score < self.min_confidence_score
+        ):
+            logger.trace(f"Excluding {data} with confidence {confidence_score}")
+            return False
         # Some of these are non-protein types
         # And if it's unknown, we don't know what to do with it
         return True

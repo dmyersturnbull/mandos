@@ -4,11 +4,15 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
-import threading
-from typing import Type
+import os
+import traceback
+from pathlib import Path
+from typing import Optional, Type
 
+import orjson
 import typer
 from pocketutils.core import DictNamespace
+from pocketutils.misc.loguru_utils import FancyLoguru
 from typer.models import CommandInfo
 
 from mandos.model.utils.globals import Globals
@@ -80,13 +84,14 @@ class MandosCli:
 
     cli = cli
     commands = None
+    log_setup: FancyLoguru = None
 
     @classmethod
     def as_library(cls) -> Type[MandosCli]:
         from mandos.model.utils.setup import LOG_SETUP
 
         Globals.is_cli = False
-        (
+        cls.log_setup = (
             LOG_SETUP.set_control(False)
             .config_levels(
                 levels=LOG_SETUP.defaults.levels_extended,
@@ -104,7 +109,7 @@ class MandosCli:
         from mandos.model.utils.setup import LOG_SETUP
 
         Globals.is_cli = True
-        LOG_SETUP.logger.remove(None)
+        cls.log_setup = LOG_SETUP.logger.remove(None)
         (
             LOG_SETUP.set_control(True)
             .disable("chembl_webresource_client", "requests_cache", "urllib3", "numba")
@@ -139,8 +144,49 @@ class MandosCli:
             logger.info(f"Mandos v{MandosMetadata.version}")
 
 
+def _write_exc_info(mandos_: Type[MandosCli], e: BaseException) -> Path:
+    s_ = mandos_.log_setup
+    s_.logger.exception(f"Command failed: {str(e)}")
+    log_path_: Optional[Path] = next(iter(s_.paths)) if len(s_.paths) > 0 else None
+    if log_path_ is None:
+        log_path_ = Path(f"mandos-err-{Globals.start_timestamp_filesys}.log")
+        log_path_.write_text(str(e) + os.linesep + traceback.format_exc(), encoding="utf8")
+    return log_path_.resolve()
+
+
+def _write_sys_info() -> Optional[Path]:
+    try:
+        from pocketutils.tools.filesys_tools import FilesysTools
+
+        info_ = FilesysTools.get_env_info()
+        info_path_ = Path(f"mandos-err-{Globals.start_timestamp_filesys}-sys.json")
+        info_ = orjson.dumps(info_, option=orjson.OPT_INDENT_2).decode(encoding="utf8")
+        info_path_.write_text(info_, encoding="utf8")
+        return info_path_.resolve()
+    except BaseException:
+        return None
+
+
+def main() -> None:
+    mandos_ = MandosCli.as_cli()
+    try:
+        mandos_.cli()
+    except KeyboardInterrupt:
+        raise typer.Abort()
+    except BaseException as e:
+        typer.echo(f"Command failed: {str(e)}", err=True)
+        lg_path_ = _write_exc_info(mandos_, e)
+        typer.echo(f"See {lg_path_} for details", err=True)
+        inf_path_ = _write_sys_info()
+        if inf_path_ is None:
+            typer.echo(f"Could not get system info", err=True)
+        else:
+            typer.echo(f"Wrote system info to {inf_path_}")
+        raise typer.Exit(code=1)
+
+
 if __name__ == "__main__":
-    MandosCli.as_cli().cli()
+    main()
 
 
 __all__ = ["CmdNamespace", "MandosCli"]

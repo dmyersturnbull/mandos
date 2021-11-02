@@ -64,6 +64,18 @@ class Ld50Search(PubchemSearch[Ld50Hit]):
             if dd.test_type != "LD50":
                 continue
             weight = -np.log10(dd.mg_per_kg)
+            source = self._format_source(
+                organism=dd.organism,
+                human=dd.organism.is_human,
+                route=dd.route,
+                test_type=dd.test_type,
+            )
+            predicate = self._format_predicate(
+                organism=dd.organism,
+                human=dd.organism.is_human,
+                route=dd.route,
+                test_type=dd.test_type,
+            )
             results.append(
                 self._create_hit(
                     inchikey=inchikey,
@@ -71,8 +83,8 @@ class Ld50Search(PubchemSearch[Ld50Hit]):
                     c_origin=inchikey,
                     c_matched=data.names_and_identifiers.inchikey,
                     c_name=data.name,
-                    data_source="ChemIDplus",
-                    predicate="has LD50",
+                    data_source=source,
+                    predicate=predicate,
                     object_id=str(dd.mg_per_kg),
                     object_name=str(dd.mg_per_kg),
                     weight=weight,

@@ -20,8 +20,12 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
         hits = []
         for dd in data.biomolecular_interactions_and_pathways.drugbank_ddis:
             kind = self._guess_type(dd.description)
+            logger.trace(f"NLP: Kind {kind} from '{dd.description}'")
             direction = self._guess_direction(dd.description)
+            logger.trace(f"NLP: Direction {direction} from '{dd.description}'")
             spec = self._guess_spec(dd, kind)
+            if spec is not None:
+                logger.trace(f"NLP: {kind} {spec} from '{dd.description}'")
             source = self._format_source(kind=kind, spec=spec)
             predicate = self._format_predicate(kind=kind, spec=spec, direction=direction)
             hits.append(

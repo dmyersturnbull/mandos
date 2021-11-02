@@ -399,8 +399,8 @@ class MiscCommands:
                 ".doc.tsv"
             ):
                 files_.append(file)
-        logger.info(f"Looking under {path} (NOT recursive)")
-        logger.debug(f"Found {len(files_)} potential input files: {[f.name for f in files_]}")
+        logger.notice(f"Looking under {path} (NOT recursive)")
+        logger.info(f"Found {len(files_)} potential input files: {[f.name for f in files_]}")
         files, dfs = [], []
         for file in files_:
             try:

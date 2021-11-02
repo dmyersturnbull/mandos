@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 import regex
 
 from mandos.model.concrete_hits import CtdGeneHit
+from mandos.model.utils.setup import logger
 from mandos.search.pubchem import PubchemSearch
 
 
@@ -19,6 +20,7 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
                     data.name, dd.gene_name, interaction, dd.tax_id, dd.tax_name
                 )
                 for predicate in predicates:
+                    logger.trace(f"NLP: Predicate {predicate} from '{interaction}'")
                     results.append(
                         self._create_hit(
                             inchikey=inchikey,

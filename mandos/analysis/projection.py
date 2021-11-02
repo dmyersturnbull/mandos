@@ -21,7 +21,7 @@ class UmapCalc:
 
     def calc(self, df: SimilarityDfLongForm) -> PsiProjectedDf:
         """"""
-        logger.debug(f"Calculating UMAP on {len(df)} items")
+        logger.info(f"Calculating UMAP on {len(df)} items")
 
 
 __all__ = ["UMAP", "UmapCalc"]

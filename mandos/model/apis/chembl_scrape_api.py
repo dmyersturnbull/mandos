@@ -15,6 +15,7 @@ from typeddfs import TypedDf, TypedDfs
 
 from mandos.model import Api
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
+from mandos.model.utils.setup import logger
 
 
 class SarPredictionResult(CleverEnum):
@@ -139,6 +140,7 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
             return ChemblScrapeTable.new_empty()
         data = self._query._fetch_page(cid, page, table_type)
         data.write_file(path, mkdirs=True)
+        logger.debug(f"Scraped page {page} for {cid} with {len(data)} rows")
         return data
 
     def path(self, cid: str, page: ChemblScrapePage):

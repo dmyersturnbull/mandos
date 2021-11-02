@@ -235,11 +235,6 @@ class Taxonomy:
     """
 
     def __init__(self, by_id: Mapping[int, Taxon], by_name: Mapping[str, FrozenSet[Taxon]]):
-        """
-
-        Args:
-            by_id:
-        """
         # constructor provided for consistency with the members
         self._by_id = dict(by_id)
         self._by_name = dict(by_name)

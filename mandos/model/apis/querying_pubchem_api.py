@@ -6,7 +6,7 @@ from __future__ import annotations
 import io
 import time
 from datetime import datetime, timezone
-from typing import Any, FrozenSet, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 from urllib.error import HTTPError
 
 import orjson
@@ -16,7 +16,6 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import (
     DataIntegrityError,
     DownloadError,
-    DownloadTimeoutError,
     LookupFailedError,
 )
 from pocketutils.core.query_utils import QueryExecutor
@@ -30,7 +29,7 @@ from mandos.model.utils.setup import logger
 class QueryingPubchemApi(PubchemApi):
     def __init__(
         self,
-        chem_data: bool = False,
+        chem_data: bool = True,
         extra_tables: bool = False,
         classifiers: bool = False,
         extra_classifiers: bool = False,
@@ -111,21 +110,6 @@ class QueryingPubchemApi(PubchemApi):
         data = self._get_parent(cid, inchikey, data, stack)
         return data
 
-    def find_similar_compounds(self, inchi: str, min_tc: float) -> FrozenSet[int]:
-        req = self._executor(
-            f"{self._pug}/compound/similarity/inchikey/{inchi}/JSON?Threshold={min_tc}",
-            method="post",
-        )
-        key = orjson.loads(req)["Waiting"]["ListKey"]
-        t0 = time.monotonic()
-        while time.monotonic() - t0 < 5:
-            # it'll wait as needed here
-            resp = self._executor(f"{self._pug}/compound/listkey/{key}/cids/JSON")
-            resp = NestedDotDict(orjson.loads(resp))
-            if resp.get("IdentifierList.CID") is not None:
-                return frozenset(resp.req_list_as("IdentifierList.CID", int))
-        raise DownloadTimeoutError(f"Search for {inchi} using key {key} timed out")
-
     def _scrape_cid(self, inchikey: str) -> int:
         # This is awful
         # Every attempt to get the actual, correct, unique CID corresponding to the inchikey
@@ -192,7 +176,7 @@ class QueryingPubchemApi(PubchemApi):
         when_started = datetime.now(timezone.utc).astimezone()
         t0 = time.monotonic_ns()
         try:
-            data = self._fetch_core_data(cid)
+            data = self._fetch_core_data(cid, stack)
         except HTTPError:
             raise PubchemCompoundLookupError(
                 f"Failed finding pubchem compound (JSON) from cid {cid}, inchikey {inchikey}"
@@ -206,10 +190,10 @@ class QueryingPubchemApi(PubchemApi):
         logger.trace(f"Stack: {stack}")
         return PubchemData(NestedDotDict(data))
 
-    def _fetch_core_data(self, cid: int) -> dict:
+    def _fetch_core_data(self, cid: int, stack: List[Tuple[int, str]]) -> dict:
         return dict(
             record=self._fetch_display_data(cid),
-            linked_records=self._get_linked_records(cid),
+            linked_records=self._get_linked_records(cid, stack),
             structure=self._fetch_structure_data(cid),
             external_tables=self._fetch_external_tables(cid),
             link_sets=self._fetch_external_linksets(cid),
@@ -225,17 +209,16 @@ class QueryingPubchemApi(PubchemApi):
             fetch_nanos_taken=str(t1 - t0),
         )
 
-    def _get_linked_records(self, cid: int) -> NestedDotDict:
-        results = {}
-        for kind in ["same_parent_stereo"]:
-            url = f"{self._pug}/compound/cid/{cid}/cids/JSON?cids_type={kind}"
-            data = self._query_json(url).sub("IdentifierList")
-            results[kind] = data.get_list_as("CID", str, [])
-            logger.debug(f"DLed linked records for {cid}")
-        else:
-            logger.debug(f"No linked records to DL for {cid}")
-            data = NestedDotDict({})
-        return NestedDotDict(data)
+    def _get_linked_records(self, cid: int, stack: List[Tuple[int, str]]) -> NestedDotDict:
+        url = f"{self._pug}/compound/cid/{cid}/cids/JSON?cids_type=same_parent_stereo"
+        data = self._query_json(url).sub("IdentifierList")
+        logger.debug(f"DLed {len(data.get('CID', []))} linked records for {cid}")
+        results = {
+            "CID": [*data.get("CID", []), *[s for s, _ in stack]],
+            "inchikey": [i for _, i in stack],
+        }
+        logger.debug(f"Linked records are: {results}")
+        return NestedDotDict(results)
 
     def _fetch_display_data(self, cid: int) -> Optional[NestedDotDict]:
         url = f"{self._pug_view}/data/compound/{cid}/JSON/?response_type=display"
@@ -248,7 +231,7 @@ class QueryingPubchemApi(PubchemApi):
             return NestedDotDict({})
         url = f"{self._pug}/compound/cid/{cid}/JSON"
         data = self._query_json(url)["PC_Compounds"][0]
-        del [data["structure"]["props"]]  # redundant with props section in record
+        del data["props"]  # redundant with props section in record
         logger.debug(f"DLed structure for {cid}")
         return data
 
@@ -257,7 +240,7 @@ class QueryingPubchemApi(PubchemApi):
             ext_table: self._fetch_external_table(cid, ext_table)
             for ext_table in self._tables_to_use.values()
         }
-        logger.debug(f"DLed external tables for {cid}")
+        logger.debug(f"DLed {len(self._tables_to_use)} external tables for {cid}")
         return x
 
     def _fetch_external_linksets(self, cid: int) -> Mapping[str, str]:
@@ -265,41 +248,44 @@ class QueryingPubchemApi(PubchemApi):
             table: self._fetch_external_linkset(cid, table)
             for table in self._linksets_to_use.values()
         }
-        logger.debug(f"DLed external linksets for {cid}")
+        logger.debug(f"DLed {len(self._linksets_to_use)} external linksets for {cid}")
         return x
 
     def _fetch_hierarchies(self, cid: int) -> NestedDotDict:
         build_up = {}
         for hname, hid in self._hierarchies_to_use.items():
             try:
-                build_up[hname] = self._fetch_hierarchy(cid, hid)
+                build_up[hname] = self._fetch_hierarchy(cid, hname, hid)
             except (HTTPError, KeyError, LookupError) as e:
                 logger.debug(f"No data for classifier {hid}, compound {cid}: {e}")
         # These list all of the child nodes for each node
         # Some of them are > 1000 items -- they're HUGE
         # We don't expect to need to navigate to children
         self._strip_by_key_in_place(build_up, "ChildID")
-        logger.debug(f"DLed hierarchies for {cid}")
+        logger.debug(f"DLed {len(self._hierarchies_to_use)} hierarchies for {cid}")
         return NestedDotDict(build_up)
 
     def _fetch_external_table(self, cid: int, table: str) -> Sequence[dict]:
         url = self._external_table_url(cid, table)
         data = self._executor(url)
         df: pd.DataFrame = pd.read_csv(io.StringIO(data)).reset_index()
+        logger.debug(f"Downloaded table {table} with {len(df)} rows for {cid}")
         return list(df.to_dict(orient="records"))
 
     def _fetch_external_linkset(self, cid: int, table: str) -> NestedDotDict:
         url = f"{self._link_db}?format=JSON&type={table}&operation=GetAllLinks&id_1={cid}"
         data = self._executor(url)
+        logger.debug(f"Downloaded linkset {table} rows for {cid}")
         return NestedDotDict(orjson.loads(data))
 
-    def _fetch_hierarchy(self, cid: int, hid: int) -> Sequence[dict]:
+    def _fetch_hierarchy(self, cid: int, hname: str, hid: int) -> Sequence[dict]:
         url = f"{self._classifications}?format=json&hid={hid}&search_uid_type=cid&search_uid={cid}&search_type=list&response_type=display"
         data: Sequence[dict] = orjson.loads(self._executor(url))["Hierarchies"]
         # underneath Hierarchies is a list of Hierarchy
         logger.debug(f"Found data for classifier {hid}, compound {cid}")
         if len(data) == 0:
             raise LookupFailedError(f"Failed getting hierarchy {hid}")
+        logger.debug(f"Downloaded hierarchy {hname} ({hid}) for {cid}")
         return data
 
     @property
@@ -383,6 +369,7 @@ class QueryingPubchemApi(PubchemApi):
             raise DownloadError(
                 f"Request failed ({data.get('Code')}) on {url}: {data.get('Message')}"
             )
+        logger.trace(f"Queried {url}")
         return data
 
     def _strip_by_key_in_place(self, data: Union[dict, list], bad_key: str) -> None:

@@ -19,6 +19,7 @@ from mandos.model.apis.chembl_support.chembl_targets import (
     TargetFactory,
     TargetType,
 )
+from mandos.model.utils.setup import logger
 
 
 @dataclass(frozen=True, order=True, repr=True)
@@ -277,11 +278,15 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
             The int is the depth, starting at 0 (this protein), going to +inf for the highest ancestors
         """
         results: Set[TargetNode] = set()
+        logger.debug(
+            f"Starting traversal from {self.target} (permitting: {', '.join([str(s) for s in permitting])}"
+        )
         # purposely use the invalid value None for is_root
         # noinspection PyTypeChecker
         self._traverse(TargetNode(0, None, self, None, None), permitting, results)
         if any((x.is_end is None for x in results)):
             raise AssertionError()
+        logger.debug(f"Got {len(results)} from traversal on {self.target}")
         return results
 
     @classmethod
@@ -297,6 +302,9 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
         # all good if we've already traversed this
         if source.target.chembl in {s.target.chembl for s in results}:
             return
+        logger.trace(
+            f"Traversing from {source.target.chembl} ({', '.join([str(s) for s in permitting])}"
+        )
         # find all links from ChEMBL, then filter to only the valid links
         # do not traverse yet -- we just want to find these links
         link_candidates = cls.at_node(source).links({q.rel_type for q in permitting})

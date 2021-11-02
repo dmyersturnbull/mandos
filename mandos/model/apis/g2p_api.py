@@ -105,9 +105,9 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
                 info = orjson.dumps(info).decode(encoding="utf8")
                 (self.cache_path / "info.json").write_text(info, encoding="utf8")
                 if exists:
-                    logger.notice(f"Cached missing G2P data to {self.cache_path}")
-                else:
                     logger.notice(f"Overwrote existing cached G2P data in {self.cache_path}")
+                else:
+                    logger.notice(f"Cached missing G2P data to {self.cache_path}")
 
     @property
     def ligands_path(self) -> Path:

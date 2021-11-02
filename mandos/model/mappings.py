@@ -7,7 +7,7 @@ import regex
 from pocketutils.core.exceptions import ParsingError
 from typeddfs import TypedDfs
 
-from mandos.model.utils.setup import MandosResources
+from mandos.model.utils.setup import MandosResources, logger
 
 
 def _patterns(self: pd.DataFrame) -> Sequence[str]:
@@ -70,10 +70,8 @@ class _Compiler:
         self._i += 1  # header is the first
         try:
             return regex.compile("^" + s.strip() + "$", flags=regex.V1 | regex.IGNORECASE)
-        except Exception:
-            raise ParsingError(
-                f"Failed to parse '{s}' on line {self._i} (excluding comments and blank lines)"
-            ) from None
+        except regex.error:
+            raise ParsingError(f"Failed to parse '{s}' on row {self._i}") from None
 
 
 @decorateme.auto_repr_str()
@@ -100,6 +98,7 @@ class Mappings:
         df = MappingDf.read_file(path)
         compiler = _Compiler()
         df[df.columns[0]] = df[df.columns[0]].map(compiler.compile)
+        logger.info(f"Read mapping with {len(df)} items from {path}")
         return df
 
 

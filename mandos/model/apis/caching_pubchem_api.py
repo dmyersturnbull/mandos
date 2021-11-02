@@ -37,11 +37,11 @@ class CachingPubchemApi(PubchemApi):
                 raise PubchemCompoundLookupError(
                     f"{inchikey_or_cid} previously not found in PubChem"
                 )
-            logger.info(f"Found cached PubChem data for {inchikey_or_cid}: {data.cid}")
+            logger.debug(f"Found cached PubChem data for {inchikey_or_cid}: {data.cid}")
             # self._write_siblings(data)  # TODO: remove
             return data
         else:
-            logger.info(f"No cached PubChem data for {inchikey_or_cid}")
+            logger.debug(f"No cached PubChem data for {inchikey_or_cid}")
         return self._download(inchikey_or_cid)
 
     def _download(self, inchikey_or_cid: Union[int, str]) -> PubchemData:

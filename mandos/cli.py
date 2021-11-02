@@ -4,32 +4,31 @@ Command-line interface for mandos.
 
 from __future__ import annotations
 
-import os
-import traceback
-from pathlib import Path
-from typing import Optional, Type
+import time
+from typing import Type
 
-import orjson
 import typer
+from loguru import logger
 from pocketutils.core import DictNamespace
 from pocketutils.misc.loguru_utils import FancyLoguru
 from pocketutils.tools.filesys_tools import FilesysTools
+from pocketutils.tools.sys_tools import SystemTools
 from typer.models import CommandInfo
 
 from mandos.model.utils.globals import Globals
 
 cli = typer.Typer()
-_my_colors = dict(
-    TRACE="<dim>",
-    DEBUG="<bold>",
-    INFO="<cyan>",
-    CAUTION="<yellow>",
-    SUCCESS="<blue>",
-    WARNING="<bold><yellow>",
-    NOTICE="<bold><blue>",
-    ERROR="<red>",
-    CRITICAL="<bold><red>",
-)
+# .disable("chembl_webresource_client", "requests_cache", "urllib3", "numba")
+_filter = {"": "WARNING", "mandos": "TRACE"}
+
+
+def _msg(msg: str):
+    typer.echo(msg)
+
+
+def _err(msg: str):
+    msg = typer.style(msg, fg=typer.colors.RED)
+    typer.echo(msg, err=True)
 
 
 class CmdNamespace(DictNamespace):
@@ -124,14 +123,13 @@ class MandosCli:
         cls.log_setup = LOG_SETUP.logger.remove(None)
         cls.log_setup = (
             LOG_SETUP.set_control(True)
-            .disable("chembl_webresource_client", "requests_cache", "urllib3", "numba")
             .config_levels(
                 levels=LOG_SETUP.defaults.levels_extended,
                 icons=LOG_SETUP.defaults.icons_extended,
-                colors=_my_colors,
+                colors=LOG_SETUP.defaults.colors_red_green_safe,
             )
             .add_log_methods()
-            .config_main(fmt=LOG_SETUP.defaults.fmt_simplified)
+            .config_main(fmt=LOG_SETUP.defaults.fmt_simplified, filter=_filter)
             .intercept_std()
         )
         cls.start()
@@ -161,29 +159,43 @@ class MandosTyperCli:
         self._mandos = None
 
     def main(self) -> None:
-        self._mandos = MandosCli.as_cli()
         try:
+            self._mandos = MandosCli.as_cli()
             self._mandos.cli()
-        except KeyboardInterrupt:
-            raise typer.Abort()
+        except (KeyboardInterrupt, typer.Abort) as e:
+            self._fail(e, abort=True)
+            quit(1)
+        except (SystemExit, typer.Exit) as e:
+            _err("Abnormal system exit.")
+            self._fail(e, abort=True)
+            quit(2)
         except BaseException as e:
-            typer.echo(f"Command failed: {str(e)}", err=True)
-            logger = self._mandos.log_setup.logger
-            logger.critical(f"Command failed: {str(e)}", exc_info=True)
-            log_path = self._log_path()
-            if log_path is not None:
-                typer.echo(f"See the log file at {log_path}", err=True)
-            dmp_path = Path(f"mandos-err-dump-{Globals.start_timestamp_filesys}.json")
-            FilesysTools.dump_error(e, dmp_path)
-            typer.echo(f"See {dmp_path.resolve()} for details", err=True)
-            raise typer.Exit(code=1)
+            _err("Error.")
+            self._fail(e, abort=False)
+            quit(-1)
 
-    def _log_path(self) -> Optional[Path]:
-        s_ = self._mandos.log_setup
+    def _fail(self, e: BaseException, *, abort: bool) -> None:
+        if not abort or True:
+            msg = (
+                "\n".join(SystemTools.serialize_exception_msg(e))
+                .replace("[ exc_info True ]", "")
+                .strip()
+            )
+            if len(msg) > 0:
+                _err(f"< Command failed: {msg} >")
+            logger.opt(exception=True).critical(f"Command failed: {msg}")
+            self._dump_error(e)
+        if self._mandos and self._mandos.log_setup and self._mandos.log_setup.only_path:
+            log_path = self._mandos.log_setup.only_path
+            _err(f"See the log file: {log_path.resolve()}")
+        time.sleep(0.5)
+
+    def _dump_error(self, e: BaseException) -> None:
         try:
-            return next(iter(s_.paths)).path.resolve()
-        except (StopIteration, AttributeError):
-            return None
+            dmp_path = FilesysTools.dump_error(e)
+            _err(f"Wrote error and system info to: {dmp_path.resolve()}")
+        except BaseException:
+            _err("Note: Failed to write an error dump")
 
 
 if __name__ == "__main__":

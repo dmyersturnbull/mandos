@@ -30,7 +30,6 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
             predicate = self._format_predicate(kind=kind, spec=spec, direction=direction)
             hits.append(
                 self._create_hit(
-                    inchikey=inchikey,
                     c_id=str(data.cid),
                     c_origin=inchikey,
                     c_matched=data.names_and_identifiers.inchikey,

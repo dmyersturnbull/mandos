@@ -7,16 +7,20 @@ from typeddfs.abs_dfs import AbsDf
 
 from mandos.model.concrete_hits import HIT_CLASSES
 from mandos.model.hits import AbstractHit
+from mandos.model.utils.setup import logger
 
 
 def _from_hits(cls, hits: Sequence[AbstractHit]) -> AbsDf:
     data = []
+    if len(hits) == 0:
+        logger.debug(f"No hits")
+        return cls.new_df()
     for hit in hits:
         x = {f: getattr(hit, f) for f in hit.__class__.fields()}
         x["universal_id"] = hit.universal_id
         x["hit_class"] = hit.hit_class
         data.append(x)
-    return cls([pd.Series(x) for x in data])
+    return cls.of([pd.Series(x) for x in data])
 
 
 def _to_hits(self: AbsDf) -> Sequence[AbstractHit]:

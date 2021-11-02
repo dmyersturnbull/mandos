@@ -1,7 +1,10 @@
 from typing import Sequence, Set, TypeVar
 
 from mandos.model.apis.pubchem_api import PubchemApi
-from mandos.model.apis.pubchem_support.pubchem_models import DrugbankInteraction, DrugbankTargetType
+from mandos.model.apis.pubchem_support.pubchem_models import (
+    DrugbankInteraction,
+    DrugbankTargetType,
+)
 
 # noinspection PyProtectedMember
 from mandos.model.concrete_hits import _DrugbankInteractionHit
@@ -24,7 +27,6 @@ class _DrugbankInteractionSearch(PubchemSearch[T]):
         data = self.api.fetch_data(inchikey)
         return [
             self._create_hit(
-                inchikey=inchikey,
                 c_id=str(data.cid),
                 c_origin=inchikey,
                 c_matched=data.names_and_identifiers.inchikey,

@@ -136,10 +136,11 @@ class Searcher:
             raise IllegalStateError(f"{self.to} marked complete but does not exist")
         return done
 
-    def _save(self, hits: Sequence[AbstractHit], *, done: bool):
+    def _save(self, hits: Sequence[AbstractHit], *, done: bool) -> None:
         df = HitDf.from_hits(hits)
         # keep all of the original extra columns from the input
         # e.g. if the user had 'inchi' or 'smiles' or 'pretty_name'
+        # if "origin_inchikey" not in df.columns:
         for extra_col in [c for c in self.input_df.columns if c != "inchikey"]:
             extra_mp = self.input_df.set_index("inchikey")[extra_col].to_dict()
             df[extra_col] = df["origin_inchikey"].map(extra_mp.get)

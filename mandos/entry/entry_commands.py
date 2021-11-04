@@ -20,6 +20,7 @@ from mandos.entry.utils._common_args import CommonArgs
 from mandos.entry.utils._entry_args import EntryArgs
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.pubchem_support.pubchem_models import (
+    ClinicalTrialsGovUtils,
     CoOccurrenceType,
     DrugbankTargetType,
 )
@@ -33,6 +34,7 @@ from mandos.search.chembl.mechanism_search import MechanismSearch
 from mandos.search.chembl.target_prediction_search import TargetPredictionSearch
 from mandos.search.g2p.g2p_interaction_search import G2pInteractionSearch
 from mandos.search.hmdb.tissue_concentration_search import TissueConcentrationSearch
+from mandos.search.meta.random_search import RandomSearch
 from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
 from mandos.search.pubchem.computed_property_search import ComputedPropertySearch
@@ -50,6 +52,7 @@ from mandos.search.pubchem.drugbank_interaction_search import (
     DrugbankGeneralFunctionSearch,
     DrugbankTargetSearch,
 )
+from mandos.search.pubchem.trials_search import TrialSearch
 
 U = TypeVar("U", covariant=True, bound=CoOccurrenceSearch)
 
@@ -389,6 +392,35 @@ class EntryGoComponent(_EntryChemblGo):
         """
         args, _, _, locs = inspect.getargvalues(inspect.currentframe())
         return super().run(**{a: locs[a] for a in args if a != "cls"})
+
+
+class EntryPubchemTrials(Entry[TrialSearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = CommonArgs.in_compound_table,
+        key: str = EntryArgs.key("pubchem:trial"),
+        to: Optional[Path] = CommonArgs.out_annotations_file,
+        min_phase: Optional[int] = EntryArgs.pubchem_trial_phase,
+        statuses: str = EntryArgs.pubchem_trial_statuses,
+        req_explicit: bool = EntryArgs.req_explicit,
+        as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
+        check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
+    ) -> Searcher:
+        """
+        Diseases from clinical trials listed in clinicaltrials.gov.
+
+        OBJECT: The name of the disease (in MeSH)
+        """
+        statuses = ClinicalTrialsGovUtils.resolve_statuses(statuses)
+        built = TrialSearch(
+            key=key, api=Apis.Pubchem, min_phase=min_phase, statuses=statuses, explicit=req_explicit
+        )
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryPubchemDisease(Entry[DiseaseSearch]):
@@ -852,11 +884,48 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
         """
         LD50 acute effects from ChemIDPlus.
 
-        OBJECT: The negative log10 of the dose in mg/kg
+        OBJECT: The negative of the dose in mg/kg
 
         PREDICATE: "LD50:<route>" (e.g. "LD50:intravenous")
         """
         built = Ld50Search(key, Apis.Pubchem)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
+
+
+class EntryPubchemComputed(Entry[ComputedPropertySearch]):
+    @classmethod
+    def run(
+        cls,
+        path: Path = CommonArgs.in_compound_table,
+        key: str = EntryArgs.key("chem.pubchem:computed"),
+        keys: str = EntryArgs.pubchem_computed_keys,
+        to: Optional[Path] = CommonArgs.out_annotations_file,
+        as_of: Optional[str] = CommonArgs.as_of,
+        replace: bool = CommonArgs.replace,
+        proceed: bool = CommonArgs.proceed,
+        check: bool = EntryArgs.check,
+        log: Optional[Path] = CommonArgs.log,
+        stderr: str = CommonArgs.stderr,
+    ) -> Searcher:
+        """
+        Computed properties from PubChem.
+
+        OBJECT: Number
+
+        PREDICATE: e.g. "complexity"
+        """
+        # replace acronyms, etc.
+        # ComputedPropertySearch standardizes punctuation and casing
+        known = {
+            k: v
+            for k, v in {
+                **EntryArgs.KNOWN_USEFUL_KEYS,
+                **EntryArgs.KNOWN_USELESS_KEYS,
+            }.items()
+            if v is not None
+        }
+        keys = {known.get(s.strip(), s) for s in keys.split(",")}
+        built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys)
         return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
@@ -903,7 +972,7 @@ class EntryHmdbTissue(Entry[TissueConcentrationSearch]):
         stderr: str = CommonArgs.stderr,
     ) -> Searcher:
         """
-        Tissue concentrations from HMDB (PENDING).
+        Tissue concentrations from HMDB.
 
         OBJECT:
 
@@ -938,43 +1007,6 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
         PREDICATE: The name of the property
         """
         pass
-
-
-class EntryPubchemComputed(Entry[ComputedPropertySearch]):
-    @classmethod
-    def run(
-        cls,
-        path: Path = CommonArgs.in_compound_table,
-        key: str = EntryArgs.key("chem.pubchem:computed"),
-        keys: str = EntryArgs.pubchem_computed_keys,
-        to: Optional[Path] = CommonArgs.out_annotations_file,
-        as_of: Optional[str] = CommonArgs.as_of,
-        replace: bool = CommonArgs.replace,
-        proceed: bool = CommonArgs.proceed,
-        check: bool = EntryArgs.check,
-        log: Optional[Path] = CommonArgs.log,
-        stderr: str = CommonArgs.stderr,
-    ) -> Searcher:
-        """
-        Computed properties from PubChem.
-
-        OBJECT: Number
-
-        PREDICATE: e.g. "complexity"
-        """
-        # replace acronyms, etc.
-        # ComputedPropertySearch standardizes punctuation and casing
-        known = {
-            k: v
-            for k, v in {
-                **EntryArgs.KNOWN_USEFUL_KEYS,
-                **EntryArgs.KNOWN_USELESS_KEYS,
-            }.items()
-            if v is not None
-        }
-        keys = {known.get(s.strip(), s) for s in keys.split(",")}
-        built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys)
-        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
@@ -1050,13 +1082,15 @@ class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
         """
 
 
-class EntryMetaRandom(Entry[BioactivitySearch]):
+class EntryMetaRandom(Entry[RandomSearch]):
     @classmethod
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("meta:random"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
+        n: int = EntryArgs.random_n,
+        seed: int = CommonArgs.seed,
         as_of: Optional[str] = CommonArgs.as_of,
         replace: bool = CommonArgs.replace,
         proceed: bool = CommonArgs.proceed,
@@ -1064,14 +1098,15 @@ class EntryMetaRandom(Entry[BioactivitySearch]):
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
     ) -> Searcher:
-        """
-        Random class assignment (PENDING).
+        r"""
+        Random class assignment.
 
-        OBJECT: 1 thru n-compounds
+        OBJECT: 0 thru n (inclusive-exclusive).
 
         PREDICATE: "random"
         """
-        pass
+        built = RandomSearch(key, seed, n)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 Entries = [

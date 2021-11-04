@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Set
+from typing import AbstractSet, Optional, Sequence, Set
 
 from pocketutils.tools.common_tools import CommonTools
 
@@ -16,13 +16,13 @@ class TrialSearch(PubchemSearch[TrialHit]):
         key: str,
         api: PubchemApi,
         min_phase: Optional[float],
-        statuses: Optional[Set[str]],
-        require_compound_as_intervention: bool,
+        statuses: Optional[AbstractSet[str]],
+        explicit: bool,
     ):
         super().__init__(key, api)
         self.min_phase = min_phase
         self.statuses = statuses
-        self.require_compound_as_intervention = require_compound_as_intervention
+        self.explicit = explicit
 
     def find(self, inchikey: str) -> Sequence[TrialHit]:
         data = self.api.fetch_data(inchikey)
@@ -33,9 +33,7 @@ class TrialSearch(PubchemSearch[TrialHit]):
                 continue
             if self.statuses is not None and dd.mapped_status not in self.statuses:
                 continue
-            if self.require_compound_as_intervention and data.name not in {
-                s.lower() for s in dd.interventions
-            }:
+            if self.explicit and data.name not in {s.lower() for s in dd.interventions}:
                 continue
             for did, condition in CommonTools.zip_list(dd.disease_ids, dd.conditions):
                 hits.append(

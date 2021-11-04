@@ -177,6 +177,28 @@ class EntryArgs:
     #                                         PUBCHEM                                             #
     ###############################################################################################
 
+    pubchem_trial_phase = typer.Option(
+        0,
+        "--phase",
+        help=cleandoc(
+            r"""
+            Minimum clinical trial pseudo-phase.
+
+            Values are: 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0
+            """
+        ),
+        min=0,
+        max=4,
+    )
+
+    pubchem_trial_statuses = Opt.val(
+        r"""
+        Trial pseudo-statuses, comma-separated.
+
+        Values are: "unknown", "completed", "stopped", and "ongoing".
+        """,
+    )
+
     min_cooccurrence_score = typer.Option(
         0.0,
         help=r"Minimum enrichment score, inclusive. See the docs.",
@@ -218,6 +240,12 @@ class EntryArgs:
             (E.g. 'behavioral' for level 1 and 'behavioral: excitement' for level 2.)
             """
         ),
+    )
+
+    req_explicit = Opt.flag(
+        r"""
+        Require the compound to be listed explicitly as an intervention.
+        """
     )
 
     KNOWN_USEFUL_KEYS: Mapping[str, str] = {
@@ -270,6 +298,15 @@ class EntryArgs:
     ###############################################################################################
     #                                          META                                               #
     ###############################################################################################
+
+    random_n = typer.Option(
+        1000,
+        help=cleandoc(
+            rf"""
+            The number of classes to choose from (max n for int).
+            """
+        ),
+    )
 
 
 __all__ = ["EntryArgs"]

@@ -143,6 +143,8 @@ class CommonArgs:
         hidden=True,
     )
 
+    seed = Opt.val(r"Random seed (integer).", default=0)
+
     as_of: Optional[str] = Opt.val(
         f"""
         Restrict to data cached before some datetime.

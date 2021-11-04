@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from mandos.model.apis.hmdb_api import HmdbApi, HmdbData
+from mandos.model.apis.hmdb_support.hmdb_data import HmdbData
 from mandos.model.concrete_hits import TissueConcentrationHit
 from mandos.search.hmdb import HmdbSearch
 

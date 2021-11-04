@@ -276,4 +276,9 @@ class ChemblTargetPredictionHit(ChemblHit):
     confidence_set: int
 
 
+@dataclass(frozen=True, order=True, repr=True)
+class MetaHit(AbstractHit):
+    """"""
+
+
 HIT_CLASSES = ReflectionTools.subclass_dict(AbstractHit, concrete=True)

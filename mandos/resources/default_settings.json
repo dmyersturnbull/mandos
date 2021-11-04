@@ -25,5 +25,7 @@
   "query.hmdb.backoff_factor": 2,
   "query.hmdb.delay_sec": 0.25,
   "query.selenium_driver": "Chrome",
-  "query.selenium_driver_path": null
+  "query.selenium_driver_path": null,
+  "cli.log_signals": true,
+  "cli.log_exit": true
 }

@@ -15,6 +15,7 @@ from mandos.model.utils.setup import logger
 @decorateme.auto_repr_str()
 class SearchCache:
     def __init__(self, path: Path, compounds: Sequence[str], *, restart: bool, proceed: bool):
+        # TODO: This class is pretty bad
         self._path = path
         exists = self._path.exists() and self._meta_path.exists()
         if exists:

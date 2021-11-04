@@ -1,11 +1,12 @@
 """
-Calculations of concordance between annotation sets.
+Calculations of overlap (similarity) between annotation sets.
 """
 import abc
 import enum
 import math
 import time
 from collections import defaultdict
+from pathlib import Path
 from typing import Collection, Sequence, Type, Union
 
 import decorateme
@@ -14,10 +15,13 @@ import pandas as pd
 from pocketutils.core.chars import Chars
 from pocketutils.core.enums import CleverEnum
 from pocketutils.tools.unit_tools import UnitTools
+from typeddfs.df_errors import HashFileMissingError
 
 from mandos.analysis import AnalysisUtils as Au
 from mandos.analysis.io_defns import SimilarityDfLongForm, SimilarityDfShortForm
+from mandos.model.hit_dfs import HitDf
 from mandos.model.hits import AbstractHit
+from mandos.model.utils import unlink
 
 # note that most of these math functions are much faster than their numpy counterparts
 # if we're not broadcasting, it's almost always better to use them
@@ -28,7 +32,12 @@ from mandos.model.utils.setup import logger
 
 @decorateme.auto_repr_str()
 class MatrixCalculator(metaclass=abc.ABCMeta):
-    def calc_all(self, hits: Sequence[AbstractHit]) -> SimilarityDfLongForm:
+    def __init__(self, *, min_compounds: int, min_nonzero: int, min_hits: int):
+        self.min_compounds = min_compounds
+        self.min_nonzero = min_nonzero
+        self.min_hits = min_hits
+
+    def calc_all(self, hits: Path, to: Path, *, keep_temp: bool = False) -> SimilarityDfLongForm:
         raise NotImplemented()
 
 
@@ -43,10 +52,8 @@ class _Inf:
     def got(self, c1: str, c2: str, z: float) -> None:
         self.used.add((c1, c2))
         self.nonzeros += int(c1 != c2 and not np.isnan(z) and 0 < z < 1)
-        if self.i % 50000 == 0:
+        if self.i % 20000 == 0:
             self.log("info")
-        elif self.i % 5000 == 0:
-            self.log("trace")
 
     @property
     def i(self) -> int:
@@ -68,19 +75,93 @@ class _Inf:
 
 
 class JPrimeMatrixCalculator(MatrixCalculator):
-    def calc_all(self, hits: Sequence[AbstractHit]) -> SimilarityDfLongForm:
+    def calc_all(self, path: Path, to: Path, *, keep_temp: bool = False) -> SimilarityDfLongForm:
+        hits = HitDf.read_file(path).to_hits()
         key_to_hit = Au.hit_multidict(hits, "search_key")
-        logger.notice(f"Calculating J on {len(key_to_hit)} keys from {len(hits)} hits")
-        dfs = []
+        logger.notice(f"Calculating J on {len(key_to_hit):,} keys from {len(hits):,} hits")
+        deltas, files, good_keys = [], [], {}
         for key, key_hits in key_to_hit.items():
-            df: SimilarityDfShortForm = self.calc_one(key, key_hits)
-            df = df.to_long_form(kind="psi", key=key)
-            dfs += [df]
-        return SimilarityDfLongForm(pd.concat(dfs))
+            key: str = key
+            key_hits: Sequence[AbstractHit] = key_hits
+            n_compounds_0 = len({k.origin_inchikey for k in key_hits})
+            part_path = self._path_of(path, key)
+            n_compounds_in_mx = None
+            n_nonzero = None
+            df = None
+            if part_path.exists():
+                try:
+                    df = SimilarityDfLongForm.read_file(
+                        part_path, file_hash=False
+                    )  # TODO: file_hash=True
+                    logger.warning(f"Results for key {key} already exist ({len(df):,} rows)")
+                    n_compounds_in_mx = len(df["inchikey_1"].unique())
+                except HashFileMissingError:
+                    logger.error(f"Extant results for key {key} appear incomplete; restarting")
+                    logger.opt(exception=True).debug(f"Hash error for {key}")
+                    unlink(part_path)
+                    # now let it go into the next block -- calculate from scratch
+            if n_compounds_0 >= self.min_compounds:
+                t1 = time.monotonic()
+                df: SimilarityDfShortForm = self.calc_one(key, key_hits)
+                t2 = time.monotonic()
+                deltas.append(t2 - t1)
+                df = df.to_long_form(kind="psi", key=key)
+                n_compounds_in_mx = len(df["inchikey_1"].unique())
+                df.write_file(part_path)
+                logger.debug(f"Wrote results for {key} to {part_path}")
+            if df is not None:
+                n_nonzero = len(df[df["value"] > 0])
+            if n_compounds_in_mx < self.min_compounds:
+                logger.warning(
+                    f"Key {key} has {n_compounds_in_mx:,} < {self.min_compounds:,} compounds; skipping"
+                )
+            elif len(key_hits) < self.min_hits:
+                logger.warning(
+                    f"Key {key} has {len(key_hits):,} < {self.min_hits:,} hits; skipping"
+                )
+            elif n_nonzero is not None and n_nonzero < self.min_nonzero:
+                logger.warning(
+                    f"Key {key} has {n_nonzero:,} < {self.min_nonzero:,} nonzero pairs; skipping"
+                )  # TODO: percent nonzero?
+            else:
+                files.append(part_path)
+                good_keys[key] = n_compounds_in_mx
+            del df
+        logger.debug(f"Concatenating {len(files):,} files")
+        df = SimilarityDfLongForm(
+            pd.concat(
+                [SimilarityDfLongForm.read_file(self._path_of(path, k)) for k in good_keys.keys()]
+            )
+        )
+        logger.notice(f"Included {len(good_keys):,} keys: {', '.join(good_keys.keys())}")
+        quartiles = {}
+        for k, v in good_keys.items():
+            vals = df[df["key"] == k]["value"]
+            qs = {x: vals.quantile(x) for x in [0, 0.25, 0.5, 0.75, 1]}
+            quartiles[k] = list(qs.values())
+            logger.info(f"Key {k} has {v:,} compounds and {len(key_to_hit[k]):,} hits")
+            logger.info(
+                f"    {k} {Chars.fatright} unique values = {len(vals.unique())} unique values"
+            )
+            logger.info(f"    {k} {Chars.fatright} quartiles: " + " | ".join(qs.values()))
+        df = df.set_attrs(
+            dict(
+                keys={
+                    k: dict(compounds=v, hits=len(key_to_hit[k]), quartiles=quartiles[k])
+                    for k, v in good_keys.items()
+                }
+            )
+        )
+        df.write_file(to, attrs=True, file_hash=True)
+        logger.notice(f"Wrote {len(df):,} rows to {to}")
+        if not keep_temp:
+            for k in key_to_hit.keys():
+                unlink(self._path_of(path, k))
+        return df
 
     def calc_one(self, key: str, hits: Sequence[AbstractHit]) -> SimilarityDfShortForm:
         ik2hits = Au.hit_multidict(hits, "origin_inchikey")
-        logger.info(f"Calculating J on {key} for {len(ik2hits)} compounds and {len(hits)} hits")
+        logger.info(f"Calculating J on {key} for {len(ik2hits):,} compounds and {len(hits):,} hits")
         data = defaultdict(dict)
         inf = _Inf(n=int(len(ik2hits) * (len(ik2hits) - 1) / 2))
         for (c1, hits1) in ik2hits.items():
@@ -90,8 +171,11 @@ class JPrimeMatrixCalculator(MatrixCalculator):
                 z = 1 if c1 == c2 else self._j_prime(key, hits1, hits2)
                 data[c1][c2] = z
                 inf.got(c1, c2, z)
-        inf.log("notice")
+        inf.log("success")
         return SimilarityDfShortForm.from_dict(data)
+
+    def _path_of(self, path: Path, key: str):
+        return path.parent / f".{path.name}-{key}.tmp.feather"
 
     def _j_prime(
         self, key: str, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]
@@ -100,7 +184,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
             return 0
         sources = {h.data_source for h in hits1}.intersection({h.data_source for h in hits2})
         if len(sources) == 0:
-            return np.nan
+            return float("NaN")
         values = [
             self._jx(
                 key,
@@ -117,8 +201,8 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         # TODO -- for testing only
         # TODO: REMOVE ME!
         if key in ["core.chemidplus.effects", "extra.chemidplus.specific-effects"]:
-            hits1 = [h.copy(weight=np.power(10, -h.weight)) for h in hits1]
-            hits2 = [h.copy(weight=np.power(10, -h.weight)) for h in hits2]
+            hits1 = [h.copy(weight=math.pow(10, -h.weight)) for h in hits1]
+            hits2 = [h.copy(weight=math.pow(10, -h.weight)) for h in hits2]
         pair_to_weights = Au.weights_of_pairs(hits1, hits2)
         values = [self._wedge(ca, cb) / self._vee(ca, cb) for ca, cb in pair_to_weights.values()]
         return float(math.fsum(values) / len(values))
@@ -141,8 +225,17 @@ class MatrixAlg(CleverEnum):
 @decorateme.auto_utils()
 class MatrixCalculation:
     @classmethod
-    def create(cls, algorithm: Union[str, MatrixAlg]) -> MatrixCalculator:
-        return MatrixAlg.of(algorithm).clazz()
+    def create(
+        cls,
+        algorithm: Union[str, MatrixAlg],
+        *,
+        min_compounds: int,
+        min_nonzero: int,
+        min_hits: int,
+    ) -> MatrixCalculator:
+        return MatrixAlg.of(algorithm).clazz(
+            min_compounds=min_compounds, min_nonzero=min_nonzero, min_hits=min_hits
+        )
 
 
 __all__ = ["MatrixCalculator", "JPrimeMatrixCalculator", "MatrixCalculation", "MatrixAlg"]

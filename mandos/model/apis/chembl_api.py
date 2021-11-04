@@ -22,12 +22,6 @@ class ChemblFilterQuery(metaclass=abc.ABCMeta):
     def only(self, items: Sequence[str]) -> ChemblFilterQuery:
         """
         Turns this into a query for a single record.
-
-        Args:
-            items:
-
-        Returns:
-
         """
         raise NotImplementedError()
 
@@ -44,12 +38,6 @@ class ChemblFilterQuery(metaclass=abc.ABCMeta):
     def mock(cls, items: Sequence[dict]):
         """
         Mocks.
-
-        Args:
-            items:
-
-        Returns:
-
         """
 
         class F(ChemblFilterQuery):
@@ -71,12 +59,6 @@ class ChemblFilterQuery(metaclass=abc.ABCMeta):
     def wrap(cls, query):
         """
         Wraps.
-
-        Args:
-            query:
-
-        Returns:
-
         """
 
         class F(ChemblFilterQuery):
@@ -121,9 +103,6 @@ class ChemblEntrypoint:
             get_items: Map from single arg for calling ``get`` to the item to return
             filter_items: Map from kwarg-set for calling ``filter`` to the list of items to return;
                           If None, returns ``items`` in all cases
-
-        Returns:
-
         """
 
         class X(ChemblEntrypoint):
@@ -141,12 +120,7 @@ class ChemblEntrypoint:
     @classmethod
     def wrap(cls, obj) -> ChemblEntrypoint:
         """
-
-        Args:
-            obj:
-
-        Returns:
-
+        Wraps.
         """
 
         class X(ChemblEntrypoint):

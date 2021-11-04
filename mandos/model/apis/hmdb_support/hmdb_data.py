@@ -14,7 +14,7 @@ from mandos.model.apis.hmdb_support.properties import PREDICTED_PROPERTIES, RULE
 from mandos.model.utils.setup import logger
 
 _prefixes = dict(M=1e6, mM=1e3, µM=1, uM=1, nM=1e-3, pM=1e-6, fM=1e-9)
-_p1 = regex.compile(r"^([0-9.]+ +\(([0-9.]+) *\- *([0-9.]+)\)$", flags=regex.V1)
+_p1 = regex.compile(r"^([0-9.]+) +\(([0-9.]+) *\- *([0-9.]+)\)$", flags=regex.V1)
 _p2 = regex.compile(r"^([0-9.]+) +\+\/\- +([0-9.]+)$", flags=regex.V1)
 
 

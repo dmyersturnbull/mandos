@@ -9,6 +9,7 @@ from mandos.model.apis.chembl_support.chembl_target_graphs import (
 from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.hits import AbstractHit
 from mandos.model.searches import Search
+from mandos.model.settings import SETTINGS
 
 H = TypeVar("H", bound=AbstractHit, covariant=True)
 
@@ -18,6 +19,7 @@ class ChemblScrapeSearch(Search[H], metaclass=abc.ABCMeta):
         super().__init__(key)
         self.api = api
         self.scrape = scrape
+        SETTINGS.configure_chembl()
 
     @classmethod
     def page(cls) -> ChemblScrapePage:
@@ -34,6 +36,7 @@ class ChemblSearch(Search[H], metaclass=abc.ABCMeta):
         self.api = api
         self._target_factory = TargetFactory(self.api)
         self._graph_factory = ChemblTargetGraphFactory.create(self.api, self._target_factory)
+        SETTINGS.configure_chembl()
 
     @classmethod
     def data_source_hierarchy(cls) -> Sequence[str]:

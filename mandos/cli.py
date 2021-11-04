@@ -202,8 +202,7 @@ class MandosTyperCli:
         if not abort:
             msg = "\n".join(SystemTools.serialize_exception_msg(e)).strip()
             if len(msg) > 0:
-                _err("")
-                _err(f"-- Command failed: {msg} --")
+                _err(f"\n-- Command failed: {msg} --\n")
             logger.opt(exception=True).critical(f"Command failed: {msg}")
             dump_path = self._dump_error(e)
         if self.log_path:

@@ -21,6 +21,7 @@ from typeddfs.utils.cli_help import DfCliHelp
 
 from mandos.analysis.filtration import Filtration
 from mandos.analysis.reification import Reifier
+from mandos.entry import entry
 from mandos.entry.tools.docs import Documenter
 from mandos.entry.tools.fillers import CompoundIdFiller, IdMatchDf
 from mandos.entry.tools.multi_searches import MultiSearch, SearchConfigDf
@@ -33,6 +34,7 @@ from mandos.model.hit_dfs import HitDf
 from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import TaxonomyDf
 from mandos.model.taxonomy_caches import TaxonomyFactories
+from mandos.model.utils import unlink
 from mandos.model.utils.globals import Globals
 from mandos.model.utils.setup import LOG_SETUP, logger
 
@@ -47,6 +49,7 @@ class _InsertedCommandListSingleton:
 @decorateme.auto_utils()
 class MiscCommands:
     @staticmethod
+    @entry()
     def search(
         path: Path = Ca.in_compound_table,
         config: Path = Opt.in_file(
@@ -79,6 +82,7 @@ class MiscCommands:
             search.run()
 
     @staticmethod
+    @entry()
     def init(
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -96,6 +100,7 @@ class MiscCommands:
         typer.echo(f"Log level for stderr is level {logger.current_stderr_log_level}")
 
     @staticmethod
+    @entry()
     def list_settings(
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -113,6 +118,7 @@ class MiscCommands:
             typer.echo(msg)
 
     @staticmethod
+    @entry()
     def document(
         to: Path = Opt.out_file(
             rf"""
@@ -193,6 +199,7 @@ class MiscCommands:
         ).document(_InsertedCommandListSingleton.commands, to, style)
 
     @staticmethod
+    @entry()
     def fill(
         path: Path = Arg.in_file(
             rf"""
@@ -255,6 +262,7 @@ class MiscCommands:
         df.write_file(to)
 
     @staticmethod
+    @entry()
     def cache_data(
         path: Path = Ca.in_compound_table,
         no_pubchem: bool = Opt.flag(r"Do not download data from PubChem", "--no-pubchem"),
@@ -273,6 +281,7 @@ class MiscCommands:
         logger.notice(f"Done caching")
 
     @staticmethod
+    @entry()
     def export_taxa(
         taxa: str = Ca.taxa,
         to: Path = Opt.out_path(
@@ -295,10 +304,11 @@ class MiscCommands:
         LOG_SETUP(log, stderr)
         default = taxa + "-" + Globals.start_timestamp_filesys + DEF_SUFFIX
         to = EntryUtils.adjust_filename(to, default, replace=replace)
-        tax = ArgUtils.get_taxonomy(taxa, local_only=in_cache, allow_forbid=False)
+        tax = ArgUtils.get_taxonomy(taxa, local_only=in_cache, allow_forbid=False).get
         tax.to_df().write_file(to, mkdirs=True, file_hash=True)
 
     @staticmethod
+    @entry()
     def cache_taxa(
         taxa: str = Opt.val(
             r"""
@@ -337,6 +347,7 @@ class MiscCommands:
         factory.rebuild(taxa, replace=replace)
 
     @staticmethod
+    @entry()
     def cache_g2p(
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
@@ -353,6 +364,7 @@ class MiscCommands:
         api.download(force=replace)
 
     @staticmethod
+    @entry()
     def cache_clear(
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
@@ -368,10 +380,11 @@ class MiscCommands:
         if not yes:
             typer.confirm("Delete?", abort=True)
         for p in SETTINGS.all_cache_paths:
-            p.unlink(missing_ok=True)
+            unlink(missing_ok=True)
         logger.notice("Deleted all cached data")
 
     @staticmethod
+    @entry()
     def concat(
         path: Path = Arg.in_dir(
             rf"""
@@ -429,6 +442,7 @@ class MiscCommands:
         df.write_file(to)
 
     @staticmethod
+    @entry()
     def filter(
         path: Path = Ca.out_annotations_file,
         by: Optional[Path] = Arg.in_file(
@@ -453,6 +467,7 @@ class MiscCommands:
         Filtration.from_file(by).apply(df).write_file(to)
 
     @staticmethod
+    @entry()
     def export_state(
         path: Path = Ca.in_annotations_file,
         to: Optional[Path] = Opt.out_path(
@@ -487,6 +502,7 @@ class MiscCommands:
                 f.write(hit.to_triple.n_triples)
 
     @staticmethod
+    @entry()
     def export_reify(
         path: Path = Ca.in_annotations_file,
         to: Optional[Path] = Opt.out_path(
@@ -518,6 +534,7 @@ class MiscCommands:
                 f.write(triple.n_triples)
 
     @staticmethod
+    @entry()
     def export_copy(
         path: Path = Ca.in_annotations_file,
         to: Optional[Path] = Opt.out_path(
@@ -545,6 +562,7 @@ class MiscCommands:
         df.write_file(to)
 
     @staticmethod
+    @entry()
     def serve(
         port: int = Opt.val(r"Port to serve on", default=1540),
         db: str = Opt.val("Name of the MySQL database", default="mandos"),
@@ -559,6 +577,7 @@ class MiscCommands:
         LOG_SETUP(log, stderr)
 
     @staticmethod
+    @entry()
     def export_db(
         path: Path = Ca.in_annotations_file,
         db: str = Opt.val(r"Name of the MySQL database", default="mandos"),
@@ -582,6 +601,7 @@ class MiscCommands:
         LOG_SETUP(log, stderr)
 
     @staticmethod
+    @entry()
     def init_db(
         db: str = Opt.val(r"Name of the MySQL database", default="mandos"),
         host: str = Opt.val(

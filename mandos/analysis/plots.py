@@ -4,7 +4,7 @@ Plots.
 import enum
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any, Mapping, NamedTuple, Optional, Tuple, Union
 
 import numpy as np
 from matplotlib.colors import Colormap
@@ -17,7 +17,13 @@ from pocketutils.core.exceptions import (
 )
 from typeddfs import AffinityMatrixDf, TypedDf
 
-from mandos.analysis._plot_utils import Figure, MandosPlotStyling, plt, sns
+from mandos.analysis._plot_utils import (
+    Figure,
+    MandosPlotStyling,
+    WidthAndHeight,
+    plt,
+    sns,
+)
 from mandos.analysis.io_defns import (
     ConcordanceDf,
     EnrichmentDf,
@@ -54,7 +60,7 @@ class PlotOptions:
     extra: Mapping[str, Any]
 
     @property
-    def width_and_height(self) -> Tuple[float, float]:
+    def width_and_height(self) -> WidthAndHeight:
         return MandosPlotStyling.fig_width_and_height(self.size)
 
 

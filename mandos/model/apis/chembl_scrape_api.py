@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import abc
 import enum
+from functools import cached_property
 from pathlib import Path
 from typing import Optional, Type
 
@@ -70,18 +71,6 @@ class ChemblScrapePage(CleverEnum):
     target_predictions = enum.auto()
 
 
-class _ScraperSingleton:
-    x = None
-
-    @classmethod
-    def get(cls, executor: QueryExecutor):
-        from mandos.model.utils.scrape import Scraper
-
-        if cls.x is None:
-            cls.x = Scraper.create(executor)
-        return cls.x
-
-
 class ChemblScrapeApi(Api, metaclass=abc.ABCMeta):
     def fetch_predictions(self, cid: str) -> ChemblTargetPredictionTable:
         return self._fetch_page(
@@ -95,16 +84,28 @@ class ChemblScrapeApi(Api, metaclass=abc.ABCMeta):
 class QueryingChemblScrapeApi(ChemblScrapeApi):
     def __init__(self, executor: QueryExecutor = QUERY_EXECUTORS.chembl):
         self._executor = executor
-        from mandos.model.utils.scrape import By, Scraper
 
-        self.By = By
-        self.Scraper = Scraper
+    @property
+    def scraper(self):
+        return self.Scraper.create(self._executor)
+
+    @cached_property
+    def By(self):
+        from mandos.model.utils.scrape import By
+
+        return By
+
+    @cached_property
+    def Scraper(self):
+        from mandos.model.utils.scrape import Scraper
+
+        return Scraper
 
     def _fetch_page(
         self, chembl_id: str, page: ChemblScrapePage, table_type: Type[ChemblScrapeTable]
     ):
         url = f"https://www.ebi.ac.uk/chembl/embed/#compound_report_card/{chembl_id}/{page}"
-        scraper = _ScraperSingleton.get(self._executor)
+        scraper = self.scraper
         scraper.go(url)
         rows = []
         i = 2
@@ -140,7 +141,7 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
             return ChemblScrapeTable.new_empty()
         data: TypedDf = self._query._fetch_page(cid, page, table_type)
         data.write_file(path.resolve(), mkdirs=True)
-        logger.debug(f"Scraped page {page} for {cid} with {len(data)} rows")
+        logger.debug(f"Scraped page {page} for {cid} with {len(data):,} rows")
         return data
 
     def path(self, cid: str, page: ChemblScrapePage):

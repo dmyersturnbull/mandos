@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import dataclasses
 import os
-from collections import Set
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Collection, Mapping, Optional, Type, TypeVar, Union
+from typing import AbstractSet, Any, Collection, Mapping, Optional, Type, TypeVar, Union
 
-from chembl_webresource_client.settings import Settings as ChemblSettings
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import ConfigError, DirDoesNotExistError, XValueError
 from pocketutils.core.query_utils import QueryExecutor
-from pocketutils.misc.loguru_utils import LogSinkInfo
+from pocketutils.tools.common_tools import CommonTools
+from pocketutils.tools.sys_tools import SystemTools
 from suretime import Suretime
 from typeddfs import FileFormat, FrozeDict
 
@@ -57,13 +56,15 @@ class Settings:
     archive_filename_suffix: str
     selenium_driver: str
     selenium_driver_path: Optional[Path]
+    log_signals: bool
+    log_exit: bool
 
     @property
     def as_dict(self) -> Mapping[str, Any]:
         return dataclasses.asdict(self)
 
     @property
-    def all_cache_paths(self) -> Set[Path]:
+    def all_cache_paths(self) -> AbstractSet[Path]:
         return {
             self.chembl_cache_path,
             self.pubchem_cache_path,
@@ -168,6 +169,8 @@ class Settings:
             hmdb_query_delay_max=hmdb_delay * max_coeff,
             selenium_driver=get("query.selenium_driver", str).title(),
             selenium_driver_path=_selenium_path,
+            log_signals=get("cli.log_signals", bool),
+            log_exit=get("cli.log_exit", bool),
         )
         # we got all the required fields
         # make sure we don't have extra keys in defaults
@@ -184,10 +187,19 @@ class Settings:
 
     def configure(self):
         """ """
+        if self.log_exit:
+            SystemTools.trace_exit(CommonTools.make_writer(logger.trace))
+        if self.log_signals:
+            SystemTools.trace_signals(CommonTools.make_writer(logger.trace))
+
+    def configure_chembl(self):
+        from chembl_webresource_client.settings import Settings as ChemblSettings
+
         if not Globals.disable_chembl:
             instance = ChemblSettings.Instance()
             instance.CACHING = True
-            instance.CACHE_NAME = str(self.chembl_cache_path / "chembl.sqlite")
+            instance.CACHE_NAME = str(self.chembl_cache_path.resolve() / "chembl.sqlite")
+            logger.debug(f"ChEMBL cache is at {instance.CACHE_NAME}")
             instance.TOTAL_RETRIES = self.chembl_n_tries
             instance.FAST_SAVE = self.chembl_fast_save
             instance.TIMEOUT = self.chembl_timeout_sec
@@ -217,7 +229,6 @@ else:
     SETTINGS = Settings.empty()
     logger.success(f"Using defaults (no file at {Globals.settings_path})")
 SETTINGS.configure()
-logger.debug(f"Setting ChEMBL cache to {SETTINGS.chembl_cache_path}")
 
 
 class QueryExecutors:

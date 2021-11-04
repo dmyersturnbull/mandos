@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import enum
-import typing
 from dataclasses import dataclass
 from datetime import date
-from typing import FrozenSet, Mapping, Optional, Sequence, Set, Union
+from typing import FrozenSet, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import orjson
 from pocketutils.core.dot_dict import NestedDotDict
@@ -380,7 +379,7 @@ class Bioactivity:
     compound_name: str
 
     @property
-    def target_name_abbrev_species(self) -> typing.Tuple[Optional[str], str, Optional[str]]:
+    def target_name_abbrev_species(self) -> Tuple[Optional[str], str, Optional[str]]:
         # first, look for a species name in parentheses
         # We use \)+ at the end instead of \)
         # this is to catch cases where we have parentheses inside of the species name

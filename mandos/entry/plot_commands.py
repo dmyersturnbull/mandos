@@ -38,6 +38,7 @@ from mandos.analysis.plots import (
     ScorePlotter,
     TauPlotter,
 )
+from mandos.entry import entry
 from mandos.entry.calc_commands import Aa
 
 # noinspection PyProtectedMember
@@ -276,6 +277,7 @@ class Pa:
 
 class PlotCommands:
     @staticmethod
+    @entry()
     def plot_enrichment(
         path: Path = Aa.in_scores_table,
         kind: str = Pa.cat_plot_kind,
@@ -330,6 +332,7 @@ class PlotCommands:
             MandosPlotUtils.save(fig, to / f"{score_name}-{kind}-plot{suffix}")
 
     @staticmethod
+    @entry()
     def plot_phi_psi(
         path: Path = Aa.in_matrix_long_form,
         kind: str = Pa.rel_plot_kind,
@@ -385,6 +388,7 @@ class PlotCommands:
         MandosPlotUtils.save(fig, to)
 
     @staticmethod
+    @entry()
     def plot_tau(
         path: Path = Arg.in_file(
             rf"""
@@ -443,6 +447,7 @@ class PlotCommands:
         MandosPlotUtils.save(fig, to)
 
     @staticmethod
+    @entry()
     def plot_heatmap(
         path: Path = Aa.in_matrix_long_form,
         size: Optional[str] = Pa.size,
@@ -472,6 +477,7 @@ class PlotCommands:
         MandosPlotUtils.save(fig, to)
 
     @staticmethod
+    @entry()
     def plot_projection(
         path: Path = Pa.in_projection,
         viz: Optional[Path] = Pa.in_compound_viz,

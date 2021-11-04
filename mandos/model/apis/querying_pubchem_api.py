@@ -6,7 +6,7 @@ from __future__ import annotations
 import io
 import time
 from datetime import datetime, timezone
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, List, Mapping, NamedTuple, Optional, Sequence, Union
 from urllib.error import HTTPError
 
 import orjson
@@ -20,6 +20,7 @@ from pocketutils.core.exceptions import (
 )
 from pocketutils.core.query_utils import QueryExecutor
 
+from mandos.model.apis import _QueryMixin
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
@@ -31,7 +32,12 @@ _html_cid_pattern = regex.compile(
 )
 
 
-class QueryingPubchemApi(PubchemApi):
+class _CidInchikey(NamedTuple):
+    cid: int
+    inchikey: str
+
+
+class QueryingPubchemApi(PubchemApi, _QueryMixin):
     def __init__(
         self,
         chem_data: bool = True,
@@ -138,6 +144,7 @@ class QueryingPubchemApi(PubchemApi):
         # Ultimately, I found that I can get HTML containing the CID from an inchikey
         # From there, we'll just have to download its "display" data and get the parent, then download that data
         url = f"https://pubchem.ncbi.nlm.nih.gov/compound/{inchikey}"
+        html = None
         try:
             for i in range(SETTINGS.pubchem_n_tries):
                 try:
@@ -149,6 +156,8 @@ class QueryingPubchemApi(PubchemApi):
             raise PubchemCompoundLookupError(
                 f"Failed finding pubchem compound (HTML) from {inchikey} [url: {url}]"
             )
+        if html is None:
+            raise AssertionError(f"Impossible!!")
         match = _html_cid_pattern.search(html)
         if match is None:
             raise DataIntegrityError(
@@ -157,7 +166,7 @@ class QueryingPubchemApi(PubchemApi):
         return int(match.group(1))
 
     def _get_parent(
-        self, cid: int, inchikey: str, data: PubchemData, stack: List[Tuple[int, str]]
+        self, cid: int, inchikey: str, data: PubchemData, stack: List[_CidInchikey]
     ) -> PubchemData:
         # guard with is not None: we're not caching, so don't do it twice
         p = data.parent_or_none
@@ -174,7 +183,7 @@ class QueryingPubchemApi(PubchemApi):
                 f"for cid {p}, child cid {cid}, inchikey {inchikey}"
             )
 
-    def _fetch_data(self, cid: int, inchikey: str, stack: List[Tuple[int, str]]) -> PubchemData:
+    def _fetch_data(self, cid: int, inchikey: str, stack: List[_CidInchikey]) -> PubchemData:
         when_started = datetime.now(timezone.utc).astimezone()
         t0 = time.monotonic()
         try:
@@ -188,11 +197,11 @@ class QueryingPubchemApi(PubchemApi):
         logger.trace(f"Downloaded {cid} in {t1-t0} s")
         data["meta"] = self._get_metadata(inchikey, when_started, when_finished, t0, t1)
         self._strip_by_key_in_place(data, "DisplayControls")
-        stack.append((cid, inchikey))
+        stack.append(_CidInchikey(cid, inchikey))
         logger.trace(f"Stack: {stack}")
         return PubchemData(NestedDotDict(data))
 
-    def _fetch_core_data(self, cid: int, stack: List[Tuple[int, str]]) -> dict:
+    def _fetch_core_data(self, cid: int, stack: List[_CidInchikey]) -> dict:
         return dict(
             record=self._fetch_display_data(cid),
             linked_records=self._get_linked_records(cid, stack),
@@ -203,15 +212,17 @@ class QueryingPubchemApi(PubchemApi):
             properties=NestedDotDict(self.fetch_properties(cid)),
         )
 
-    def _get_metadata(self, inchikey: str, started: datetime, finished: datetime, t0: int, t1: int):
+    def _get_metadata(
+        self, inchikey: str, started: datetime, finished: datetime, t0: float, t1: float
+    ):
         return dict(
             timestamp_fetch_started=started.isoformat(),
             timestamp_fetch_finished=finished.isoformat(),
             from_lookup=inchikey,
-            fetch_nanos_taken=str(t1 - t0),
+            fetch_secs_taken=str(t1 - t0),
         )
 
-    def _get_linked_records(self, cid: int, stack: List[Tuple[int, str]]) -> NestedDotDict:
+    def _get_linked_records(self, cid: int, stack: List[_CidInchikey]) -> NestedDotDict:
         url = f"{self._pug}/compound/cid/{cid}/cids/JSON?cids_type=same_parent_stereo"
         data = self._query_json(url).sub("IdentifierList")
         logger.debug(f"DLed {len(data.get('CID', []))} linked records for {cid}")
@@ -376,13 +387,9 @@ class QueryingPubchemApi(PubchemApi):
         )
         return data
 
-    def _query(self, url: str):
-        data = self._executor(url)
-        tt = self._executor.last_time_taken
-        wt, qt = tt.wait.total_seconds(), tt.query.total_seconds()
-        bts = int(len(data) * 8 / 1024)
-        logger.trace(f"Queried {bts} kb from {url} in {qt:.1} s with {wt:.1} s of wait")
-        return data
+    @property
+    def executor(self) -> QueryExecutor:
+        raise NotImplementedError()
 
     def _strip_by_key_in_place(self, data: Union[dict, list], bad_key: str) -> None:
         if isinstance(data, list):

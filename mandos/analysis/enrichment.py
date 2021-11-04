@@ -4,6 +4,7 @@ Scoring (regression and enrichment) calculations.
 import abc
 import enum
 import math
+from pathlib import Path
 from typing import (
     Any,
     Generic,
@@ -181,16 +182,22 @@ class EnrichmentCalculation:
         self.seed = seed
         self.state = RandomState(seed)
 
-    def calculate(self, hit_df: HitDf, scores: Optional[ScoreDf]) -> EnrichmentDf:
+    def calculate(self, hits: Path, scores: Optional[Path], to: Path) -> EnrichmentDf:
+        hit_df = HitDf.read_file(hits)
         hits = hit_df.to_hits()
         if scores is None:
             scores = self._default_scores(hit_df)
+        else:
+            scores = ScoreDf.read_file(scores)
         score_dict = self._get_dict(scores)
         results = self._calc(hits, score_dict, 0)
         for b in range(self.n_samples):
             b_hits = self.state.choice(hits, replace=True)
             results += self._calc(b_hits, score_dict, b)
-        return EnrichmentDf.convert(results)
+        df = EnrichmentDf.convert(results)
+        df.write_file(to, attrs=True, mkdirs=True, file_hash=True)
+        logger.notice(f"Wrote {len(df):,} rows to {to}")
+        return df
 
     def _calc(self, hits: Sequence[AbstractHit], score_dict, sample: int) -> Sequence[pd.DataFrame]:
         for score_name, (alg_type, score_vals) in score_dict.items():

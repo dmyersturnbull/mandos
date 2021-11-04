@@ -10,8 +10,10 @@ from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.query_utils import QueryExecutor
 
 from mandos.model import Api, CompoundNotFoundError
+from mandos.model.apis import _QueryMixin
 from mandos.model.apis.hmdb_support.hmdb_data import HmdbData
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
+from mandos.model.utils import unlink
 from mandos.model.utils.setup import logger
 
 
@@ -26,9 +28,13 @@ class HmdbApi(Api, metaclass=abc.ABCMeta):
 
 
 @decorateme.auto_repr_str()
-class QueryingHmdbApi(HmdbApi):
+class QueryingHmdbApi(HmdbApi, _QueryMixin):
     def __init__(self, executor: QueryExecutor = QUERY_EXECUTORS.hmdb):
         self._executor = executor
+
+    @property
+    def executor(self) -> QueryExecutor:
+        raise NotImplementedError()
 
     def fetch(self, inchikey_or_hmdb_id: str) -> HmdbData:
         logger.debug(f"Downloading HMDB data for {inchikey_or_hmdb_id}")
@@ -64,14 +70,6 @@ class QueryingHmdbApi(HmdbApi):
                 response[child.tag] = child.text or ""
         return NestedDotDict(response)
 
-    def _query(self, url: str) -> str:
-        data = self._executor(url)
-        tt = self._executor.last_time_taken
-        wt, qt = tt.wait.total_seconds(), tt.query.total_seconds()
-        bts = int(len(data) * 8 / 1024)
-        logger.trace(f"Queried {bts} kb from {url} in {qt:.1} s with {wt:.1} s of wait")
-        return data
-
 
 @decorateme.auto_repr_str()
 class CachingHmdbApi(HmdbApi):
@@ -105,7 +103,7 @@ class CachingHmdbApi(HmdbApi):
         ]
         for alias in aliases:
             link = self.path(alias)
-            link.unlink(missing_ok=True)
+            unlink(link, missing_ok=True)
             path.link_to(link)
         logger.debug(f"Added aliases {','.join([str(s) for s in aliases])} ⇌ {data.cid} ({path})")
 

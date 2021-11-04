@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import decorateme
+import pandas as pd
 from pocketutils.core.exceptions import ResourceError
 from typeddfs import CompressionFormat
 from typeddfs.utils.cli_help import DfCliHelp
@@ -26,6 +27,7 @@ from mandos.analysis.io_defns import (
 )
 from mandos.analysis.prepping import MatrixPrep
 from mandos.analysis.projection import UMAP
+from mandos.entry import entry
 from mandos.entry.tools.searchers import MemoizedInputCompounds
 from mandos.entry.utils._arg_utils import Arg, ArgUtils, EntryUtils, Opt
 from mandos.entry.utils._common_args import CommonArgs
@@ -147,6 +149,7 @@ class Aa:
 
 class CalcCommands:
     @staticmethod
+    @entry()
     def calc_enrichment(
         path: Path = Ca.in_annotations_file,
         scores: Path = Aa.in_scores_table,
@@ -215,10 +218,10 @@ class CalcCommands:
         hits = HitDf.read_file(path)
         scores = ScoreDf.read_file(scores)
         calculator = EnrichmentCalculation(bool_alg, real_alg, boot, seed)
-        df = calculator.calculate(hits, scores)
-        df.write_file(to, mkdirs=True)
+        calculator.calculate(hits, scores, to)
 
     @staticmethod
+    @entry()
     def calc_psi(
         path: Path = Arg.in_file(
             rf"""
@@ -233,6 +236,31 @@ class CalcCommands:
             """,
             default="j",
         ),
+        min_compounds: int = Opt.val(
+            r"""
+            Minimum number of compounds (with hits) required to include a key.
+
+            Excluded keys will be logged with WARNING level.
+            """,
+            default=0,
+        ),
+        min_nonzero: int = Opt.val(
+            r"""
+            Minimum number of nonzero pairs.
+
+            Excluded keys will be logged with WARNING level.
+            """,
+            default=0,
+        ),
+        min_hits: int = Opt.val(
+            r"""
+            Minimum number of compounds hits required to include a key.
+
+            Excluded keys will be logged with WARNING level.
+            """,
+            default=0,
+        ),
+        keep_temp: bool = Opt.flag(r"""Keep temporary per-key files."""),
         to: Path = Aa.out_matrix_long_form,
         replace: bool = Ca.replace,
         log: Optional[Path] = CommonArgs.log,
@@ -248,13 +276,13 @@ class CalcCommands:
         in_base = CompressionFormat.strip_suffix(path).name
         default = path.parent / (in_base + "-" + algorithm + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
-        hits = HitDf.read_file(path).to_hits()
-        calculator: MatrixCalculator = MatrixCalculation.create(algorithm)
-        matrix = calculator.calc_all(hits)
-        matrix.write_file(to)
-        logger.notice(f"Wrote results to {to}")
+        calculator: MatrixCalculator = MatrixCalculation.create(
+            algorithm, min_compounds=min_compounds, min_nonzero=min_nonzero, min_hits=min_hits
+        )
+        calculator.calc_all(path, to, keep_temp=keep_temp)
 
     @staticmethod
+    @entry()
     def calc_ecfp(
         path: Path = CommonArgs.in_compound_table,
         radius: int = Opt.val(r"""Radius of the ECFP fingerprint.""", default=4),
@@ -288,9 +316,10 @@ class CalcCommands:
         short = MatrixPrep.ecfp_matrix(df, radius, n_bits)
         long_form = MatrixPrep(kind, False, False, False).create({name: short})
         long_form.write_file(to)
-        logger.notice(f"Wrote results to {to}")
+        logger.notice(f"Wrote {len(long_form):,} to {to}")
 
     @staticmethod
+    @entry()
     def calc_tau(
         phi: Path = Aa.in_matrix_long_form,
         psi: Path = Aa.in_matrix_long_form,
@@ -343,9 +372,10 @@ class CalcCommands:
         calculator = ConcordanceCalculation.create(algorithm, phi, psi, samples, seed)
         concordance = calculator.calc_all(phi, psi)
         concordance.write_file(to)
-        logger.notice(f"Wrote results to {to}")
+        logger.notice(f"Wrote {len(concordance):,} rows to {to}")
 
     @staticmethod
+    @entry()
     def calc_projection(
         psi_matrix: Path = Aa.in_matrix_long_form,
         algorithm: str = Opt.val(
@@ -396,9 +426,9 @@ class CalcCommands:
         """
         if algorithm == "umap" and UMAP is None:
             raise ResourceError(f"UMAP is not available")
-        logger.notice(f"Wrote results to {to}")
 
     @staticmethod
+    @entry()
     def calc_phi(
         matrices: List[Path] = Aa.in_matrix_short_form,
         kind: str = Opt.val(
@@ -432,7 +462,7 @@ class CalcCommands:
         to = EntryUtils.adjust_filename(to, default, replace)
         long_form = MatrixPrep(kind, normalize, log10, invert).from_files(matrices)
         long_form.write_file(to)
-        logger.notice(f"Wrote results to {to}")
+        logger.notice(f"Wrote {len(long_form)} rows to {to}")
 
 
 __all__ = ["CalcCommands"]

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import enum
 from pathlib import Path
-from typing import Any, Generator, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Generator, Mapping, NamedTuple, Optional, Sequence, Set, Union
 
 import decorateme
 import numpy as np
@@ -39,6 +39,11 @@ class DataType(CleverEnum):
     qualitative = enum.auto()
     sequential = enum.auto()
     divergent = enum.auto()
+
+
+class WidthAndHeight(NamedTuple):
+    width_in: float
+    height_in: float
 
 
 @decorateme.auto_repr_str()
@@ -158,7 +163,7 @@ class MandosPlotStyling:
             yield
 
     @classmethod
-    def fig_width_and_height(cls, size: str) -> Tuple[float, float]:
+    def fig_width_and_height(cls, size: str) -> WidthAndHeight:
         if size is None:
             return plt.rcParams["figure.figsize"]
         axis_to_str = {
@@ -172,7 +177,7 @@ class MandosPlotStyling:
             )
         except ValueError:
             raise BadCommandError(f"Strange --size format in '{size}'") from None
-        return width, height
+        return WidthAndHeight(width, height)
 
     @classmethod
     def _to_inch(

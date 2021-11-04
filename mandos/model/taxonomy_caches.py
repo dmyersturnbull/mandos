@@ -1,5 +1,5 @@
 """
-Caching.
+Caching of taxonomies.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from typeddfs import Checksums, TypedDfs
 
 from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import Taxonomy, TaxonomyDf
+from mandos.model.utils import unlink
 from mandos.model.utils.globals import Globals
 from mandos.model.utils.setup import MandosResources, logger
 
@@ -118,7 +119,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         raw.unlink(missing_ok=True)
         p = self._resolve_non_vertebrate_raw(taxon)
         if p.exists():
-            p.unlink()
+            unlink(p)
             logger.warning(f"Deleted cached taxonomy file {p}")
         # delete either way:
         checksum_file = Checksums().get_filesum_of_file(p)
@@ -172,7 +173,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         # write it to a feather / csv / whatever
         df = TaxonomyDf.convert(df)
         df.write_file(final_path.resolve(), dir_hash=True)
-        raw_path.unlink()
+        unlink(raw_path)
         return df
 
     def _determine_name(self, df: pd.DataFrame, taxon: int) -> str:
@@ -235,7 +236,7 @@ class TaxonomyFactories:
                 cache = CachedTaxonomyCache(local_only=local_only, cache_dir=cache_dir)
                 vertebrata = cache.load_vertebrate(Globals.vertebrata)
                 return vertebrata
-                # TODO:
+                # TODO: This is broken
                 # return vertebrata.subtrees_by_ids_or_names(allow)
                 # .exclude_subtrees_by_ids_or_names(forbid)
                 vertebrates: Set[Union[int, str]] = {t for t in allow if t in vertebrata}
@@ -243,14 +244,14 @@ class TaxonomyFactories:
                 trees: Set[Taxonomy] = {cache.load(t) for t in vertebrates}
                 if len(invertebrates) > 0:
                     logger.debug(
-                        f"{len(invertebrates)} invertebrate taxa found with {len(ancestors)} ancestors"
+                        f"{len(invertebrates):,} invertebrate taxa found with {len(ancestors):,} ancestors"
                     )
                     if len(ancestors) == 0:
                         new = {cache.load(t) for t in invertebrates}
                     else:
                         new = Taxonomy.from_trees({cache.load(t) for t in ancestors})
                     trees.add(new.subtrees_by_ids_or_names(invertebrates))
-                    logger.debug(f"Added {len(invertebrates)} invertebrate taxa into taxonomy")
+                    logger.debug(f"Added {len(invertebrates):,} invertebrate taxa into taxonomy")
                 return Taxonomy.from_trees(trees).exclude_subtrees_by_ids_or_names(forbid)
 
         return _X()

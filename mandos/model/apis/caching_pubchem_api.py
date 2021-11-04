@@ -18,6 +18,7 @@ from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 from mandos.model.settings import SETTINGS
+from mandos.model.utils import unlink
 from mandos.model.utils.setup import logger
 
 
@@ -67,7 +68,7 @@ class CachingPubchemApi(PubchemApi):
             logger.debug(f"PubChem data for {inchikey_or_cid} parent CID {cid} does not exist")
         data._data.write_json(path, mkdirs=True)
         self._write_siblings(data, inchikey_or_cid)
-        logger.debug(f"Wrote PubChem data to {path.absolute()}")
+        logger.debug(f"Wrote PubChem data to {path.resolve()}")
         logger.success(f"Downloaded PubChem data {cid} for {inchikey_or_cid}")
         return data
 
@@ -78,7 +79,7 @@ class CachingPubchemApi(PubchemApi):
         for alias in aliases:
             link = self.data_path(alias)
             if link != path and link.resolve() != path.resolve():
-                link.unlink(missing_ok=True)
+                unlink(link, missing_ok=True)
                 path.link_to(link)
         logger.debug(f"Added aliases {','.join([str(s) for s in aliases])} ⇌ {cid} ({path})")
 

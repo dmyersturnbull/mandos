@@ -12,6 +12,7 @@ from typing import Optional, TypeVar
 from pocketutils.core.exceptions import InjectionError
 from pocketutils.tools.reflection_tools import ReflectionTools
 
+from mandos.entry import entry
 from mandos.entry.abstract_entries import Entry
 from mandos.entry.api_singletons import Apis
 from mandos.entry.tools.searchers import Searcher
@@ -104,6 +105,7 @@ class EntryChemblBinding(Entry[BindingSearch]):
 
 class EntryChemblMechanism(Entry[MechanismSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -141,6 +143,7 @@ class EntryChemblMechanism(Entry[MechanismSearch]):
 
 class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -183,6 +186,7 @@ class ChemblQsarPredictions(Entry[TargetPredictionSearch]):
 
 class EntryChemblTrials(Entry[IndicationSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -207,6 +211,7 @@ class EntryChemblTrials(Entry[IndicationSearch]):
 
 class EntryChemblAtc(Entry[AtcSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -242,6 +247,7 @@ class _EntryChemblGo(Entry[GoSearch], metaclass=abc.ABCMeta):
         return f"chembl:go.{me.lower()}"
 
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -295,6 +301,7 @@ class EntryGoFunction(_EntryChemblGo):
         return GoType.function
 
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -330,6 +337,7 @@ class EntryGoProcess(_EntryChemblGo):
         return GoType.process
 
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -365,6 +373,7 @@ class EntryGoComponent(_EntryChemblGo):
         return GoType.component
 
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -396,6 +405,7 @@ class EntryGoComponent(_EntryChemblGo):
 
 class EntryPubchemTrials(Entry[TrialSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -425,6 +435,7 @@ class EntryPubchemTrials(Entry[TrialSearch]):
 
 class EntryPubchemDisease(Entry[DiseaseSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -461,6 +472,7 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
         return s.cooccurrence_type()
 
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -483,6 +495,7 @@ class _EntryPubchemCoOccurrence(Entry[U], metaclass=abc.ABCMeta):
 
 class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -512,6 +525,7 @@ class EntryPubchemGeneCoOccurrence(_EntryPubchemCoOccurrence[GeneCoOccurrenceSea
 
 class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurrenceSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -541,6 +555,7 @@ class EntryPubchemDiseaseCoOccurrence(_EntryPubchemCoOccurrence[DiseaseCoOccurre
 
 class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccurrenceSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -570,6 +585,7 @@ class EntryPubchemChemicalCoOccurrence(_EntryPubchemCoOccurrence[ChemicalCoOccur
 
 class EntryPubchemDgi(Entry[DgiSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -598,6 +614,7 @@ class EntryPubchemDgi(Entry[DgiSearch]):
 
 class EntryPubchemCgi(Entry[CtdGeneSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -626,6 +643,7 @@ class EntryPubchemCgi(Entry[CtdGeneSearch]):
 
 class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -651,6 +669,7 @@ class EntryDrugbankTarget(Entry[DrugbankTargetSearch]):
 
 class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -676,6 +695,7 @@ class EntryGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
 
 class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -706,6 +726,7 @@ class EntryDrugbankTransporter(Entry[DrugbankTargetSearch]):
 
 class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -736,6 +757,7 @@ class EntryTransporterGeneralFunction(Entry[DrugbankGeneralFunctionSearch]):
 
 class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -764,6 +786,7 @@ class EntryDrugbankDdi(Entry[DrugbankDdiSearch]):
 
 class EntryPubchemAssay(Entry[BioactivitySearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -797,6 +820,7 @@ class EntryPubchemAssay(Entry[BioactivitySearch]):
 
 class EntryDeaSchedule(Entry[BioactivitySearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -819,6 +843,7 @@ class EntryDeaSchedule(Entry[BioactivitySearch]):
 
 class EntryDeaClass(Entry[BioactivitySearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -841,6 +866,7 @@ class EntryDeaClass(Entry[BioactivitySearch]):
 
 class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -869,6 +895,7 @@ class EntryChemidPlusAcute(Entry[AcuteEffectSearch]):
 
 class EntryChemidPlusLd50(Entry[Ld50Search]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -894,6 +921,7 @@ class EntryChemidPlusLd50(Entry[Ld50Search]):
 
 class EntryPubchemComputed(Entry[ComputedPropertySearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -931,6 +959,7 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
 
 class EntryG2pInteractions(Entry[G2pInteractionSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -958,6 +987,7 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
 
 class EntryHmdbTissue(Entry[TissueConcentrationSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -984,6 +1014,7 @@ class EntryHmdbTissue(Entry[TissueConcentrationSearch]):
 
 class EntryHmdbComputed(Entry[BioactivitySearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -1011,6 +1042,7 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
 
 class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -1034,6 +1066,7 @@ class EntryDrugbankAdmet(Entry[DrugbankTargetSearch]):
 
 class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -1057,6 +1090,7 @@ class EntryDrugbankMetabolites(Entry[DrugbankTargetSearch]):
 
 class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,
@@ -1084,6 +1118,7 @@ class EntryDrugbankDosage(Entry[DrugbankTargetSearch]):
 
 class EntryMetaRandom(Entry[RandomSearch]):
     @classmethod
+    @entry()
     def run(
         cls,
         path: Path = CommonArgs.in_compound_table,

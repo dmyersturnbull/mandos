@@ -41,16 +41,23 @@ def _to_hits(self: AbsDf) -> Sequence[AbstractHit]:
         # ignore extra columns
         # if cols are missing, let it fail on clazz.__init__
         data = {f: getattr(row, f) for f in clazz.fields()}
-        try:
-            # noinspection PyArgumentList
-            hit = clazz(**data)
-        except ValueError:
-            logger.debug(f"Data passed to {clazz}: {data}")
-            raise InjectionError(
+        missing = set(clazz.fields()) - set(data.keys())
+        extra = set(data.keys()) - set(clazz.fields())
+        if len(missing) + len(extra) > 0:
+            logger.opt(exception=True).debug(
                 f"Fields for {c} do not match:"
                 + f" expected {', '.join(clazz.fields())};"
                 + f" got {', '.join(data.keys())}"
             )
+            logger.debug(f"Data passed to {clazz}: {data}")
+            raise InjectionError(
+                f"Mismatch of fields for {c}: missing {','.join(missing)}; extra {','.join(extra)}"
+            )
+        try:
+            # noinspection PyArgumentList
+            hit = clazz(**data)
+        except ValueError:
+            raise InjectionError(f"Failed to make {clazz}")
         hits.append(hit)
     return hits
 

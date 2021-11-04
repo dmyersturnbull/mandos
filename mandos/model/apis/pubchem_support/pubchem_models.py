@@ -7,13 +7,13 @@ from datetime import date
 from typing import FrozenSet, Mapping, Optional, Sequence, Set, Union
 
 import orjson
-import regex
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import XTypeError, XValueError
 from pocketutils.tools.string_tools import StringTools
 
 from mandos.model.apis.pubchem_support._nav_fns import Mapx
+from mandos.model.apis.pubchem_support._patterns import Patterns
 from mandos.model.utils.setup import MandosResources
 
 hazards = MandosResources.file("hazards.json").read_text(encoding="utf8")
@@ -45,14 +45,7 @@ class Code(str):
 
     @classmethod
     def of(cls, value: Union[str, int, float]) -> __qualname__:
-        if isinstance(value, float):
-            try:
-                value = int(value)
-                value = StringTools.strip_off_end(str(value).strip(), ".0")
-            except ArithmeticError:
-                value = str(value)
-                value = StringTools.strip_off_end(str(value).strip(), ".0")
-        value = str(value).strip()
+        value = StringTools.strip_off_end(str(value).strip(), ".0").strip()
         return cls(value)
 
     @classmethod
@@ -198,7 +191,7 @@ class ClinicalTrialsGovUtils:
             "Phase 1": 1,
             "Early Phase 1": 1.5,
             "Phase 2/Phase 3": 2.5,
-            "N/A": 0,
+            "N/A": 0.5,
         }
 
     @classmethod
@@ -302,11 +295,12 @@ class AcuteEffectEntry:
 
     @property
     def mg_per_kg(self) -> float:
-        # TODO: Could it ever start with just a dot; e.g. '.175'?
-        match = regex.compile(r".+?\((\d+(?:.\d+)?) *mg/kg\)").fullmatch(self.dose, flags=regex.V1)
+        match = Patterns.mg_per_kg_pattern.search(self.dose)
         if match is None:
+            # e.g. mg/m3/2H (mass per liter per time)
             raise XValueError(f"Dose {self.dose} (acute effect {self.gid}) could not be parsed")
-        return float(match.group(1))
+        scale = dict(g=1e3, gm=1e3, mg=1, ug=10e-3, ng=10e-6, pg=10e-9)[match.group(2)]
+        return float(match.group(1)) * scale
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -329,8 +323,7 @@ class AtcCode:
 
     @property
     def parts(self) -> Sequence[str]:
-        pat = regex.compile(r"([A-Z])([0-9]{2})?([A-Z])?([A-Z])?([A-Z])?", flags=regex.V1)
-        match = pat.fullmatch(self.code)
+        match = Patterns.atc_parts_pattern.fullmatch(self.code)
         return [g for g in match.groups() if g is not None]
 
 
@@ -392,7 +385,7 @@ class Bioactivity:
         # We use \)+ at the end instead of \)
         # this is to catch cases where we have parentheses inside of the species name
         # this happens with some virus strains, for e.g.
-        match = regex.compile(r"^(.+?)\(([^)]+)\)+$", flags=regex.V1).fullmatch(self.target_name)
+        match = Patterns.target_name_abbrev_species_pattern_1.fullmatch(self.target_name)
         if match is None:
             species = None
             target = self.target_name
@@ -400,7 +393,7 @@ class Bioactivity:
             species = match.group(2)
             target = match.group(1)
         # now try to get an abbreviation
-        match = regex.compile(r"^ *([^ ]+) +- +(.+)$, flags=regex.V1").fullmatch(target)
+        match = Patterns.target_name_abbrev_species_pattern_2.fullmatch(target)
         if match is None:
             abbrev = None
             name = target

@@ -11,7 +11,7 @@ from typing import Any, Mapping, MutableMapping, Optional, Sequence, Type, Union
 
 import pandas as pd
 import typer
-from pocketutils.core.exceptions import InjectionError
+from pocketutils.core.exceptions import InjectionError, PathExistsError
 from typeddfs import Checksums, TypedDfs
 from typeddfs.abs_dfs import AbsDf
 
@@ -93,6 +93,8 @@ class MultiSearch:
         self._build_and_test()
 
     def run(self) -> None:
+        if self.final_path.exists():
+            raise PathExistsError(f"{self.final_path} exists")
         commands = self._build_and_test()
         # start!
         for cmd in commands:
@@ -104,8 +106,16 @@ class MultiSearch:
         # write the final file
         df = HitDf(pd.concat([HitDf.read_file(cmd.output_path) for cmd in commands]))
         now = datetime.now().isoformat(timespec="milliseconds")
-        df = df.set_attrs(keys=[c.key for c in commands], written=now)
-        df.write_file(self.final_path, dir_hash=True, file_hash=True, attrs=True)
+        docs = self.get_docs(commands)
+        SearchExplainDf([pd.Series(x) for x in docs]).write_file(self.doc_path)
+        df = df.set_attrs(commands=docs, written=now)
+        df.write_file(
+            self.final_path.resolve(),
+            dir_hash=True,
+            file_hash=True,
+            attrs=True,
+            overwrite=self.restart,
+        )
         logger.notice(f"Concatenated results to {self.final_path}")
 
     def _build_and_test(self) -> Sequence[CmdRunner]:
@@ -116,8 +126,6 @@ class MultiSearch:
         if len(commands) == 0:
             logger.warning(f"No searches — nothing to do")
             return []
-        # write a file describing all of the searches
-        self.write_docs(commands)
         # build and test
         for cmd in commands:
             try:
@@ -155,7 +163,7 @@ class MultiSearch:
             cmd = CmdRunner.build(data, self.input_path, restart=self.restart, proceed=self.proceed)
         return cmd
 
-    def write_docs(self, commands: Sequence[CmdRunner]) -> None:
+    def get_docs(self, commands: Sequence[CmdRunner]) -> Sequence[Mapping[str, Any]]:
         rows = []
         for cmd in commands:
             st = cmd.cmd.get_search_type()
@@ -164,8 +172,8 @@ class MultiSearch:
             desc = cmd.cmd.describe()
             args = " ".join([f'{k}="{v}"' for k, v in cmd.params.items()])
             ser = dict(key=cmd.key, search=name, source=src, desc=desc, args=args)
-            rows.append(pd.Series(ser))
-        SearchExplainDf(rows).write_file(self.doc_path, mkdirs=True)
+            rows.append(ser)
+        return rows
 
     def _get_log_path(self, key: str) -> Path:
         if self.log_path is None:

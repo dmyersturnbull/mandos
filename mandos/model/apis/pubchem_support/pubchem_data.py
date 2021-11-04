@@ -4,14 +4,14 @@ PubChem data views and processors.
 from __future__ import annotations
 
 import abc
-import time
+import functools
 from datetime import date, datetime
+from functools import cached_property
 from typing import AbstractSet, FrozenSet, Mapping, MutableMapping, Optional, Sequence
 from typing import Tuple as Tup
 from typing import Union
 from urllib.parse import unquote as url_unescape
 
-import regex
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.exceptions import (
     DataIntegrityError,
@@ -22,12 +22,9 @@ from pocketutils.tools.common_tools import CommonTools
 from pocketutils.tools.string_tools import StringTools
 
 from mandos.model import CompoundStruct
-
-# noinspection PyProtectedMember
 from mandos.model.apis.pubchem_support._nav import FlatmapError, JsonNavigator
-
-# noinspection PyProtectedMember
 from mandos.model.apis.pubchem_support._nav_fns import Filter, FilterFn, Flatmap, Mapx
+from mandos.model.apis.pubchem_support._patterns import Patterns
 
 # noinspection PyProtectedMember
 from mandos.model.apis.pubchem_support.pubchem_models import (
@@ -55,16 +52,6 @@ from mandos.model.utils.setup import logger
 
 class Misc:
     empty_frozenset = frozenset([])
-
-
-class Patterns:
-    ghs_code = regex.compile(r"((?:H\d+)(?:\+H\d+)*)", flags=regex.V1)
-    ghs_code_singles = regex.compile(r"(H\d+)")
-    pubchem_compound_url = regex.compile(
-        r"^https:\/\/pubchem\.ncbi\.nlm\.nih\.gov\/compound\/(.+)$", flags=regex.V1
-    )
-    atc_codes = regex.compile(r"([A-Z])([0-9]{2})?([A-Z])?([A-Z])?([A-Z])?", flags=regex.V1)
-    mesh_codes = regex.compile(r"[A-Z]", flags=regex.V1)
 
 
 class PubchemDataView(metaclass=abc.ABCMeta):
@@ -150,7 +137,7 @@ class RelatedRecords(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Related Records"
 
-    @property
+    @cached_property
     def parent(self) -> Optional[int]:
         parent = (
             self._mini
@@ -173,22 +160,22 @@ class NamesAndIdentifiers(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Names and Identifiers"
 
-    @property
+    @cached_property
     def inchikey(self) -> str:
         return self.descriptor("InChI Key")
 
-    @property
+    @cached_property
     def inchi(self) -> str:
         return self.descriptor("InChI")
 
-    @property
+    @cached_property
     def iupac(self) -> Optional[str]:
         try:
             return self.descriptor("IUPAC Name")
         except FlatmapError:  # TODO
             return None
 
-    @property
+    @cached_property
     def molecular_formula(self) -> str:
         return (
             self._mini
@@ -202,6 +189,7 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             // Flatmap.require_only()
         ).get
 
+    @functools.cache
     def descriptor(self, key: str) -> str:
         return (
             self._mini
@@ -218,7 +206,7 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             // Flatmap.require_only()
         ).get
 
-    @property
+    @cached_property
     def create_date(self) -> date:
         return (
             self._toc
@@ -232,7 +220,7 @@ class NamesAndIdentifiers(PubchemMiniDataView):
             // Flatmap.require_only()
         ).get
 
-    @property
+    @cached_property
     def modify_date(self) -> date:
         return (
             self._toc
@@ -280,11 +268,13 @@ class ChemicalAndPhysicalProperties(PubchemMiniDataView):
     def complexity_rating(self) -> int:
         return self.single_property("Complexity", "PubChem").value
 
+    @functools.cache
     def single_property(self, key: str, ref: Optional[str] = "PubChem") -> ComputedProperty:
         return CommonTools.only(
             [kvr for kvr in self.computed if kvr.key == key and (ref is None or kvr.ref == ref)]
         )
 
+    @cached_property
     @property
     def computed(self) -> FrozenSet[ComputedProperty]:
         cid = self.cid
@@ -350,7 +340,7 @@ class DrugAndMedicationInformation(PubchemDataView):
     def mini(self) -> JsonNavigator:
         return self._toc / "Drug and Medication Information" / "Section" % "TOCHeading"
 
-    @property
+    @cached_property
     def indication_summary_drugbank(self) -> Optional[str]:
         return (
             self.mini
@@ -363,7 +353,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             >> Flatmap.join_nonnulls()
         ).get
 
-    @property
+    @cached_property
     def indication_summary_livertox(self) -> Optional[str]:
         return (
             self.mini
@@ -376,7 +366,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             >> Flatmap.join_nonnulls()
         ).get
 
-    @property
+    @cached_property
     def livertox_classes(self) -> FrozenSet[str]:
         return (
             self.mini
@@ -388,7 +378,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             >> "String"
         ).to_set
 
-    @property
+    @cached_property
     def dea_class(self) -> FrozenSet[str]:
         return (
             self.mini
@@ -400,7 +390,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             >> "String"
         ).to_set
 
-    @property
+    @cached_property
     def dea_schedule(self) -> Optional[Codes.DeaSchedule]:
         return (
             self.mini
@@ -416,7 +406,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             // Flatmap.request_only()
         ).get
 
-    @property
+    @cached_property
     def hsdb_uses(self) -> FrozenSet[str]:
         mesh = "National Library of Medicine's Medical Subject Headings"
         return (
@@ -430,7 +420,7 @@ class DrugAndMedicationInformation(PubchemDataView):
             >> "String"
         ).to_set
 
-    @property
+    @cached_property
     def clinical_trials(self) -> FrozenSet[ClinicalTrial]:
         trials = (self._tables / "clinicaltrials").get
         objs = []
@@ -458,7 +448,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Pharmacology and Biochemistry"
 
-    @property
+    @cached_property
     def summary_drugbank_text(self) -> Optional[str]:
         return (
             self._mini
@@ -471,7 +461,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             >> Flatmap.join_nonnulls()
         ).get
 
-    @property
+    @cached_property
     def summary_ncit_text(self) -> Optional[str]:
         return (
             self._mini
@@ -485,7 +475,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             >> Flatmap.join_nonnulls()
         ).get
 
-    @property
+    @cached_property
     def summary_ncit_links(self) -> FrozenSet[str]:
         return (
             self._mini
@@ -504,7 +494,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / Mapx.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
         ).to_set
 
-    @property
+    @cached_property
     def mesh(self) -> FrozenSet[str]:
         return (
             self._mini
@@ -514,7 +504,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             >> "Name"
         ).to_set
 
-    @property
+    @cached_property
     def atc(self) -> FrozenSet[AtcCode]:
         strs = (
             self._mini
@@ -530,19 +520,19 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             [AtcCode(s.split(" - ")[0].strip(), s.split(" - ")[1].strip()) for s in strs]
         )
 
-    @property
+    @cached_property
     def moa_summary_drugbank_links(self) -> FrozenSet[str]:
         return self._get_moa_links("DrugBank")
 
-    @property
+    @cached_property
     def moa_summary_drugbank_text(self) -> Optional[str]:
         return self._get_moa_text("DrugBank")
 
-    @property
+    @cached_property
     def moa_summary_hsdb_links(self) -> FrozenSet[str]:
         return self._get_moa_links("Hazardous Substances Data Bank (HSDB)")
 
-    @property
+    @cached_property
     def moa_summary_hsdb_text(self) -> Optional[str]:
         return self._get_moa_text("Hazardous Substances Data Bank (HSDB)")
 
@@ -575,7 +565,7 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
             / Mapx.lowercase_unless_acronym()  # TODO necessary but unfortunate -- cocaine and Cocaine
         ).to_set
 
-    @property
+    @cached_property
     def biochem_reactions(self) -> FrozenSet[str]:
         # TODO from multiple sources
         return frozenset({s.strip() for s in (self._tables / "pathwayreaction" >> "name").to_set})
@@ -584,11 +574,11 @@ class PharmacologyAndBiochemistry(PubchemMiniDataView):
 class SafetyAndHazards(PubchemMiniDataView):
     """ """
 
-    @property
+    @cached_property
     def _whoami(self) -> str:
         return "Safety and Hazards"
 
-    @property
+    @cached_property
     def ghs_codes(self) -> FrozenSet[GhsCode]:
         codes = (
             self._mini
@@ -616,7 +606,7 @@ class Toxicity(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Toxicity"
 
-    @property
+    @cached_property
     def acute_effects(self) -> FrozenSet[AcuteEffectEntry]:
         return (
             self._tables
@@ -641,7 +631,7 @@ class AssociatedDisordersAndDiseases(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Associated Disorders and Diseases"
 
-    @property
+    @cached_property
     def associated_disorders_and_diseases(self) -> FrozenSet[AssociatedDisorder]:
         return (
             self._tables
@@ -810,7 +800,7 @@ class Patents(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Patents"
 
-    @property
+    @cached_property
     def associated_disorders_and_diseases(self) -> FrozenSet[AssociatedDisorder]:
         return (
             self._tables
@@ -828,7 +818,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Biomolecular Interactions and Pathways"
 
-    @property
+    @cached_property
     def drug_gene_interactions(self) -> FrozenSet[DrugGeneInteraction]:
         # the order of this dict is crucial
         keys = {
@@ -847,7 +837,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
             // Flatmap.construct(DrugGeneInteraction)
         ).to_set
 
-    @property
+    @cached_property
     def chemical_gene_interactions(self) -> FrozenSet[ChemicalGeneInteraction]:
         # the order of this dict is crucial
         # YES, the | used in pmids really is different from the , used in DrugGeneInteraction
@@ -866,7 +856,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
             // Flatmap.construct(ChemicalGeneInteraction)
         ).to_set
 
-    @property
+    @cached_property
     def drugbank_interactions(self) -> FrozenSet[DrugbankInteraction]:
         keys = {
             "gid": (lambda f: None if f is None else str(int(f))),
@@ -888,7 +878,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
             // Flatmap.construct(DrugbankInteraction)
         ).to_set
 
-    @property
+    @cached_property
     def drugbank_legal_groups(self) -> FrozenSet[str]:
         q = set()
         for x in (self._tables / "drugbank" // ["druggroup"] // Flatmap.require_only()).to_set:
@@ -896,7 +886,7 @@ class BiomolecularInteractionsAndPathways(PubchemMiniDataView):
                 q.add(y.strip())
         return frozenset(q)
 
-    @property
+    @cached_property
     def drugbank_ddis(self) -> FrozenSet[DrugbankDdi]:
         keys = {
             "dbid2": Codes.DrugbankCompoundId,
@@ -920,7 +910,7 @@ class BiologicalTestResults(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Biological Test Results"
 
-    @property
+    @cached_property
     def bioactivity(self) -> FrozenSet[Bioactivity]:
         keys = {
             "aid": Mapx.get_int,
@@ -954,62 +944,62 @@ class Classification(PubchemMiniDataView):
     def _whoami(self) -> str:
         return "Classification"
 
-    @property
+    @cached_property
     def mesh_tree(self) -> Sequence[str]:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def chebi_tree(self) -> Sequence[str]:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def atc_tree(self) -> FrozenSet[Sequence[str]]:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def chemid(self) -> FrozenSet[Sequence[str]]:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def g2p_tree(self) -> FrozenSet[Sequence[str]]:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def chembl_tree(self) -> FrozenSet[Sequence[str]]:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def cpdat_tree(self) -> FrozenSet[Sequence[str]]:
         raise NotImplementedError()
 
-    @property
+    @cached_property
     def dea(self) -> FrozenSet[str]:
         raise NotImplementedError()
 
 
 class PubchemData(PubchemDataView):
-    @property
+    @cached_property
     def name(self) -> Optional[str]:
         return self._data.get("record.RecordTitle")
 
-    @property
+    @cached_property
     def inchikey(self) -> Optional[str]:
         return self.names_and_identifiers.inchikey
 
-    @property
+    @cached_property
     def inchi(self) -> Optional[str]:
         return self.names_and_identifiers.inchi
 
-    @property
+    @cached_property
     def parent_or_none(self) -> Optional[int]:
         return self.related_records.parent
 
-    @property
+    @cached_property
     def parent_or_self(self) -> int:
         parent = self.related_records.parent
         return self.cid if parent is None else parent
 
-    @property
+    @cached_property
     def siblings(self) -> AbstractSet[int]:
         records = self._data["linked_records"]
         try:

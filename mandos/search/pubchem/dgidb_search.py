@@ -32,6 +32,7 @@ class DgiSearch(PubchemSearch[DgiHit]):
                         predicate=predicate,
                         object_id=dd.gene_claim_id,
                         object_name=dd.gene_name,
+                        cache_date=data.names_and_identifiers.modify_date,
                     )
                 )
         return results

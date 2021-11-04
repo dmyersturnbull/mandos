@@ -29,11 +29,12 @@ from mandos.model.apis.chembl_support.chembl_targets import TargetType
 from mandos.model.apis.pubchem_support.pubchem_models import ClinicalTrialsGovUtils
 from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import Taxonomy
-from mandos.model.taxonomy_caches import TaxonomyFactories
+from mandos.model.taxonomy_caches import LazyTaxonomy, TaxonomyFactories
 from mandos.model.utils.globals import Globals
 from mandos.model.utils.setup import logger
 
 T = TypeVar("T", covariant=True)
+_dir_name_pattern = regex.compile(r"([^*]*)(?:\*(\..+))?", flags=regex.V1)
 
 
 @dataclass(frozen=True, repr=True, order=True)
@@ -88,7 +89,7 @@ class ArgUtils:
         *,
         local_only: bool = False,
         allow_forbid: bool = True,
-    ) -> Optional[Taxonomy]:
+    ) -> Optional[LazyTaxonomy]:
         if taxa is None or len(taxa) == 0:
             return None
         parsed = cls.parse_taxa(taxa, allow_forbid=allow_forbid)
@@ -210,7 +211,7 @@ class EntryUtils:
         cls._check_suffix(path.suffix, suffixes)
         if info.exists and replace and not quiet:
             logger.info(f"Overwriting existing file {path}")
-        logger.debug(f"Output file is {path}")
+        logger.log("TRACE" if quiet else "INFO", f"Output file is {path}")
         return path
 
     @classmethod
@@ -225,8 +226,7 @@ class EntryUtils:
         out_dir = Path(default)
         suffix = SETTINGS.table_suffix
         if to is not None:
-            pat = regex.compile(r"([^*]*)(?:\*(\..+))?", flags=regex.V1)
-            m: regex.Match = pat.fullmatch(str(to))
+            m: regex.Match = _dir_name_pattern.fullmatch(str(to))
             out_dir = default if m.group(1) == "" else m.group(1)
             if m.group(2) is not None and m.group(2) != "":
                 suffix = m.group(2)

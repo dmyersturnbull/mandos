@@ -160,7 +160,6 @@ class ChemblEntrypoint:
         return X()
 
 
-@decorateme.auto_repr_str()
 class ChemblApi(metaclass=abc.ABCMeta):
     """
     Wraps the whole ChEMBL API.
@@ -231,16 +230,6 @@ class ChemblApi(metaclass=abc.ABCMeta):
 
     @classmethod
     def mock(cls, entrypoints: Mapping[str, ChemblEntrypoint]) -> ChemblApi:
-        """
-        Mocks.
-
-        Args:
-            entrypoints:
-
-        Returns:
-
-        """
-
         class X(ChemblApi):
             def __getattribute__(self, item: str) -> ChemblEntrypoint:
                 return entrypoints[item]
@@ -249,21 +238,17 @@ class ChemblApi(metaclass=abc.ABCMeta):
 
     @classmethod
     def wrap(cls, obj) -> ChemblApi:
-        """
-        Wraps.
-
-        Args:
-            obj:
-
-        Returns:
-
-        """
-
         class X(ChemblApi):
             def __getattribute__(self, item: str) -> ChemblEntrypoint:
                 return ChemblEntrypoint.wrap(getattr(obj, item))
 
         return X()
+
+    def __repr__(self):
+        return self.__class__.__name__
+
+    def __str__(self):
+        return repr(self)
 
 
 __all__ = [

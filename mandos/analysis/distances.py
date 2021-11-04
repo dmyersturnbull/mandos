@@ -1,5 +1,5 @@
 """
-Calculations of concordance between annotations.
+Calculations of concordance between annotation sets.
 """
 import abc
 import enum
@@ -43,14 +43,10 @@ class _Inf:
     def got(self, c1: str, c2: str, z: float) -> None:
         self.used.add((c1, c2))
         self.nonzeros += int(c1 != c2 and not np.isnan(z) and 0 < z < 1)
-        i = self.i
-        if i % 5000 == 0:
-            lg_ = next(
-                t_
-                for s_, t_ in zip([50000, 10000, 1000], ["success", "info", "debug"])
-                if not i % s_
-            )
-            self.log(lg_)
+        if self.i % 50000 == 0:
+            self.log("info")
+        elif self.i % 5000 == 0:
+            self.log("trace")
 
     @property
     def i(self) -> int:
@@ -63,6 +59,12 @@ class _Inf:
             f"Processed {self.i:,}/{self.n:,} pairs in {delta};"
             + f" {self.nonzeros:,} ({self.nonzeros / self.i * 100:.1f}%) are nonzero",
         )
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.i}/{self.n})"
+
+    def __str__(self):
+        return repr(self)
 
 
 class JPrimeMatrixCalculator(MatrixCalculator):
@@ -85,13 +87,15 @@ class JPrimeMatrixCalculator(MatrixCalculator):
             for (c2, hits2) in ik2hits.items():
                 if inf.is_used(c1, c2):
                     continue
-                z = 1 if c1 == c2 else self._j_prime(hits1, hits2)
+                z = 1 if c1 == c2 else self._j_prime(key, hits1, hits2)
                 data[c1][c2] = z
                 inf.got(c1, c2, z)
         inf.log("notice")
         return SimilarityDfShortForm.from_dict(data)
 
-    def _j_prime(self, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]) -> float:
+    def _j_prime(
+        self, key: str, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]
+    ) -> float:
         if len(hits1) == 0 or len(hits2) == 0:
             return 0
         sources = {h.data_source for h in hits1}.intersection({h.data_source for h in hits2})
@@ -99,6 +103,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
             return np.nan
         values = [
             self._jx(
+                key,
                 [h for h in hits1 if h.data_source == source],
                 [h for h in hits2 if h.data_source == source],
             )
@@ -106,7 +111,14 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         ]
         return float(math.fsum(values) / len(values))
 
-    def _jx(self, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]) -> float:
+    def _jx(
+        self, key: str, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]
+    ) -> float:
+        # TODO -- for testing only
+        # TODO: REMOVE ME!
+        if key in ["core.chemidplus.effects", "extra.chemidplus.specific-effects"]:
+            hits1 = [h.copy(weight=np.power(10, -h.weight)) for h in hits1]
+            hits2 = [h.copy(weight=np.power(10, -h.weight)) for h in hits2]
         pair_to_weights = Au.weights_of_pairs(hits1, hits2)
         values = [self._wedge(ca, cb) / self._vee(ca, cb) for ca, cb in pair_to_weights.values()]
         return float(math.fsum(values) / len(values))

@@ -4,6 +4,7 @@ Run searches and write files.
 
 from __future__ import annotations
 
+import functools
 import time
 from dataclasses import dataclass
 from datetime import timedelta
@@ -34,6 +35,16 @@ InputCompoundsDf = (
     .strict(cols=False)
     .secure()
 ).build()
+
+
+class MemoizedInputCompounds:
+    @classmethod
+    @functools.cache
+    def read_file(cls, path: Path) -> InputCompoundsDf:
+        logger.debug(f"Reading compounds from {path}")
+        df = InputCompoundsDf.read_file(path)
+        logger.info(f"Read {len(df)} compounds from {path}")
+        return df
 
 
 @dataclass(frozen=True, repr=True, order=True)
@@ -148,8 +159,8 @@ class Searcher:
         df: HitDf = HitDf.of(df)
         params = self.what.get_params()
         df = df.set_attrs(**params, key=self.what.key)
-        df.write_file(self.to, mkdirs=True, attrs=True, dir_hash=done)
+        df.write_file(self.to.resolve(), mkdirs=True, attrs=True, dir_hash=done)
         logger.debug(f"Saved {len(df)} rows to {self.to}")
 
 
-__all__ = ["Searcher", "InputCompoundsDf", "SearchReturnInfo"]
+__all__ = ["Searcher", "InputCompoundsDf", "SearchReturnInfo", "MemoizedInputCompounds"]

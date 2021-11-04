@@ -53,6 +53,7 @@ class CoOccurrenceSearch(PubchemSearch[H], metaclass=abc.ABCMeta):
                 intersect_count=dd.article_count,
                 query_count=dd.query_article_count,
                 neighbor_count=dd.neighbor_article_count,
+                cache_date=data.names_and_identifiers.modify_date,
             )
             for dd in all_of_them
             if (

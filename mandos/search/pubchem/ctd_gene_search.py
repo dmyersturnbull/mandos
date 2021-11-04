@@ -34,6 +34,7 @@ class CtdGeneSearch(PubchemSearch[CtdGeneHit]):
                             object_name=dd.gene_name,
                             taxon_id=dd.tax_id,
                             taxon_name=dd.tax_name,
+                            cache_date=data.names_and_identifiers.modify_date,
                         )
                     )
         return results

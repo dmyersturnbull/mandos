@@ -77,8 +77,4 @@ class AssayType(CleverEnum):
         }[self]
 
 
-__all__ = [
-    "AssayType",
-    "DataValidityComment",
-    "ActivityRelation",
-]
+__all__ = ["AssayType", "DataValidityComment", "ActivityRelation"]

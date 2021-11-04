@@ -42,6 +42,7 @@ class DrugbankDdiSearch(PubchemSearch[DrugbankDdiHit]):
                     effect_target=spec,
                     change=direction,
                     description=dd.description,
+                    cache_date=data.names_and_identifiers.modify_date,
                 )
             )
         return hits

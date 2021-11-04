@@ -7,6 +7,7 @@ import enum
 from dataclasses import dataclass
 from typing import Mapping, Optional, Set
 
+import decorateme
 from pocketutils.core.dot_dict import NestedDotDict
 from pocketutils.core.enums import CleverEnum
 from pocketutils.core.exceptions import LookupFailedError
@@ -196,6 +197,7 @@ class ChemblTarget:
     type: TargetType
 
 
+@decorateme.auto_obj()
 class TargetFactory:
     """
     Factory for ``Target`` that injects a ``ChemblApi``.
@@ -206,6 +208,7 @@ class TargetFactory:
 
     def find(self, chembl: str) -> ChemblTarget:
         """
+        Finds.
 
         Args:
             chembl:
@@ -213,11 +216,10 @@ class TargetFactory:
         Returns:
             A ``Target`` instance from a newly created subclass of that class
         """
-
         try:
             targets = self.api.target.filter(target_chembl_id=chembl)
         except MaxRetryError:
-            raise TargetNotFoundError(f"NOT FOUND: Target {chembl}")
+            raise TargetNotFoundError(f"Not found: target {chembl}")
         if len(targets) != 1:
             raise AssertionError(f"Found {len(targets)} targets for {chembl}")
         target = NestedDotDict(targets[0])

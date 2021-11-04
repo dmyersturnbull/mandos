@@ -34,6 +34,7 @@ class ComputedPropertySearch(PubchemSearch[ComputedPropertyHit]):
                         predicate=predicate,
                         object_id=dd.value,
                         object_name=dd.value,
+                        cache_date=data.names_and_identifiers.modify_date,
                     )
                 )
         return results

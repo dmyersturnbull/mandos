@@ -28,6 +28,10 @@ def _oint(x: str) -> Optional[int]:
     return int(x)
 
 
+class G2pCompoundLookupError(CompoundNotFoundError):
+    """ """
+
+
 LigandDf = (
     TypedDfs.typed("LigandDf")
     .require("Ligand id", dtype=int)
@@ -55,10 +59,18 @@ InteractionDf = (
 ).build()
 
 
-@decorateme.auto_repr_str()
 class G2pApi(Api, metaclass=abc.ABCMeta):
     def fetch(self, inchikey: str) -> G2pData:
         raise NotImplementedError()
+
+    def __eq__(self, other):
+        raise UnsupportedOpError(f"Cannot compare {self.__class__.__name__}")
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
+
+    def __str__(self):
+        return repr(self)
 
 
 class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
@@ -71,7 +83,7 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
         """ """
         series = self.ligands[self.ligands["inchikey"] == inchikey]
         if len(series) == 0:
-            raise CompoundNotFoundError(f"G2P ligand {inchikey} not found")
+            raise G2pCompoundLookupError(f"G2P ligand {inchikey} not found")
         basic = dict(CommonTools.only(series).to_dict())
         g2pid = int(basic["Ligand id"])
         interactions = [
@@ -143,9 +155,6 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
 
     def __str__(self):
         return repr(self)
-
-    def __eq__(self, other):
-        raise UnsupportedOpError(f"Cannot compare {self.__class__.__name__}")
 
 
 _all__ = ["G2pApi", "CachedG2pApi"]

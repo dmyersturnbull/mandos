@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import FrozenSet, Optional, Union
 
+import decorateme
 import orjson
 import pandas as pd
 from pocketutils.core.dot_dict import NestedDotDict
@@ -20,6 +21,7 @@ from mandos.model.settings import SETTINGS
 from mandos.model.utils.setup import logger
 
 
+@decorateme.auto_obj()
 class CachingPubchemApi(PubchemApi):
     def __init__(
         self,
@@ -73,8 +75,8 @@ class CachingPubchemApi(PubchemApi):
         cid = data.parent_or_self
         path = self.data_path(cid)
         aliases = {self.data_path(data.inchikey), *data.siblings, *others}
-        for sibling in aliases:
-            link = self.data_path(sibling)
+        for alias in aliases:
+            link = self.data_path(alias)
             if link != path and link.resolve() != path.resolve():
                 link.unlink(missing_ok=True)
                 path.link_to(link)

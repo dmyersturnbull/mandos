@@ -132,6 +132,11 @@ class PubchemHit(AbstractHit, metaclass=abc.ABCMeta):
 
 
 @dataclass(frozen=True, order=True, repr=True)
+class HmdbHit(AbstractHit, metaclass=abc.ABCMeta):
+    """ """
+
+
+@dataclass(frozen=True, order=True, repr=True)
 class AcuteEffectHit(PubchemHit):
     """ """
 
@@ -247,6 +252,13 @@ class TrialHit(PubchemHit):
     phase: float
     status: str
     interventions: str
+
+
+@dataclass(frozen=True, order=True, repr=True)
+class TissueConcentrationHit(HmdbHit):
+    micromolar: float
+    ages: str
+    sexes: str
 
 
 @dataclass(frozen=True, order=True, repr=True)

@@ -17,6 +17,7 @@ from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 from mandos.model.concrete_hits import ChemblTargetPredictionHit
 from mandos.model.taxonomy import Taxon, Taxonomy
+from mandos.model.taxonomy_caches import LazyTaxonomy
 from mandos.model.utils.setup import logger
 from mandos.search.chembl import ChemblScrapeSearch
 
@@ -35,7 +36,7 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
         key: str,
         api: ChemblApi,
         scrape,
-        taxa: Taxonomy,
+        taxa: LazyTaxonomy,
         traversal: str,
         target_types: Set[str],
         required_level: int = 70,
@@ -61,6 +62,7 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
         self.nonbinding_score = nonbinding_score
 
     def find(self, lookup: str) -> Sequence[ChemblTargetPredictionHit]:
+        _ = self.taxa.get  # do first for better logging
         ch = ChemblUtils(self.api).get_compound_dot_dict(lookup)
         compound = ChemblUtils(self.api).compound_dot_dict_to_obj(ch)
         table: TypedDf = self.scrape.fetch_predictions(compound.chid)
@@ -116,9 +118,9 @@ class TargetPredictionSearch(ChemblScrapeSearch[ChemblTargetPredictionHit]):
         return lst
 
     def _get_taxon(self, organism: str) -> Tuple[Optional[int], Optional[str]]:
-        if self.taxa is None:  # allow all
+        if self.taxa.get is None:  # allow all
             return None, organism
-        matches = self.taxa.get_by_id_or_name(organism)
+        matches = self.taxa.get.get_by_id_or_name(organism)
         if len(matches) == 0:
             logger.debug(f"Taxon {organism} not in set; excluding")
             return None, None

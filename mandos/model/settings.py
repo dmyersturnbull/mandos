@@ -223,7 +223,7 @@ logger.debug(f"Setting ChEMBL cache to {SETTINGS.chembl_cache_path}")
 class QueryExecutors:
     chembl = QueryExecutor(SETTINGS.chembl_query_delay_min, SETTINGS.chembl_query_delay_max)
     pubchem = QueryExecutor(SETTINGS.pubchem_query_delay_min, SETTINGS.pubchem_query_delay_max)
-    hmdb = QueryExecutor(SETTINGS.pubchem_query_delay_min, SETTINGS.pubchem_query_delay_max)
+    hmdb = QueryExecutor(SETTINGS.hmdb_query_delay_min, SETTINGS.hmdb_query_delay_max)
 
 
 QUERY_EXECUTORS = QueryExecutors

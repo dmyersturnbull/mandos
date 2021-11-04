@@ -30,12 +30,6 @@ class ChemblUtils:
     def get_target(self, chembl: str) -> NestedDotDict:
         """
         Queries for the target.
-
-        Args:
-            chembl:
-
-        Returns:
-
         """
         targets = self.api.target.filter(target_chembl_id=chembl)
         if len(targets) != 1:
@@ -74,7 +68,8 @@ class ChemblUtils:
             inchikey:
 
         Returns:
-            **Only** ``molecule_chembl_id``, ``pref_name``, "and ``molecule_structures`` are guaranteed to exist
+            **Only** ``molecule_chembl_id``, ``pref_name``,
+            and ``molecule_structures`` are guaranteed to exist
         """
         ch = self._get_compound(inchikey)
         # molecule_hierarchy can have the actual value None

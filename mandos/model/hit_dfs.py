@@ -2,6 +2,7 @@ from typing import Sequence
 
 import numpy as np
 import pandas as pd
+from pocketutils.core.exceptions import InjectionError
 from typeddfs import TypedDfs
 from typeddfs.abs_dfs import AbsDf
 
@@ -26,12 +27,30 @@ def _from_hits(cls, hits: Sequence[AbstractHit]) -> AbsDf:
 def _to_hits(self: AbsDf) -> Sequence[AbstractHit]:
     hits = []
     for row in self.itertuples():
-        clazz = HIT_CLASSES[row.hit_class]
+        # noinspection PyUnresolvedReferences
+        c = row.hit_class
+        # TODO: remove
+        if c == "_DrugbankInteractionHit" and row.data_source == "drugbank:target-functions":
+            c = "DrugbankGeneralFunctionHit"
+        elif c == "_DrugbankInteractionHit" and row.data_source == "drugbank:targets":
+            c = "DrugbankTargetHit"
+        try:
+            clazz = HIT_CLASSES[c]
+        except KeyError:
+            raise InjectionError(f"No hit class {c}") from None
         # ignore extra columns
         # if cols are missing, let it fail on clazz.__init__
         data = {f: getattr(row, f) for f in clazz.fields()}
-        # noinspection PyArgumentList
-        hit = clazz(**data)
+        try:
+            # noinspection PyArgumentList
+            hit = clazz(**data)
+        except ValueError:
+            logger.debug(f"Data passed to {clazz}: {data}")
+            raise InjectionError(
+                f"Fields for {c} do not match:"
+                + f" expected {', '.join(clazz.fields())};"
+                + f" got {', '.join(data.keys())}"
+            )
         hits.append(hit)
     return hits
 

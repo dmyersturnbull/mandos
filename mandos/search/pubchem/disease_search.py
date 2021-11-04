@@ -20,6 +20,7 @@ class DiseaseSearch(PubchemSearch[DiseaseHit]):
                 object_id=dd.disease_id,
                 object_name=dd.disease_name,
                 evidence_type=dd.evidence_type,
+                cache_date=data.names_and_identifiers.modify_date,
             )
             for dd in data.associated_disorders_and_diseases.associated_disorders_and_diseases
         ]

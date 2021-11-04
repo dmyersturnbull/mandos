@@ -62,7 +62,7 @@ class CachingPubchemSimilarityApi(SimilarityApi):
             return frozenset(set(df["cid"].values))
         found = self._query.search(inchi, min_tc)
         df: SimilarityDf = SimilarityDf.of([pd.Series(dict(cid=cid)) for cid in found])
-        df.write_file(path, mkdirs=True, dir_hash=True)
+        df.write_file(path.resolve(), mkdirs=True, dir_hash=True)
         logger.info(f"Wrote {len(df)} values for {inchi} with min TC {min_tc}")
         return frozenset(set(df["cid"].values))
 

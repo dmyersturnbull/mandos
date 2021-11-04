@@ -6,7 +6,7 @@ import typer
 from pocketutils.tools.reflection_tools import ReflectionTools
 from typer.models import OptionInfo
 
-from mandos.entry.tools.searchers import InputCompoundsDf, Searcher
+from mandos.entry.tools.searchers import MemoizedInputCompounds, Searcher
 from mandos.entry.utils._arg_utils import EntryUtils
 from mandos.model.searches import Search
 from mandos.model.settings import SETTINGS
@@ -63,9 +63,7 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
         to = EntryUtils.adjust_filename(
             to, default=default_to, replace=replace or proceed, quiet=True
         )
-        logger.debug(f"Reading compounds from {path}")
-        input_df = InputCompoundsDf.read_file(path)
-        logger.info(f"Read {len(input_df)} compounds from {path}")
+        input_df = MemoizedInputCompounds.read_file(path)
         searcher = Searcher(built, input_df, to, restart=replace, proceed=proceed)
         logger.notice(f"Searching {built.key} [{built.search_class}] on {path}")
         if not check:

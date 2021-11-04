@@ -40,7 +40,6 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
             species=species,
         )
         return self._create_hit(
-            inchikey=inchikey,
             c_id=str(data.cid),
             c_origin=inchikey,
             c_matched=data.names_and_identifiers.inchikey,
@@ -57,6 +56,7 @@ class BioactivitySearch(PubchemSearch[BioactivityHit]):
             species=species,
             compound_name_in_assay=dd.compound_name,
             referrer=dd.assay_ref,
+            cache_date=data.names_and_identifiers.modify_date,
         )
 
 

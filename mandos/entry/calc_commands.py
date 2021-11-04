@@ -26,7 +26,7 @@ from mandos.analysis.io_defns import (
 )
 from mandos.analysis.prepping import MatrixPrep
 from mandos.analysis.projection import UMAP
-from mandos.entry.tools.searchers import InputCompoundsDf
+from mandos.entry.tools.searchers import MemoizedInputCompounds
 from mandos.entry.utils._arg_utils import Arg, ArgUtils, EntryUtils, Opt
 from mandos.entry.utils._common_args import CommonArgs
 from mandos.entry.utils._common_args import CommonArgs as Ca
@@ -283,7 +283,7 @@ class CalcCommands:
         name = f"ecfp{radius}-n{n_bits}"
         default = path.parent / (in_base + "-" + name + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
-        df = InputCompoundsDf.read_file(path)
+        df = MemoizedInputCompounds.read_file(path)
         kind = "psi" if psi else "phi"
         short = MatrixPrep.ecfp_matrix(df, radius, n_bits)
         long_form = MatrixPrep(kind, False, False, False).create({name: short})

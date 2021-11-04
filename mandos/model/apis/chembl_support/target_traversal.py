@@ -32,7 +32,6 @@ class Acceptance(CleverEnum):
     at_end = enum.auto()
 
 
-@decorateme.auto_repr_str()
 class TargetTraversalStrategy(metaclass=abc.ABCMeta):
     """ """
 
@@ -48,6 +47,12 @@ class TargetTraversalStrategy(metaclass=abc.ABCMeta):
         Run the strategy.
         """
         raise NotImplementedError()
+
+    def __repr__(self) -> str:
+        return self.__class__.__name__ + "(" + str(self.api()) + ")"
+
+    def __str__(self) -> str:
+        return repr(self)
 
 
 class NullTargetTraversalStrategy(TargetTraversalStrategy, metaclass=abc.ABCMeta):
@@ -232,12 +237,6 @@ class TargetTraversalStrategies:
             def api(cls) -> ChemblApi:
                 return api
 
-            def __repr__(self) -> str:
-                return name + "(" + str(self.api()) + ")"
-
-            def __str__(self) -> str:
-                return repr(self)
-
         Strategy.__name__ = name
         return Strategy()
 
@@ -248,11 +247,13 @@ class TargetTraversalStrategies:
             def api(cls) -> ChemblApi:
                 return api
 
+        NullStrategy.__name__ = "NullStrategy"
         return NullStrategy()
 
     # noinspection PyAbstractClass
     @classmethod
     def create(cls, clz: Type[TargetTraversalStrategy], api: ChemblApi) -> TargetTraversalStrategy:
+        @decorateme.auto_utils()
         class X(clz):
             @classmethod
             def api(cls) -> ChemblApi:

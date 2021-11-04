@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import abc
 import shutil
+from functools import cached_property
 from pathlib import Path
 from typing import Collection, Iterable, Mapping, Optional, Set, Union
 
@@ -20,6 +21,12 @@ from mandos.model.settings import SETTINGS
 from mandos.model.taxonomy import Taxonomy, TaxonomyDf
 from mandos.model.utils.globals import Globals
 from mandos.model.utils.setup import MandosResources, logger
+
+
+class LazyTaxonomy:
+    @cached_property
+    def get(self) -> Taxonomy:
+        raise NotImplementedError()
 
 
 @decorateme.auto_repr_str()
@@ -164,7 +171,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         df["parent"] = df["parent"].fillna(0).astype(int)
         # write it to a feather / csv / whatever
         df = TaxonomyDf.convert(df)
-        df.write_file(final_path, dir_hash=True)
+        df.write_file(final_path.resolve(), dir_hash=True)
         raw_path.unlink()
         return df
 
@@ -221,27 +228,32 @@ class TaxonomyFactories:
         ancestors: Union[int, Collection[int]] = Globals.cellular_taxon,
         cache_dir: Path = SETTINGS.taxonomy_cache_path,
         local_only: bool,
-    ) -> Taxonomy:
-        cache = CachedTaxonomyCache(local_only=local_only, cache_dir=cache_dir)
-        vertebrata = cache.load_vertebrate(Globals.vertebrata)
-        return vertebrata
-        # TODO:
-        # return vertebrata.subtrees_by_ids_or_names(allow)
-        # .exclude_subtrees_by_ids_or_names(forbid)
-        vertebrates: Set[Union[int, str]] = {t for t in allow if t in vertebrata}
-        invertebrates: Set[Union[int, str]] = {t for t in allow if t not in vertebrata}
-        trees: Set[Taxonomy] = {cache.load(t) for t in vertebrates}
-        if len(invertebrates) > 0:
-            logger.debug(
-                f"{len(invertebrates)} invertebrate taxa found with {len(ancestors)} ancestors"
-            )
-            if len(ancestors) == 0:
-                new = {cache.load(t) for t in invertebrates}
-            else:
-                new = Taxonomy.from_trees({cache.load(t) for t in ancestors})
-            trees.add(new.subtrees_by_ids_or_names(invertebrates))
-            logger.debug(f"Added {len(invertebrates)} invertebrate taxa into taxonomy")
-        return Taxonomy.from_trees(trees).exclude_subtrees_by_ids_or_names(forbid)
+    ) -> LazyTaxonomy:
+        class _X(LazyTaxonomy):
+            @cached_property
+            def get(self) -> Taxonomy:
+                cache = CachedTaxonomyCache(local_only=local_only, cache_dir=cache_dir)
+                vertebrata = cache.load_vertebrate(Globals.vertebrata)
+                return vertebrata
+                # TODO:
+                # return vertebrata.subtrees_by_ids_or_names(allow)
+                # .exclude_subtrees_by_ids_or_names(forbid)
+                vertebrates: Set[Union[int, str]] = {t for t in allow if t in vertebrata}
+                invertebrates: Set[Union[int, str]] = {t for t in allow if t not in vertebrata}
+                trees: Set[Taxonomy] = {cache.load(t) for t in vertebrates}
+                if len(invertebrates) > 0:
+                    logger.debug(
+                        f"{len(invertebrates)} invertebrate taxa found with {len(ancestors)} ancestors"
+                    )
+                    if len(ancestors) == 0:
+                        new = {cache.load(t) for t in invertebrates}
+                    else:
+                        new = Taxonomy.from_trees({cache.load(t) for t in ancestors})
+                    trees.add(new.subtrees_by_ids_or_names(invertebrates))
+                    logger.debug(f"Added {len(invertebrates)} invertebrate taxa into taxonomy")
+                return Taxonomy.from_trees(trees).exclude_subtrees_by_ids_or_names(forbid)
+
+        return _X()
 
 
 __all__ = ["TaxonomyFactory", "TaxonomyFactories"]

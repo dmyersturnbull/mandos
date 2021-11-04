@@ -75,7 +75,7 @@ class _ScraperSingleton:
 
     @classmethod
     def get(cls, executor: QueryExecutor):
-        from mandos.model.utils.scrape import By, Scraper
+        from mandos.model.utils.scrape import Scraper
 
         if cls.x is None:
             cls.x = Scraper.create(executor)
@@ -138,8 +138,8 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
             return ChemblScrapeTable.read_file(path)
         elif self._query is None:
             return ChemblScrapeTable.new_empty()
-        data = self._query._fetch_page(cid, page, table_type)
-        data.write_file(path, mkdirs=True)
+        data: TypedDf = self._query._fetch_page(cid, page, table_type)
+        data.write_file(path.resolve(), mkdirs=True)
         logger.debug(f"Scraped page {page} for {cid} with {len(data)} rows")
         return data
 

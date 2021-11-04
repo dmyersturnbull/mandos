@@ -46,6 +46,7 @@ class TargetNode:
         return self.depth == 0
 
 
+@decorateme.auto_obj()
 class AbstractTargetEdgeReqs(metaclass=abc.ABCMeta):
     """
     A set of requirements for a (source, rel, dest) triple.
@@ -246,8 +247,6 @@ class ChemblTargetGraph(metaclass=abc.ABCMeta):
         Args:
             rel_types: Relationship types (e.g. "superset of") to include
                        If ``TargetRelType.self_link`` is included, will add a single self-link
-
-        Returns:
         """
         api = self.__class__.api()
         relations = api.target_relation.filter(target_chembl_id=self.target.chembl)

@@ -15,6 +15,7 @@ from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 from mandos.model.concrete_hits import ProteinHit
 from mandos.model.taxonomy import Taxonomy
+from mandos.model.taxonomy_caches import LazyTaxonomy
 from mandos.model.utils.setup import logger
 from mandos.search.chembl import ChemblSearch
 
@@ -30,7 +31,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         self,
         key: str,
         api: ChemblApi,
-        taxa: Optional[Taxonomy],
+        taxa: Optional[LazyTaxonomy],
         traversal: str,
         allowed_target_types: Set[str],
         min_confidence_score: Optional[int],
@@ -92,14 +93,7 @@ class ProteinSearch(ChemblSearch[H], metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     def find(self, lookup: str) -> Sequence[H]:
-        """
-
-        Args:
-            lookup:
-
-        Returns:
-
-        """
+        _ = self.taxa.get  # do first for better logging
         form = ChemblUtils(self.api).get_compound(lookup)
         results = self.query(form)
         hits = []

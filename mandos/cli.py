@@ -5,7 +5,8 @@ Command-line interface for mandos.
 from __future__ import annotations
 
 import time
-from typing import Type
+from pathlib import Path
+from typing import Optional, Type
 
 import typer
 from loguru import logger
@@ -162,40 +163,64 @@ class MandosTyperCli:
         try:
             self._mandos = MandosCli.as_cli()
             self._mandos.cli()
+            _err("Done! Exited successfully.")
+            if self.log_path:
+                _err(f"See the log file: {self.log_path.resolve()}")
+            quit(0)
         except (KeyboardInterrupt, typer.Abort) as e:
-            self._fail(e, abort=True)
-            quit(1)
-        except (SystemExit, typer.Exit) as e:
-            _err("Abnormal system exit.")
-            self._fail(e, abort=True)
-            quit(2)
+            self._fail(e, "aborted", abort=True)
+            quit(130)
+        except SystemExit as e:
+            if str(e) == "0":
+                _err("Done! Exited successfully.")
+                if self.log_path:
+                    _err(f"See the log file: {self.log_path.resolve()}")
+                quit(0)
+            self._fail(e, "unexpected exit", abort=False)
+            quit(64)
+        except Exception as e:
+            self._fail(e, "error", abort=False)
+            quit(70)
         except BaseException as e:
-            _err("Error.")
-            self._fail(e, abort=False)
-            quit(-1)
+            self._fail(e, "system error", abort=False)
+            quit(71)
 
-    def _fail(self, e: BaseException, *, abort: bool) -> None:
-        if not abort or True:
-            msg = (
-                "\n".join(SystemTools.serialize_exception_msg(e))
-                .replace("[ exc_info True ]", "")
-                .strip()
-            )
+    @property
+    def log_setup(self) -> Optional[FancyLoguru]:
+        if self._mandos and self._mandos.log_setup:
+            return self._mandos.log_setup
+
+    @property
+    def log_path(self) -> Optional[Path]:
+        if self._mandos and self._mandos.log_setup:
+            return self._mandos.log_setup.only_path
+
+    def _fail(self, e: BaseException, what: str, *, abort: bool) -> None:
+        _err("")
+        _err(f"--- {what} ---".upper())
+        dump_path = None
+        if not abort:
+            msg = "\n".join(SystemTools.serialize_exception_msg(e)).strip()
             if len(msg) > 0:
-                _err(f"< Command failed: {msg} >")
+                _err("")
+                _err(f"-- Command failed: {msg} --")
             logger.opt(exception=True).critical(f"Command failed: {msg}")
-            self._dump_error(e)
-        if self._mandos and self._mandos.log_setup and self._mandos.log_setup.only_path:
-            log_path = self._mandos.log_setup.only_path
-            _err(f"See the log file: {log_path.resolve()}")
-        time.sleep(0.5)
+            dump_path = self._dump_error(e)
+        if self.log_path:
+            _err(f"See the log file: {self.log_path.resolve()}")
+        if not abort:
+            if dump_path:
+                _err(f"Wrote error and system info to: {dump_path}")
+            else:
+                _err("Note: Failed to write an error dump")
+        time.sleep(0.05)  # flush, etc.
+        _err("")
 
-    def _dump_error(self, e: BaseException) -> None:
+    def _dump_error(self, e: BaseException) -> Optional[Path]:
         try:
-            dmp_path = FilesysTools.dump_error(e)
-            _err(f"Wrote error and system info to: {dmp_path.resolve()}")
+            return FilesysTools.dump_error(e)
         except BaseException:
-            _err("Note: Failed to write an error dump")
+            return None
 
 
 if __name__ == "__main__":

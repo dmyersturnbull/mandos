@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Sequence
 
+from pocketutils.core.exceptions import XValueError
+
 HIT_FIELD_TYPE = frozenset([str, int, float, datetime])
 
 
@@ -80,6 +82,13 @@ class AbstractHit:
     data_source: str
     run_date: datetime
     cache_date: Optional[datetime]
+
+    def __post_init__(self):
+        if self.weight <= 0:
+            raise XValueError(f"Weight of {self} is nonpositive ({self.weight})")
+
+    def copy(self, **changes) -> __qualname__:
+        return dataclasses.replace(self, **changes)
 
     @property
     def hit_class(self) -> str:

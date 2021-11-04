@@ -25,6 +25,11 @@ from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
 from mandos.model.utils.setup import logger
 
+_html_cid_pattern = regex.compile(
+    r'<meta property="og:url" content="https://pubchem\.ncbi\.nlm\.nih\.gov/compound/(\d+)">',
+    flags=regex.V1,
+)
+
 
 class QueryingPubchemApi(PubchemApi):
     def __init__(
@@ -133,10 +138,6 @@ class QueryingPubchemApi(PubchemApi):
         # Ultimately, I found that I can get HTML containing the CID from an inchikey
         # From there, we'll just have to download its "display" data and get the parent, then download that data
         url = f"https://pubchem.ncbi.nlm.nih.gov/compound/{inchikey}"
-        pat = regex.compile(
-            r'<meta property="og:url" content="https://pubchem\.ncbi\.nlm\.nih\.gov/compound/(\d+)">',
-            flags=regex.V1,
-        )
         try:
             for i in range(SETTINGS.pubchem_n_tries):
                 try:
@@ -148,7 +149,7 @@ class QueryingPubchemApi(PubchemApi):
             raise PubchemCompoundLookupError(
                 f"Failed finding pubchem compound (HTML) from {inchikey} [url: {url}]"
             )
-        match = pat.search(html)
+        match = _html_cid_pattern.search(html)
         if match is None:
             raise DataIntegrityError(
                 f"Something is wrong with the HTML from {url}; og:url not found"

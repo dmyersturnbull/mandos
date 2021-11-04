@@ -32,6 +32,7 @@ from mandos.search.chembl.indication_search import IndicationSearch
 from mandos.search.chembl.mechanism_search import MechanismSearch
 from mandos.search.chembl.target_prediction_search import TargetPredictionSearch
 from mandos.search.g2p.g2p_interaction_search import G2pInteractionSearch
+from mandos.search.hmdb.tissue_concentration_search import TissueConcentrationSearch
 from mandos.search.pubchem.acute_effects_search import AcuteEffectSearch, Ld50Search
 from mandos.search.pubchem.bioactivity_search import BioactivitySearch
 from mandos.search.pubchem.computed_property_search import ComputedPropertySearch
@@ -886,7 +887,7 @@ class EntryG2pInteractions(Entry[G2pInteractionSearch]):
         return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
-class EntryHmdbTissue(Entry[BioactivitySearch]):
+class EntryHmdbTissue(Entry[TissueConcentrationSearch]):
     @classmethod
     def run(
         cls,
@@ -908,7 +909,8 @@ class EntryHmdbTissue(Entry[BioactivitySearch]):
 
         PREDICATE: "tissue:..."
         """
-        pass
+        built = TissueConcentrationSearch(key, Apis.Hmdb)
+        return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
 
 class EntryHmdbComputed(Entry[BioactivitySearch]):

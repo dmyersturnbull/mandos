@@ -3,6 +3,7 @@ from typing import Optional, Sequence, Set
 from pocketutils.tools.common_tools import CommonTools
 
 from mandos.model.apis.pubchem_api import PubchemApi
+from mandos.model.apis.pubchem_support.pubchem_models import ClinicalTrial
 from mandos.model.concrete_hits import TrialHit
 from mandos.search.pubchem import PubchemSearch
 
@@ -26,6 +27,7 @@ class TrialSearch(PubchemSearch[TrialHit]):
     def find(self, inchikey: str) -> Sequence[TrialHit]:
         data = self.api.fetch_data(inchikey)
         hits = []
+        # {std_status}:phase{std_phase}
         for dd in data.drug_and_medication_information.clinical_trials:
             if self.min_phase is not None and dd.mapped_phase < self.min_phase:
                 continue
@@ -58,12 +60,17 @@ class TrialSearch(PubchemSearch[TrialHit]):
                         ),
                         object_id=did,
                         object_name=condition,
+                        weight=self._weight(dd),
                         phase=dd.mapped_phase,
                         status=dd.mapped_status,
                         interventions=str(list(dd.interventions)),
+                        cache_date=data.names_and_identifiers.modify_date,
                     )
                 )
         return hits
+
+    def _weight(self, dd: ClinicalTrial) -> float:
+        return dd.mapped_phase
 
 
 __all__ = ["TrialSearch"]

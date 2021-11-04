@@ -81,6 +81,10 @@
   },
   "pubchem:TrialSearch": {
     "source": "clinical-trials-dot-gov:{source}",
-    "predicate": "{std_status}:phase{std_phase}"
+    "predicate": "trial"
+  },
+  "hmdb:TissueConcentrationSearch": {
+    "source": "hmdb:concentrations",
+    "predicate": "concentration:{normality}"
   }
 }

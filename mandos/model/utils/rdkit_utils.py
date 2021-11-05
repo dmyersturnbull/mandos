@@ -1,3 +1,8 @@
+"""
+rdkit-dependent tools.
+Import this only if and when needed.
+"""
+
 from __future__ import annotations
 
 from typing import Iterator, List, Set
@@ -13,7 +18,7 @@ try:
     from rdkit.Chem import AllChem, Mol, SaltRemover
 except ImportError:
     logger.info("rdkit is not installed")
-    logger.debug("failed to import rdkit", exc_info=True)
+    logger.opt(exception=True).debug("failed to import rdkit")
     Chem = None
     Mol = None
     Inchi = None

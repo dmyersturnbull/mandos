@@ -35,7 +35,7 @@ if webdriver is not None:
         driver_fn = getattr(webdriver, SETTINGS.selenium_driver)
     except AttributeError:
         driver_fn = None
-        logger.caution(f"Selenium driver {SETTINGS.selenium_driver} not found", exc_info=True)
+        logger.opt(exception=True).caution(f"Selenium driver {SETTINGS.selenium_driver} not found")
     else:
         logger.info(f"Selenium installed; expecting driver {SETTINGS.selenium_driver}")
 

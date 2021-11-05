@@ -420,7 +420,7 @@ class MiscCommands:
                 df: HitDf = HitDf.read_file(file, attrs=True)
             except InvalidDfError:
                 logger.warning(f"Skipping {file} {Chars.en} not a valid hit list")
-                logger.debug(f"Error reading {file}", exc_info=True)
+                logger.opt(exception=True).debug(f"Error reading {file}")
                 continue
             df = df.set_attrs({file.name: df.attrs})
             dfs.append(df)

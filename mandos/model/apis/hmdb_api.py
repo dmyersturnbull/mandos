@@ -7,10 +7,9 @@ from urllib import request
 
 import decorateme
 from pocketutils.core.dot_dict import NestedDotDict
-from pocketutils.core.query_utils import QueryExecutor
+from pocketutils.core.query_utils import QueryExecutor, QueryMixin
 
 from mandos.model import Api, CompoundNotFoundError
-from mandos.model.apis import _QueryMixin
 from mandos.model.apis.hmdb_support.hmdb_data import HmdbData
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
 from mandos.model.utils import unlink
@@ -28,7 +27,7 @@ class HmdbApi(Api, metaclass=abc.ABCMeta):
 
 
 @decorateme.auto_repr_str()
-class QueryingHmdbApi(HmdbApi, _QueryMixin):
+class QueryingHmdbApi(HmdbApi, QueryMixin):
     def __init__(self, executor: QueryExecutor = QUERY_EXECUTORS.hmdb):
         self._executor = executor
 

@@ -18,9 +18,8 @@ from pocketutils.core.exceptions import (
     DownloadError,
     LookupFailedError,
 )
-from pocketutils.core.query_utils import QueryExecutor
+from pocketutils.core.query_utils import QueryExecutor, QueryMixin
 
-from mandos.model.apis import _QueryMixin
 from mandos.model.apis.pubchem_api import PubchemApi, PubchemCompoundLookupError
 from mandos.model.apis.pubchem_support.pubchem_data import PubchemData
 from mandos.model.settings import QUERY_EXECUTORS, SETTINGS
@@ -37,7 +36,7 @@ class _CidInchikey(NamedTuple):
     inchikey: str
 
 
-class QueryingPubchemApi(PubchemApi, _QueryMixin):
+class QueryingPubchemApi(PubchemApi, QueryMixin):
     def __init__(
         self,
         chem_data: bool = True,
@@ -70,7 +69,7 @@ class QueryingPubchemApi(PubchemApi, _QueryMixin):
         try:
             return self.fetch_data(inchikey).cid
         except PubchemCompoundLookupError:
-            logger.debug(f"Could not find pubchem ID for {inchikey}", exc_info=True)
+            logger.opt(exception=True).debug(f"Could not find pubchem ID for {inchikey}")
             return None
 
     def fetch_properties(self, cid: int) -> Mapping[str, Any]:
@@ -150,7 +149,9 @@ class QueryingPubchemApi(PubchemApi, _QueryMixin):
                 try:
                     html = self._query(url)
                 except ConnectionAbortedError:
-                    logger.warning(f"Connection aborted for {inchikey} [url: {url}]", exc_info=True)
+                    logger.opt(exception=True).warning(
+                        f"Connection aborted for {inchikey} [url: {url}]"
+                    )
                     continue
         except HTTPError:
             raise PubchemCompoundLookupError(

@@ -42,7 +42,6 @@ class Entry(Generic[S], metaclass=abc.ABCMeta):
     # noinspection PyUnusedLocal
     @classmethod
     def test(cls, path: Path, **params) -> None:
-        # TODO: lower stderr level?
         cls.run(path, **{**params, **dict(check=True)})
 
     @classmethod

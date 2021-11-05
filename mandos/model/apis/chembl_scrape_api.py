@@ -140,7 +140,7 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
         elif self._query is None:
             return ChemblScrapeTable.new_empty()
         data: TypedDf = self._query._fetch_page(cid, page, table_type)
-        data.write_file(path.resolve(), mkdirs=True)
+        data.write_file(path, mkdirs=True)
         logger.debug(f"Scraped page {page} for {cid} with {len(data):,} rows")
         return data
 

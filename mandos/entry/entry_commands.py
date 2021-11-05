@@ -21,7 +21,8 @@ from mandos.entry.utils._common_args import CommonArgs
 from mandos.entry.utils._entry_args import EntryArgs
 from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.pubchem_support.pubchem_models import (
-    ClinicalTrialsGovUtils,
+    ClinicalTrialPhase,
+    ClinicalTrialSimplifiedStatus,
     CoOccurrenceType,
     DrugbankTargetType,
 )
@@ -426,7 +427,7 @@ class EntryPubchemTrials(Entry[TrialSearch]):
 
         OBJECT: The name of the disease (in MeSH)
         """
-        statuses = ClinicalTrialsGovUtils.resolve_statuses(statuses)
+        statuses = ClinicalTrialSimplifiedStatus.parse(statuses)
         built = TrialSearch(
             key=key, api=Apis.Pubchem, min_phase=min_phase, statuses=statuses, explicit=req_explicit
         )
@@ -944,15 +945,7 @@ class EntryPubchemComputed(Entry[ComputedPropertySearch]):
         """
         # replace acronyms, etc.
         # ComputedPropertySearch standardizes punctuation and casing
-        known = {
-            k: v
-            for k, v in {
-                **EntryArgs.KNOWN_USEFUL_KEYS,
-                **EntryArgs.KNOWN_USELESS_KEYS,
-            }.items()
-            if v is not None
-        }
-        keys = {known.get(s.strip(), s) for s in keys.split(",")}
+        keys = {EntryArgs.ALL_NON_EMPTY_KEYS.get(s.strip(), s) for s in keys.split(",")}
         built = ComputedPropertySearch(key, Apis.Pubchem, descriptors=keys)
         return cls._run(built, path, to, replace, proceed, check, log, stderr)
 
@@ -1020,7 +1013,7 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
         path: Path = CommonArgs.in_compound_table,
         key: str = EntryArgs.key("hmdb:computed"),
         to: Optional[Path] = CommonArgs.out_annotations_file,
-        min_nm: Optional[float] = None,
+        min_nm: Optional[float] = EntryArgs.min_nanomolar,
         as_of: Optional[str] = CommonArgs.as_of,
         replace: bool = CommonArgs.replace,
         proceed: bool = CommonArgs.proceed,
@@ -1033,7 +1026,7 @@ class EntryHmdbComputed(Entry[BioactivitySearch]):
 
         Keys include pKa, logP, logS, etc.
 
-        OBJECT: A number; booleans are converted to 0/1
+        OBJECT: Numeric values
 
         PREDICATE: The name of the property
         """

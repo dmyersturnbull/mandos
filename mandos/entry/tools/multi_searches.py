@@ -110,7 +110,7 @@ class MultiSearch:
         SearchExplainDf([pd.Series(x) for x in docs]).write_file(self.doc_path)
         df = df.set_attrs(commands=docs, written=now)
         df.write_file(
-            self.final_path.resolve(),
+            self.final_path,
             dir_hash=True,
             file_hash=True,
             attrs=True,

@@ -1,4 +1,3 @@
-from inspect import cleandoc
 from typing import Mapping
 
 import decorateme
@@ -7,6 +6,10 @@ import typer
 from mandos.entry.utils._arg_utils import ArgUtils, Opt
 from mandos.model.apis.chembl_support.chembl_targets import ConfidenceLevel, TargetType
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
+from mandos.model.apis.pubchem_support.pubchem_models import (
+    ClinicalTrialPhase,
+    ClinicalTrialSimplifiedStatus,
+)
 
 
 def _stringify(keys: Mapping[str, str]):
@@ -17,18 +20,16 @@ def _stringify(keys: Mapping[str, str]):
 class EntryArgs:
     @staticmethod
     def key(name: str) -> typer.Option:
-        return typer.Option(
+        return Opt.val(
+            r"""
+            A unique key to designate the search.
+
+            A <60-character name that describes the search and parameters.
+            Intermediate output filenames will use this value.
+            """,
             name,
             min=1,
             max=120,
-            help=cleandoc(
-                r"""
-                A unique key to designate the search.
-
-                A <60-character name that describes the search and parameters.
-                Intermediate output filenames will use this value.
-                """
-            ),
         )
 
     check = Opt.flag(
@@ -40,174 +41,149 @@ class EntryArgs:
     #                                         CHEMBL                                              #
     ###############################################################################################
 
-    traversal = typer.Option(
-        "@null",
-        "--traversal",
+    traversal = Opt.val(
+        rf"""
+        Target traversal strategy name, file, or class.
+        This is an experimental option. See the docs.
+
+        Can be one of:
+        (A) A standard strategy name, starting with @;
+        (B) The path to a *.strat file; OR
+        (C) The fully qualified name of a TargetTraversal
+
+        Standard strategies:
+        {ArgUtils.list(TargetTraversalStrategies.standard_strategies(), sep="; ")}
+
+        [default: @null] (leave targets as-is)
+        """,
+        default="@null",
         show_default=False,
-        help=cleandoc(
-            rf"""
-            Target traversal strategy name, file, or class.
-            This is an experimental option. See the docs.
-
-            Can be one of:
-            (A) A standard strategy name, starting with @;
-            (B) The path to a *.strat file; OR
-            (C) The fully qualified name of a TargetTraversal
-
-            Standard strategies:
-            {ArgUtils.list(TargetTraversalStrategies.standard_strategies(), sep="; ")}
-
-            [default: @null] (leave targets as-is)
-            """
-        ),
     )
 
-    target_types = typer.Option(
-        "@molecular",
-        "--targets",
-        help=cleandoc(
-            f"""
-            The accepted target types, comma-separated.
+    target_types = Opt.val(
+        f"""
+        The accepted target types, comma-separated.
 
-            NOTE: This affects only the types are are accepted after traversal,
-            and the types must be included in the traversal.
-            This means that this must be AT LEAST as restrictive as the traversal strategy.
+        NOTE: This affects only the types are are accepted after traversal,
+        and the types must be included in the traversal.
+        This means that this must be AT LEAST as restrictive as the traversal strategy.
 
-            The ChEMBL-defined types are:
-            {ArgUtils.list(TargetType)}
+        The ChEMBL-defined types are:
+        {ArgUtils.list(TargetType)}
 
-            These special names are also accepted:
+        These special names are also accepted:
 
-            {ArgUtils.definition_bullets(TargetType.special_type_names())}
-            """
-        ),
+        {ArgUtils.definition_bullets(TargetType.special_type_names())}
+        """,
+        default="@molecular",
     )
 
-    min_confidence = typer.Option(
-        3,
-        "--confidence",
+    min_confidence = Opt.val(
+        rf"""
+        Minimum target confidence score, inclusive.
+
+        This is useful to modify in only some cases.
+        More important options are min_pchembl and taxa.
+
+        Values are: {ArgUtils.list(ConfidenceLevel)}
+
+        [default: 3] ("Target assigned is molecular non-protein target")
+        """,
+        default=3,
         min=0,
         max=9,
         show_default=False,
-        help=cleandoc(
-            rf"""
-            Minimum target confidence score, inclusive.
-
-            This is useful to modify in only some cases.
-            More important options are min_pchembl and taxa.
-
-            Values are: {ArgUtils.list(ConfidenceLevel)}
-
-            [default: 3] ("Target assigned is molecular non-protein target")
-            """
-        ),
     )
 
-    min_pchembl = typer.Option(
-        0.0,
-        "--pchembl",
-        min=0.0,
-        help=cleandoc(
-            """
-            Minimum pCHEMBL value, inclusive.
+    min_pchembl = Opt.val(
+        r"""
+        Minimum pCHEMBL value, inclusive.
 
-            Set to 0 if "cutoff" is set.
-            """
-        ),
+        Set to 0 if "cutoff" is set.
+        """,
+        default=0,
+        min=0,
     )
 
-    binds_cutoff = typer.Option(
-        7.0,
-        "--binding",
+    binds_cutoff = Opt.val(
+        r"""
+        Cutoff of pCHEMBL at which "binds" is declared.
+
+        Applies only if the relation is >, >=, =, or ~.
+
+        [default: 7.0 (100 nanomolar)]
+        """,
+        default=7.0,
         min=0.0,
         show_default=False,
-        help=cleandoc(
-            """
-            Cutoff of pCHEMBL at which "binds" is declared.
-
-            Applies only if the relation is >, >=, =, or ~.
-
-            [default: 7.0 (100 nanomolar)]
-            """
-        ),
     )
 
-    min_threshold = typer.Option(
-        70,
-        "--min-threshold",
+    min_threshold = Opt.val(
+        r"""
+        Minimum pCHEMBL threshold used to limit the true examples when training the QSAR model.
+
+        Must be either 70, 80, or 90.
+        An "active" or "inactive" prediction is required for this threshold or higher.
+        """,
+        default=70,
         min=70,
-        help=cleandoc(
-            """
-            Minimum pCHEMBL threshold used to limit the true examples when training the QSAR model.
-
-            Must be either 70, 80, or 90.
-            An "active" or "inactive" prediction is required for this threshold or higher.
-            """
-        ),
+        max=90,
     )
 
-    binding_search_name = typer.Option(
-        None,
-        help=cleandoc(
-            r"""
-            The fully qualified name of a class inheriting ``BindingSearch``.
+    binding_search_name = Opt.val(
+        r"""
+        The fully qualified name of a class inheriting ``BindingSearch``.
 
-            If specified, all parameters above are passed to its constructor.
-            """
-        ),
+        If specified, all parameters above are passed to its constructor.
+        """
     )
 
-    chembl_trial = typer.Option(
-        0,
-        "--phase",
-        help=cleandoc(
-            r"""
-            Minimum clinical trial phase, inclusive.
+    chembl_trial = Opt.val(
+        r"""
+        Minimum clinical trial phase, inclusive.
 
-            Values are: 0, 1, 2, 3.
-            """
-        ),
+        Values are: 0, 1, 2, 3, 4.
+        """,
+        default=0,
         min=0,
-        max=3,
+        max=4,
     )
 
-    atc_level = typer.Option("1,2,3,4", help="""List of ATC levels, comma-separated.""")
+    atc_level = Opt.val(r"""List of ATC levels, comma-separated.""", default="1,2,3,4")
 
     ###############################################################################################
     #                                         PUBCHEM                                             #
     ###############################################################################################
 
-    pubchem_trial_phase = typer.Option(
-        0,
-        "--phase",
-        help=cleandoc(
-            r"""
-            Minimum clinical trial pseudo-phase.
+    pubchem_trial_phase = Opt.val(
+        rf"""
+        Minimum clinical trial pseudo-phase.
 
-            Values are: 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0
-            """
-        ),
+        Values are: {", ".join(str(e.score) for e in ClinicalTrialPhase)}.
+        """,
+        default=0,
         min=0,
-        max=4,
+        max=max((e.score for e in ClinicalTrialPhase)),
     )
 
     pubchem_trial_statuses = Opt.val(
-        r"""
+        rf"""
         Trial pseudo-statuses, comma-separated.
 
-        Values are: "unknown", "completed", "stopped", and "ongoing".
+        Values are: {", ".join(s.name for s in ClinicalTrialSimplifiedStatus)}.
         """,
+        default="@all",
     )
 
-    min_cooccurrence_score = typer.Option(
-        0.0,
-        help=r"Minimum enrichment score, inclusive. See the docs.",
+    min_cooccurrence_score = Opt.val(
+        r"Minimum enrichment score, inclusive. See the docs.",
+        default=0.0,
         min=0.0,
     )
 
-    min_cooccurring_articles = typer.Option(
-        0,
-        help=r"Minimum number of articles for both the compound and object, inclusive.",
+    min_cooccurring_articles = Opt.val(
+        r"Minimum number of articles for both the compound and object, inclusive.",
+        default=0,
         min=0,
     )
 
@@ -223,23 +199,14 @@ class EntryArgs:
         """
     )
 
-    min_nanomolar = Opt.val(
+    acute_effect_level = Opt.val(
         r"""
-        Minimum tissue concentration in nanomolar required to include.
+        The level in the ChemIDPlus hierarchy of effect names.
+        (E.g. 'behavioral' for level 1 and 'behavioral: excitement' for level 2.)
         """,
-        default=1,
-    )
-
-    acute_effect_level = typer.Option(
-        2,
+        default=2,
         min=1,
         max=2,
-        help=cleandoc(
-            r"""
-            The level in the ChemIDPlus hierarchy of effect names.
-            (E.g. 'behavioral' for level 1 and 'behavioral: excitement' for level 2.)
-            """
-        ),
     )
 
     req_explicit = Opt.flag(
@@ -272,19 +239,21 @@ class EntryArgs:
         "compound-is-canonicalized": None,
     }
 
-    pubchem_computed_keys = typer.Option(
-        "weight,xlogp3,tpsa,complexity,exact-mass,heavy-atom-count,charge",
-        help=cleandoc(
-            rf"""
-            The keys of the computed properties, comma-separated.
+    ALL_NON_EMPTY_KEYS = {
+        k: v for k, v in {**KNOWN_USEFUL_KEYS, **KNOWN_USELESS_KEYS}.items() if v is not None
+    }
 
-            Keys are case-insensitive and mainly ignore punctuation.
+    pubchem_computed_keys = Opt.val(
+        rf"""
+        The keys of the computed properties, comma-separated.
 
-            Main keys: {_stringify(KNOWN_USEFUL_KEYS)}
+        Keys are case-insensitive and mainly ignore punctuation.
 
-            Less-useful keys: {_stringify(KNOWN_USELESS_KEYS)}
-            """
-        ),
+        Main keys: {_stringify(KNOWN_USEFUL_KEYS)}
+
+        Less-useful keys: {_stringify(KNOWN_USELESS_KEYS)}
+        """,
+        default="weight,xlogp3,tpsa,complexity,exact-mass,heavy-atom-count,charge",
     )
 
     ###############################################################################################
@@ -295,17 +264,22 @@ class EntryArgs:
     #                                          HMDB                                               #
     ###############################################################################################
 
+    min_nanomolar = Opt.val(
+        r"""
+        Minimum tissue concentration in nanomolar required to include.
+        """,
+        default=1,
+    )
+
     ###############################################################################################
     #                                          META                                               #
     ###############################################################################################
 
-    random_n = typer.Option(
-        1000,
-        help=cleandoc(
-            rf"""
-            The number of classes to choose from (max n for int).
-            """
-        ),
+    random_n = Opt.val(
+        rf"""
+        The number of classes to choose from (max n for int).
+        """,
+        default=1000,
     )
 
 

@@ -3,7 +3,17 @@ from __future__ import annotations
 import enum
 from dataclasses import dataclass
 from datetime import date
-from typing import FrozenSet, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    AbstractSet,
+    FrozenSet,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 import orjson
 from pocketutils.core.dot_dict import NestedDotDict
@@ -180,59 +190,141 @@ class CoOccurrenceType(CleverEnum):
         raise AssertionError(f"{self} not found!!")
 
 
-class ClinicalTrialsGovUtils:
-    @classmethod
-    def phase_map(cls) -> Mapping[str, float]:
-        return {
-            "Phase 4": 4,
-            "Phase 3": 3,
-            "Phase 2": 2,
-            "Phase 1": 1,
-            "Early Phase 1": 1.5,
-            "Phase 2/Phase 3": 2.5,
-            "N/A": 0.5,
-        }
+class _PM(NamedTuple):
+    name: str
+    score: float
+
+
+class _SM(NamedTuple):
+    name: str
+    simplified: str
+
+
+_phase_map: Mapping[str, _PM] = dict(
+    phase_4=_PM("Phase 4", 4),
+    phase_3=_PM("Phase 3", 3),
+    phase_2=_PM("Phase 2", 2),
+    phase_1=_PM("Phase 1", 1),
+    early_phase_1=_PM("Early Phase 1", 0.5),
+    phase_2_or_3=_PM("Phase 2/Phase 3", 2.5),
+    na=_PM("N/A", 0.5),
+    unknown=_PM("", 0.5),  # doesn't occur in the wild
+)
+_status_map: Mapping[str, _SM] = dict(
+    unknown=_SM("Unknown status", "unknown"),
+    completed=_SM("Completed", "completed"),
+    terminated=_SM("Terminated", "stopped"),
+    suspended=_SM("Suspended", "stopped"),
+    withdrawn=_SM("Withdrawn", "stopped"),
+    not_yet_recruiting=_SM("Not yet recruiting", "ongoing"),
+    recruiting=_SM("Recruiting", "ongoing"),
+    enrolling_by_invitation=_SM("Enrolling by invitation", "ongoing"),
+    active_not_recruiting=_SM("Active, not recruiting", "ongoing"),
+    available=_SM("Available", "completed"),
+    no_longer_available=_SM("No longer available", "completed"),
+    temporarily_not_available=_SM("Temporarily not available", "completed"),
+    approved_for_marketing=_SM("Approved for marketing", "completed"),
+)
+
+
+class ClinicalTrialSimplifiedStatus(CleverEnum):
+    unknown = ()
+    completed = ()
+    stopped = ()
+    ongoing = ()
 
     @classmethod
-    def known_phases(cls) -> Set[float]:
-        return set(cls.phase_map().values())
-
-    @classmethod
-    def resolve_statuses(cls, st: str) -> Set[str]:
-        found = set()
+    def parse(cls, st: str) -> AbstractSet[ClinicalTrialSimplifiedStatus]:
+        _mp = {"@all": set(cls)}
+        found: Set[ClinicalTrialSimplifiedStatus] = set()
         for s in st.lower().split(","):
-            s = s.strip()
-            if s == "@all":
-                match = cls.known_statuses()
-            elif s in cls.known_statuses():
-                match = {s}
-            else:
-                raise XValueError(f"Invalid status {s}")
-            for m in match:
-                found.add(m)
+            found.update(_mp.get(s.strip(), {s.strip()}))
+        return found
+
+
+class ClinicalTrialPhase(CleverEnum):
+    unknown = ()
+    na = ()
+    phase_2_or_3 = ()
+    early_phase_1 = ()
+    phase_1 = ()
+    phase_2 = ()
+    phase_3 = ()
+    phase_4 = ()
+
+    @classmethod
+    def _unmatched_type(cls) -> Optional[__qualname__]:
+        return cls.unknown
+
+    @classmethod
+    def parse(cls, st: str) -> AbstractSet[ClinicalTrialPhase]:
+        _by_score = {"@" + str(v): {x for x in cls if x.score == v} for v in {x.score for x in cls}}
+        _map = {**{"@all": set(cls)}, **_by_score}
+        found: Set[ClinicalTrialPhase] = set()
+        for s in [s.strip() for s in st.lower().split(",")]:
+            found.update(_map.get(s, {cls[s]}))
         return found
 
     @classmethod
-    def known_statuses(cls) -> Set[str]:
-        return set(cls.status_map().values())
+    def of(cls, s: Union[str, __qualname__]) -> __qualname__:
+        if isinstance(s, str):
+            s = _phase_map.get(s, _PM(s, -1)).name
+        return super().of(s)
+
+    @property
+    def raw_name(self) -> str:
+        return _phase_map[self.name].name
+
+    @property
+    def score(self) -> float:
+        return _phase_map[self.name].score
+
+
+class ClinicalTrialStatus(CleverEnum):
+
+    unknown = ()
+    completed = ()
+    terminated = ()
+    suspended = ()
+    withdrawn = ()
+    not_yet_recruiting = ()
+    recruiting = ()
+    enrolling_by_invitation = ()
+    active_not_recruiting = ()
+    available = ()
+    no_longer_available = ()
+    temporarily_not_available = ()
+    approved_for_marketing = ()
 
     @classmethod
-    def status_map(cls) -> Mapping[str, str]:
-        return {
-            "Unknown status": "unknown",
-            "Completed": "completed",
-            "Terminated": "stopped",
-            "Suspended": "stopped",
-            "Withdrawn": "stopped",
-            "Not yet recruiting": "ongoing",
-            "Recruiting": "ongoing",
-            "Enrolling by invitation": "ongoing",
-            "Active, not recruiting": "ongoing",
-            "Available": "completed",
-            "No longer available": "completed",
-            "Temporarily not available": "completed",
-            "Approved for marketing": "completed",
+    def _unmatched_type(cls) -> Optional[__qualname__]:
+        return cls.unknown
+
+    @classmethod
+    def parse(cls, st: str) -> AbstractSet[ClinicalTrialStatus]:
+        _by_simple = {
+            "@" + v: {x for x in cls if x.simplified.name == v}
+            for v in {x.simplified.name for x in cls}
         }
+        _map = {**{"@all": set(cls)}, **_by_simple}
+        found: Set[ClinicalTrialStatus] = set()
+        for s in [s.strip() for s in st.lower().split(",")]:
+            found.update(_map.get(s, {cls[s]}))
+        return found
+
+    @classmethod
+    def of(cls, s: Union[str, __qualname__]) -> __qualname__:
+        if isinstance(s, str):
+            s = _status_map.get(s, _SM(s, "--")).name
+        return super().of(s)
+
+    @property
+    def raw_name(self) -> str:
+        return _status_map[self.name][0]
+
+    @property
+    def simplified(self) -> ClinicalTrialSimplifiedStatus:
+        return _status_map[self.name][1]
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -248,12 +340,12 @@ class ClinicalTrial:
     source: str
 
     @property
-    def mapped_phase(self) -> float:
-        return ClinicalTrialsGovUtils.phase_map().get(self.phase, 0)
+    def mapped_phase(self) -> ClinicalTrialPhase:
+        return ClinicalTrialPhase.of(self.phase)
 
     @property
-    def mapped_status(self) -> str:
-        return ClinicalTrialsGovUtils.status_map().get(self.status, "unknown")
+    def mapped_status(self) -> ClinicalTrialStatus:
+        return ClinicalTrialStatus.of(self.status)
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -504,7 +596,9 @@ __all__ = [
     "CoOccurrence",
     "Publication",
     "ComputedProperty",
-    "ClinicalTrialsGovUtils",
+    "ClinicalTrialStatus",
+    "ClinicalTrialSimplifiedStatus",
+    "ClinicalTrialPhase",
     "AcuteEffectEntry",
     "DrugbankTargetType",
 ]

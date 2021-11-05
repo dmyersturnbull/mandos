@@ -159,7 +159,7 @@ class Searcher:
         df: HitDf = HitDf.of(df)
         params = self.what.get_params()
         df = df.set_attrs(**params, key=self.what.key)
-        df.write_file(self.to.resolve(), mkdirs=True, attrs=True, dir_hash=done)
+        df.write_file(self.to, mkdirs=True, attrs=True, dir_hash=done)
         logger.debug(f"Saved {len(df)} rows to {self.to}")
 
 

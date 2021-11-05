@@ -172,7 +172,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
         df["parent"] = df["parent"].fillna(0).astype(int)
         # write it to a feather / csv / whatever
         df = TaxonomyDf.convert(df)
-        df.write_file(final_path.resolve(), dir_hash=True)
+        df.write_file(final_path, dir_hash=True)
         unlink(raw_path)
         return df
 

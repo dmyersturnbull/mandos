@@ -16,7 +16,6 @@ from mandos.model.apis.pubchem_similarity_api import (
 )
 from mandos.model.apis.querying_pubchem_api import QueryingPubchemApi
 from mandos.model.apis.similarity_api import SimilarityApi
-from mandos.model.settings import SETTINGS
 from mandos.model.utils.setup import logger
 
 
@@ -47,7 +46,7 @@ class Apis:
         cls.Hmdb = hmdb
         cls.ChemblScrape = chembl_scrape
         cls.Similarity = similarity
-        logger.debug("Set custom API singletons")
+        logger.debug(f"Set custom API singletons: {cls}")
 
     @classmethod
     def set_default(
@@ -74,7 +73,7 @@ class Apis:
             cls.ChemblScrape = CachingChemblScrapeApi(QueryingChemblScrapeApi())
         if similarity:
             cls.Similarity = CachingPubchemSimilarityApi(QueryingPubchemSimilarityApi())
-        logger.debug("Set default singletons")
+        logger.debug(f"Set default singletons: {cls}")
 
 
 __all__ = ["Apis"]

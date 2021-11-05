@@ -20,7 +20,7 @@ from mandos.model.settings import SETTINGS
 from mandos.model.utils.setup import logger
 
 
-@decorateme.auto_repr_str()
+@decorateme.auto_utils()
 class Apis:
 
     Pubchem: PubchemApi = None
@@ -47,7 +47,6 @@ class Apis:
         cls.Hmdb = hmdb
         cls.ChemblScrape = chembl_scrape
         cls.Similarity = similarity
-        SETTINGS.configure()
         logger.debug("Set custom API singletons")
 
     @classmethod
@@ -75,7 +74,6 @@ class Apis:
             cls.ChemblScrape = CachingChemblScrapeApi(QueryingChemblScrapeApi())
         if similarity:
             cls.Similarity = CachingPubchemSimilarityApi(QueryingPubchemSimilarityApi())
-        SETTINGS.configure()
         logger.debug("Set default singletons")
 
 

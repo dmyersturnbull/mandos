@@ -16,7 +16,7 @@ from mandos.model.apis.chembl_support.chembl_targets import TargetFactory
 from mandos.model.apis.chembl_support.chembl_utils import ChemblUtils
 from mandos.model.apis.chembl_support.target_traversal import TargetTraversalStrategies
 from mandos.model.concrete_hits import ChemblTargetPredictionHit
-from mandos.model.taxonomy import Taxon, Taxonomy
+from mandos.model.taxonomy import Taxon
 from mandos.model.taxonomy_caches import LazyTaxonomy
 from mandos.model.utils.setup import logger
 from mandos.search.chembl import ChemblScrapeSearch

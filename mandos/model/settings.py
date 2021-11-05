@@ -187,6 +187,11 @@ class Settings:
 
     def configure(self):
         """ """
+        # this is a little hacky, but we want to delay logging till now
+        if Globals.settings_path.exists():
+            logger.success(f"Read settings at {Globals.settings_path}")
+        else:
+            logger.success(f"Using defaults (no file at {Globals.settings_path})")
         if self.log_exit:
             SystemTools.trace_exit(CommonTools.make_writer(logger.trace))
         if self.log_signals:
@@ -224,11 +229,8 @@ class Settings:
 
 if Globals.settings_path.exists():
     SETTINGS = Settings.from_file(Globals.settings_path)
-    logger.success(f"Read settings at {Globals.settings_path}")
 else:
     SETTINGS = Settings.empty()
-    logger.success(f"Using defaults (no file at {Globals.settings_path})")
-SETTINGS.configure()
 
 
 class QueryExecutors:

@@ -7,7 +7,6 @@ from mandos.model.apis.chembl_api import ChemblApi
 from mandos.model.apis.chembl_support import ChemblCompound
 from mandos.model.apis.chembl_support.chembl_activity import DataValidityComment
 from mandos.model.apis.chembl_support.chembl_target_graphs import ChemblTargetGraph
-from mandos.model.taxonomy import Taxonomy
 from mandos.model.taxonomy_caches import LazyTaxonomy
 from mandos.model.utils.setup import logger
 from mandos.search.chembl._protein_search import H, ProteinSearch

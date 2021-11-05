@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import List, Optional
 
 import decorateme
-import pandas as pd
 from pocketutils.core.exceptions import ResourceError
 from typeddfs import CompressionFormat
 from typeddfs.utils.cli_help import DfCliHelp

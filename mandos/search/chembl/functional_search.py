@@ -1,4 +1,4 @@
-from typing import Sequence, Set
+from typing import Sequence
 
 from pocketutils.core.dot_dict import NestedDotDict
 

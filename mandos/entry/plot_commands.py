@@ -258,7 +258,7 @@ class Pa:
     @classmethod
     def get_degree(cls, order: str) -> int:
         try:
-            order = int(order)
+            return int(order)
         except ValueError:
             pass
         arities = dict(

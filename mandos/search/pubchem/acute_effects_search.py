@@ -1,7 +1,5 @@
 from typing import Sequence
 
-import numpy as np
-
 from mandos.model.apis.pubchem_api import PubchemApi
 from mandos.model.concrete_hits import AcuteEffectHit, Ld50Hit
 from mandos.model.utils.setup import logger

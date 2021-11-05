@@ -98,7 +98,7 @@ class Mappings:
         df = MappingDf.read_file(path)
         compiler = _Compiler()
         df[df.columns[0]] = df[df.columns[0]].map(compiler.compile)
-        logger.info(f"Read mapping with {len(df)} items from {path}")
+        logger.info(f"Read mapping with {len(df):,} items from {path}")
         return df
 
 

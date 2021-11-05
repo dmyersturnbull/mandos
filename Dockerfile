@@ -50,6 +50,8 @@ RUN poetry config virtualenvs.create false \
 # Copy to workdir
 COPY . /code
 
-EXPOSE 1532
+RUN poetry install /code --extras server
+
+EXPOSE 1532/tcp
 ENTRYPOINT mandos
-CMD ["--help"]
+CMD [":serve", "--init", "--port", "1532", "--log", "serve.log"]

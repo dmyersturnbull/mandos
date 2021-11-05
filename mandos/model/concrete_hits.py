@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import enum
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional
 
 from pocketutils.core.enums import CleverEnum
 from pocketutils.tools.reflection_tools import ReflectionTools

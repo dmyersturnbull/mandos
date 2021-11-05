@@ -67,7 +67,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             else:
                 logger.info(f"Taxon {taxon} found in the vertebrata cache")
                 tree = self._load_or_dl(taxon)
-        logger.info(f"Taxonomy has {len(tree)} taxa with {len(tree.roots)} roots")
+        logger.info(f"Taxonomy has {len(tree):,} taxa with {len(tree.roots)} roots")
         return tree
 
     def load_exact(self, taxon: int) -> Optional[Taxonomy]:
@@ -97,11 +97,11 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             return Taxonomy.from_path(path)
         else:
             # raise AssertionError(str(taxon))  # TODO
-            logger.notice(f"Downloading new taxonomy file for taxon {taxon}")
+            logger.notice(f"Downloading taxonomy for taxon {taxon}")
             self._download_raw(raw_path, taxon)
             path = self._resolve_non_vertebrate_final(taxon)
             df = self._fix(raw_path, taxon, path)
-            logger.notice(f"Cached taxonomy at {path} .")
+            logger.success(f"Cached taxonomy at {path} .")
             return Taxonomy.from_df(df)
 
     def rebuild(self, *taxa: int, replace: bool) -> None:
@@ -112,7 +112,7 @@ class CachedTaxonomyCache(TaxonomyFactory, metaclass=abc.ABCMeta):
             if replace or not path.exists():
                 self.delete_exact(taxon)
                 self._load_or_dl(taxon)
-                logger.notice(f"Regenerated {taxon} taxonomy")
+                logger.success(f"Regenerated {taxon} taxonomy")
 
     def delete_exact(self, taxon: int) -> None:
         raw = self._resolve_non_vertebrate_raw(taxon)

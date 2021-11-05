@@ -25,8 +25,6 @@ from mandos.model import CompoundStruct
 from mandos.model.apis.pubchem_support._nav import FlatmapError, JsonNavigator
 from mandos.model.apis.pubchem_support._nav_fns import Filter, FilterFn, Flatmap, Mapx
 from mandos.model.apis.pubchem_support._patterns import Patterns
-
-# noinspection PyProtectedMember
 from mandos.model.apis.pubchem_support.pubchem_models import (
     Activity,
     AcuteEffectEntry,

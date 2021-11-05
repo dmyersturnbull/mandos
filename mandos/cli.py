@@ -16,6 +16,7 @@ from pocketutils.tools.filesys_tools import FilesysTools
 from pocketutils.tools.sys_tools import SystemTools
 from typer.models import CommandInfo
 
+from mandos.model.settings import SETTINGS
 from mandos.model.utils.globals import Globals
 
 cli = typer.Typer()
@@ -153,6 +154,7 @@ class MandosCli:
             logger.error("Could not load package metadata for mandos. Is it installed?")
         else:
             logger.info(f"Mandos v{MandosMetadata.version}")
+        SETTINGS.configure()
 
 
 class MandosTyperCli:
@@ -201,9 +203,9 @@ class MandosTyperCli:
         dump_path = None
         if not abort:
             msg = "\n".join(SystemTools.serialize_exception_msg(e)).strip()
+            logger.opt(exception=True).critical(f"error: {msg}\n")
             if len(msg) > 0:
                 _err(f"\n-- Command failed: {msg} --\n")
-            logger.opt(exception=True).critical(f"Command failed: {msg}")
             dump_path = self._dump_error(e)
         if self.log_path:
             _err(f"See the log file: {self.log_path.resolve()}")

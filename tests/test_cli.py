@@ -18,7 +18,7 @@ class TestCli:
         result = runner.invoke(cli, ["chembl:atc", "--help"])
         if result.exception is not None:
             raise result.exception
-        assert "--verbose" in result.stdout
+        assert "--stderr" in result.stdout
 
 
 if __name__ == "__main__":

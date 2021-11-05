@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from mandos.model.hit_dfs import HitUtils
-from mandos.model.hits import AbstractHit, HitFrame
+from mandos.model.hit_dfs import HitDf
+from mandos.model.hits import AbstractHit
 
 from .. import get_test_resource
 
@@ -15,10 +15,10 @@ class _SimpleHit(AbstractHit):
 
 class TestHits:
     def test(self):
-        df = HitFrame.read_file(get_test_resource("chembl_atc.csv"))
-        hits = HitUtils.df_to_hits(df)
+        df = HitDf.read_file(get_test_resource("chembl_atc.csv"))
+        hits = df.to_hits(df)
         assert len(hits) == 10
-        df2 = HitUtils.hits_to_df(hits)
+        df2 = HitDf.from_hits(hits)
         assert len(df2) == 10
 
 

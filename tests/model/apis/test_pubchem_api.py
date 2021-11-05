@@ -15,7 +15,8 @@ from mandos.model.apis.pubchem_support.pubchem_models import (
     DrugbankDdi,
     DrugGeneInteraction,
 )
-from tests import get_test_resource
+
+from ... import get_test_resource
 
 
 class TestPubchemData:

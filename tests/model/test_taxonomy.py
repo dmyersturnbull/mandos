@@ -6,7 +6,7 @@ from mandos.model.taxonomy_caches import TaxonomyFactories
 
 class TestFind:
     def test_find(self):
-        tax = TaxonomyFactories.get_smart_taxonomy(allow=[7742], forbid=[])
+        tax = TaxonomyFactories.get_smart_taxonomy(allow=[7742], forbid=[], local_only=True).get
         assert len(tax) == 100670
         assert tax.roots == [Taxon(7742, "Vertebrata", None, None, None, set())]
         assert len(tax.roots[0].descendents) == 100669

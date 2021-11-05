@@ -259,4 +259,4 @@ class FilterFn:
         return self.keep_if(*args, **kwargs)
 
 
-__all__ = ["Filter", "Mapx", "Flatmap", "FilterFn"]
+__all__ = ["Filter", "FilterFn", "Flatmap", "Mapx"]

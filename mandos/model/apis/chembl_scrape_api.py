@@ -149,10 +149,10 @@ class CachingChemblScrapeApi(ChemblScrapeApi):
 
 
 __all__ = [
+    "CachingChemblScrapeApi",
     "ChemblScrapeApi",
     "ChemblScrapePage",
     "ChemblScrapePage",
     "ChemblTargetPredictionTable",
     "QueryingChemblScrapeApi",
-    "CachingChemblScrapeApi",
 ]

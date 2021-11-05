@@ -164,4 +164,4 @@ class Search(Generic[H], metaclass=abc.ABCMeta):
         return repr(self) == repr(other)
 
 
-__all__ = ["Search", "HitDf", "SearchError"]
+__all__ = ["HitDf", "Search", "SearchError"]

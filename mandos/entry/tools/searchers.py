@@ -163,4 +163,4 @@ class Searcher:
         logger.debug(f"Saved {len(df)} rows to {self.to}")
 
 
-__all__ = ["Searcher", "InputCompoundsDf", "SearchReturnInfo", "MemoizedInputCompounds"]
+__all__ = ["InputCompoundsDf", "MemoizedInputCompounds", "Searcher", "SearchReturnInfo"]

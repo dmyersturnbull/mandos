@@ -223,9 +223,9 @@ __all__ = [
     "plt",
     "Figure",
     "Axes",
+    "CompoundStyleDf",
     "MandosPlotStyling",
     "MandosPlotUtils",
-    "CompoundStyleDf",
     "PredicateObjectStyleDf",
     "VIZ_RESOURCES",
 ]

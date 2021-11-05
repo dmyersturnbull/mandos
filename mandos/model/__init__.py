@@ -6,12 +6,11 @@ from typing import TypeVar
 
 from pocketutils.core.exceptions import DbLookupError
 
+T = TypeVar("T", covariant=True)
+
 
 class Api(metaclass=abc.ABCMeta):
     """ """
-
-
-T = TypeVar("T", covariant=True)
 
 
 @dataclass(frozen=True, repr=True, order=True)
@@ -32,11 +31,12 @@ class CompoundStruct:
         return f"[{db}{self.id} : {self.inchikey}]"
 
 
-__all__ = [
-    "Api",
-    "CompoundStruct",
-]
-
-
 class CompoundNotFoundError(DbLookupError):
     """ """
+
+
+__all__ = [
+    "Api",
+    "CompoundNotFoundError",
+    "CompoundStruct",
+]

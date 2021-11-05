@@ -157,4 +157,4 @@ class CachingG2pApi(G2pApi, metaclass=abc.ABCMeta):
         return repr(self)
 
 
-_all__ = ["G2pApi", "CachedG2pApi"]
+_all__ = ["CachedG2pApi", "G2pApi"]

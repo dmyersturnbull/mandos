@@ -231,9 +231,9 @@ class TargetFactory:
 
 
 __all__ = [
-    "TargetType",
-    "TargetFactory",
-    "TargetNotFoundError",
     "ChemblTarget",
     "ConfidenceLevel",
+    "TargetFactory",
+    "TargetNotFoundError",
+    "TargetType",
 ]

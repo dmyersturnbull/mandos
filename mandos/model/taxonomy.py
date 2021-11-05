@@ -36,6 +36,8 @@ class KnownTaxa:
     Taxa whose IDs are used in the code.
     """
 
+    cellular = 131567
+    viral = 10239
     biota = 131567  # 2 million nodes
     eukaryota = 2759  # 1.5 million nodes
     metazoa = 33208  # 1 million
@@ -579,4 +581,4 @@ class Taxonomy:
         return {k.lower(): frozenset(v) for k, v in by_name.items()}
 
 
-__all__ = ["Taxon", "Taxonomy", "TaxonomyDf", "KnownTaxa"]
+__all__ = ["KnownTaxa", "Taxon", "Taxonomy", "TaxonomyDf"]

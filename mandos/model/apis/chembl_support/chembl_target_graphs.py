@@ -387,9 +387,9 @@ class ChemblTargetGraphFactory:
 
 
 __all__ = [
-    "TargetNode",
-    "TargetRelType",
-    "TargetEdgeReqs",
     "ChemblTargetGraph",
     "ChemblTargetGraphFactory",
+    "TargetEdgeReqs",
+    "TargetNode",
+    "TargetRelType",
 ]

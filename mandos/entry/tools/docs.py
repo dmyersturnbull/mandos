@@ -169,4 +169,4 @@ class Documenter:
         return "\n".join(wrap(txt, width=self.width))
 
 
-__all__ = ["Documenter", "Doc", "CommandDocDf"]
+__all__ = ["CommandDocDf", "Doc", "Documenter"]

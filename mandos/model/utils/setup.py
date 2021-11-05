@@ -12,4 +12,4 @@ _strings = {k.partition(":")[2]: v for k, v in MandosResources.json("strings.jso
 MandosResources.to_memory("strings", _strings)
 
 
-__all__ = ["LOG_SETUP", "logger"]
+__all__ = ["logger", "LOG_SETUP"]

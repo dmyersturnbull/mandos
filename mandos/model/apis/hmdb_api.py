@@ -108,8 +108,8 @@ class CachingHmdbApi(HmdbApi):
 
 
 __all__ = [
-    "HmdbApi",
-    "QueryingHmdbApi",
     "CachingHmdbApi",
+    "HmdbApi",
     "HmdbCompoundLookupError",
+    "QueryingHmdbApi",
 ]

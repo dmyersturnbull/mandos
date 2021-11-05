@@ -251,14 +251,14 @@ class EnrichmentCalculation:
 
 __all__ = [
     "AlphaCalculator",
+    "BoolAlg",
+    "EnrichmentCalculation",
     "EnrichmentCalculator",
+    "EnrichmentDf",
     "FoldUnweightedCalc",
     "FoldWeightedCalc",
+    "RealAlg",
+    "ScoreDf",
     "SumUnweightedCalc",
     "SumWeightedCalc",
-    "EnrichmentCalculation",
-    "EnrichmentDf",
-    "ScoreDf",
-    "BoolAlg",
-    "RealAlg",
 ]

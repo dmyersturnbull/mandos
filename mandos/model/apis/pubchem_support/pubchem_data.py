@@ -1069,17 +1069,17 @@ class PubchemData(PubchemDataView):
 
 
 __all__ = [
-    "PubchemData",
-    "TitleAndSummary",
-    "RelatedRecords",
-    "ChemicalAndPhysicalProperties",
-    "DrugAndMedicationInformation",
-    "PharmacologyAndBiochemistry",
-    "SafetyAndHazards",
-    "Toxicity",
     "AssociatedDisordersAndDiseases",
+    "BiomolecularInteractionsAndPathways",
+    "ChemicalAndPhysicalProperties",
+    "Classification",
+    "DrugAndMedicationInformation",
     "Literature",
     "NamesAndIdentifiers",
-    "BiomolecularInteractionsAndPathways",
-    "Classification",
+    "PharmacologyAndBiochemistry",
+    "PubchemData",
+    "RelatedRecords",
+    "SafetyAndHazards",
+    "TitleAndSummary",
+    "Toxicity",
 ]

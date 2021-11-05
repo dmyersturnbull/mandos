@@ -77,6 +77,6 @@ class DrugbankGeneralFunctionSearch(_DrugbankInteractionSearch[DrugbankGeneralFu
 
 
 __all__ = [
-    "DrugbankTargetSearch",
     "DrugbankGeneralFunctionSearch",
+    "DrugbankTargetSearch",
 ]

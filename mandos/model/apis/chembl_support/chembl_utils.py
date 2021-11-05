@@ -114,4 +114,4 @@ class ChemblUtils:
             logger.error(f"Error on ChEMBL query for compound {inchikey}")
 
 
-__all__ = ["MolStructureType", "ChemblUtils"]
+__all__ = ["ChemblUtils", "MolStructureType"]

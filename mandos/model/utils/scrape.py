@@ -84,4 +84,4 @@ if __name__ == "__main__":
     logger.notice("Done. All ok.")
 
 
-__all__ = ["Scraper", "By"]
+__all__ = ["By", "Scraper"]

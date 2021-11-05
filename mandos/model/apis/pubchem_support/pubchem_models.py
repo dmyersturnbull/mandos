@@ -257,7 +257,7 @@ class ClinicalTrialPhase(CleverEnum):
         return cls.unknown
 
     @classmethod
-    def parse(cls, st: str) -> AbstractSet[ClinicalTrialPhase]:
+    def resolve(cls, st: str) -> AbstractSet[ClinicalTrialPhase]:
         _by_score = {"@" + str(v): {x for x in cls if x.score == v} for v in {x.score for x in cls}}
         _map = {**{"@all": set(cls)}, **_by_score}
         found: Set[ClinicalTrialPhase] = set()
@@ -301,7 +301,7 @@ class ClinicalTrialStatus(CleverEnum):
         return cls.unknown
 
     @classmethod
-    def parse(cls, st: str) -> AbstractSet[ClinicalTrialStatus]:
+    def resolve(cls, st: str) -> AbstractSet[ClinicalTrialStatus]:
         _by_simple = {
             "@" + v: {x for x in cls if x.simplified.name == v}
             for v in {x.simplified.name for x in cls}
@@ -579,26 +579,26 @@ class ChemicalGeneInteraction:
 
 
 __all__ = [
-    "ClinicalTrial",
+    "Activity",
+    "AcuteEffectEntry",
     "AssociatedDisorder",
     "AtcCode",
-    "DrugbankInteraction",
-    "DrugbankDdi",
     "Bioactivity",
-    "Activity",
-    "DrugGeneInteraction",
     "ChemicalGeneInteraction",
-    "GhsCode",
-    "PubmedEntry",
+    "ClinicalTrial",
+    "ClinicalTrialPhase",
+    "ClinicalTrialSimplifiedStatus",
+    "ClinicalTrialStatus",
+    "CoOccurrence",
+    "CoOccurrenceType",
     "Code",
     "Codes",
-    "CoOccurrenceType",
-    "CoOccurrence",
-    "Publication",
     "ComputedProperty",
-    "ClinicalTrialStatus",
-    "ClinicalTrialSimplifiedStatus",
-    "ClinicalTrialPhase",
-    "AcuteEffectEntry",
+    "DrugGeneInteraction",
+    "DrugbankDdi",
+    "DrugbankInteraction",
     "DrugbankTargetType",
+    "GhsCode",
+    "Publication",
+    "PubmedEntry",
 ]

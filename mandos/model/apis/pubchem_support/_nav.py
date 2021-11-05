@@ -280,13 +280,13 @@ class JsonNavigatorSingleOptional(AbstractJsonNavigator):
 
 
 __all__ = [
+    "AbstractJsonNavigator",
+    "FilterError",
+    "FlatmapError",
     "JsonNavigator",
     "JsonNavigatorListOfLists",
     "JsonNavigatorListOfOptionals",
-    "AbstractJsonNavigator",
     "JsonNavigatorSingleOptional",
-    "NavError",
     "MapError",
-    "FlatmapError",
-    "FilterError",
+    "NavError",
 ]

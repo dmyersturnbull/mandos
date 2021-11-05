@@ -27,7 +27,7 @@ class EntryArgs:
             A <60-character name that describes the search and parameters.
             Intermediate output filenames will use this value.
             """,
-            name,
+            default=name,
             min=1,
             max=120,
         )

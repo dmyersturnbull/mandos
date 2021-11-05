@@ -263,4 +263,4 @@ class TargetTraversalStrategies:
         return X()
 
 
-__all__ = ["TargetTraversalStrategy", "TargetTraversalStrategies"]
+__all__ = ["TargetTraversalStrategies", "TargetTraversalStrategy"]

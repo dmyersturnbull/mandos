@@ -43,4 +43,4 @@ class ChemblSearch(Search[H], metaclass=abc.ABCMeta):
         return ["ChEMBL"]
 
 
-__all__ = ["ChemblSearch", "ChemblScrapeSearch", "ChemblScrapePage"]
+__all__ = ["ChemblScrapeSearch", "ChemblScrapePage", "ChemblSearch"]

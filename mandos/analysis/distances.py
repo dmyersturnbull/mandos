@@ -238,4 +238,4 @@ class MatrixCalculation:
         )
 
 
-__all__ = ["MatrixCalculator", "JPrimeMatrixCalculator", "MatrixCalculation", "MatrixAlg"]
+__all__ = ["JPrimeMatrixCalculator", "MatrixAlg", "MatrixCalculation", "MatrixCalculator"]

@@ -26,9 +26,8 @@ from regex import regex
 from typeddfs.df_errors import FilenameSuffixError
 
 from mandos.model.apis.chembl_support.chembl_targets import TargetType
-from mandos.model.apis.pubchem_support.pubchem_models import ClinicalTrialsGovUtils
 from mandos.model.settings import SETTINGS
-from mandos.model.taxonomy import Taxonomy
+from mandos.model.taxonomy import KnownTaxa, Taxonomy
 from mandos.model.taxonomy_caches import LazyTaxonomy, TaxonomyFactories
 from mandos.model.utils.globals import Globals
 from mandos.model.utils.setup import logger
@@ -109,7 +108,7 @@ class ArgUtils:
     ) -> ParsedTaxa:
         if taxa is None or taxa == "":
             return ParsedTaxa.empty()
-        ancestors = f"{Globals.cellular_taxon},{Globals.viral_taxon}"
+        ancestors = f"{KnownTaxa.cellular},{KnownTaxa.viral}"
         if ":" in taxa:
             ancestors = taxa.split(":", 1)[1]
             taxa = taxa.split(":", 1)[0]
@@ -152,22 +151,18 @@ class ArgUtils:
     @classmethod
     def _get_std_taxon(cls, taxa: str) -> str:
         x = dict(
-            vertebrata=Globals.vertebrata,
-            vertebrate=Globals.vertebrata,
-            vertebrates=Globals.vertebrata,
-            cellular=Globals.cellular_taxon,
-            cell=Globals.cellular_taxon,
-            cells=Globals.cellular_taxon,
-            viral=Globals.viral_taxon,
-            virus=Globals.viral_taxon,
-            viruses=Globals.viral_taxon,
+            vertebrata=KnownTaxa.vertebrata,
+            vertebrate=KnownTaxa.vertebrata,
+            vertebrates=KnownTaxa.vertebrata,
+            cellular=KnownTaxa.cellular,
+            cell=KnownTaxa.cellular,
+            cells=KnownTaxa.cellular,
+            viral=KnownTaxa.viral,
+            virus=KnownTaxa.viral,
+            viruses=KnownTaxa.viral,
             all=f"{Globals.cellular_taxon},{Globals.viral_taxon}",
         ).get(taxa)
         return taxa if x is None else str(x)
-
-    @staticmethod
-    def get_trial_statuses(st: str) -> Set[str]:
-        return ClinicalTrialsGovUtils.resolve_statuses(st)
 
     @staticmethod
     def get_target_types(st: str) -> Set[str]:
@@ -198,7 +193,7 @@ class EntryUtils:
             path = Path(to)
         path = Path(path)
         if os.name == "nt" and SETTINGS.sanitize_paths:
-            new_path = Path(*PathTools.sanitize_nodes(path._parts, is_file=True))
+            new_path = Path(*PathTools.sanitize_nodes(path.parts, is_file=True))
             if new_path.resolve() != path.resolve():
                 if not quiet:
                     logger.warning(f"Sanitized filename {path} → {new_path}")
@@ -261,4 +256,4 @@ class EntryUtils:
                 raise XValueError(f"Unsupported file format {suffix}")
 
 
-__all__ = ["Arg", "Opt", "ArgUtils", "EntryUtils"]
+__all__ = ["Arg", "ArgUtils", "EntryUtils", "Opt"]

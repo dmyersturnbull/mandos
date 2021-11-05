@@ -18,7 +18,7 @@ from pocketutils.tools.filesys_tools import FilesysTools
 from typeddfs import Checksums, TypedDfs
 
 from mandos.model.settings import SETTINGS
-from mandos.model.taxonomy import Taxonomy, TaxonomyDf
+from mandos.model.taxonomy import KnownTaxa, Taxonomy, TaxonomyDf
 from mandos.model.utils import unlink
 from mandos.model.utils.globals import Globals
 from mandos.model.utils.setup import MandosResources, logger
@@ -226,7 +226,7 @@ class TaxonomyFactories:
         *,
         allow: Iterable[Union[int, str]],
         forbid: Iterable[Union[int, str]],
-        ancestors: Union[int, Collection[int]] = Globals.cellular_taxon,
+        ancestors: Union[int, Collection[int]] = KnownTaxa.cellular,
         cache_dir: Path = SETTINGS.taxonomy_cache_path,
         local_only: bool,
     ) -> LazyTaxonomy:
@@ -257,4 +257,4 @@ class TaxonomyFactories:
         return _X()
 
 
-__all__ = ["TaxonomyFactory", "TaxonomyFactories"]
+__all__ = ["TaxonomyFactories", "TaxonomyFactory"]

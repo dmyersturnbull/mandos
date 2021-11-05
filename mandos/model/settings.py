@@ -213,7 +213,7 @@ class Settings:
 
     @classmethod
     def set_path_for_selenium(cls) -> None:
-        cls.add_to_path([SETTINGS.driver_path, MandosResources.dir(), Globals.where_am_i_installed])
+        cls.add_to_path([SETTINGS.driver_path, MandosResources.dir(), Globals.install_path])
 
     @classmethod
     def add_to_path(cls, paths: Collection[Union[None, str, Path]]) -> None:
@@ -242,4 +242,4 @@ class QueryExecutors:
 QUERY_EXECUTORS = QueryExecutors
 
 
-__all__ = ["SETTINGS", "QUERY_EXECUTORS"]
+__all__ = ["QUERY_EXECUTORS", "SETTINGS"]

@@ -226,4 +226,4 @@ class CmdRunner:
         return CmdRunner(cmd, params, input_path)
 
 
-__all__ = ["MultiSearch", "SearchExplainDf", "SearchConfigDf"]
+__all__ = ["MultiSearch", "SearchConfigDf", "SearchExplainDf"]

@@ -103,9 +103,9 @@ class ConcordanceCalculation:
 
 
 __all__ = [
-    "ConcordanceCalculator",
-    "TauConcordanceCalculator",
-    "ConcordanceDf",
-    "ConcordanceCalculation",
     "ConcordanceAlg",
+    "ConcordanceCalculation",
+    "ConcordanceCalculator",
+    "ConcordanceDf",
+    "TauConcordanceCalculator",
 ]

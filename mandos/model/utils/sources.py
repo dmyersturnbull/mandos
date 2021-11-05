@@ -95,4 +95,4 @@ class JsonSource(_Source):
         return NestedDotDict(orjson.loads(self._get_txt()))
 
 
-__all__ = ["TextSource", "XmlSource", "JsonSource"]
+__all__ = ["JsonSource", "TextSource", "XmlSource"]

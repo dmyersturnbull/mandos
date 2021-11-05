@@ -32,4 +32,4 @@ class G2pData:
     interactions: List[G2pInteraction]
 
 
-__all__ = ["G2pInteraction", "G2pData"]
+__all__ = ["G2pData", "G2pInteraction"]

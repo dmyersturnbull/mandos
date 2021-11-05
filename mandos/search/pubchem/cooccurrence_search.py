@@ -92,8 +92,8 @@ class DiseaseCoOccurrenceSearch(CoOccurrenceSearch[DiseaseCoOccurrenceHit]):
 
 
 __all__ = [
-    "GeneCoOccurrenceSearch",
     "ChemicalCoOccurrenceSearch",
-    "DiseaseCoOccurrenceSearch",
     "CoOccurrenceSearch",
+    "DiseaseCoOccurrenceSearch",
+    "GeneCoOccurrenceSearch",
 ]

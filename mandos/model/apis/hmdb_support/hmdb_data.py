@@ -237,11 +237,11 @@ class HmdbData:
 
 
 __all__ = [
-    "HmdbProperty",
     "ConcentrationBound",
-    "HmdbData",
-    "PersonSex",
-    "PersonAge",
     "HmdbConcentration",
+    "HmdbData",
     "HmdbDisease",
+    "HmdbProperty",
+    "PersonAge",
+    "PersonSex",
 ]

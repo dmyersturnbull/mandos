@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import decorateme
+import typer
 from pocketutils.core.exceptions import ResourceError
 from typeddfs import CompressionFormat
 from typeddfs.utils.cli_help import DfCliHelp
@@ -259,6 +260,7 @@ class CalcCommands:
             """,
             default=0,
         ),
+        exclude: Optional[List[str]] = Opt.val(r"""Exclude a key (pass as many times as needed"""),
         keep_temp: bool = Opt.flag(r"""Keep temporary per-key files."""),
         to: Path = Aa.out_matrix_long_form,
         replace: bool = Ca.replace,
@@ -276,7 +278,11 @@ class CalcCommands:
         default = path.parent / (in_base + "-" + algorithm + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
         calculator: MatrixCalculator = MatrixCalculation.create(
-            algorithm, min_compounds=min_compounds, min_nonzero=min_nonzero, min_hits=min_hits
+            algorithm,
+            min_compounds=min_compounds,
+            min_nonzero=min_nonzero,
+            min_hits=min_hits,
+            exclude=exclude,
         )
         calculator.calc_all(path, to, keep_temp=keep_temp)
 
@@ -461,7 +467,7 @@ class CalcCommands:
         to = EntryUtils.adjust_filename(to, default, replace)
         long_form = MatrixPrep(kind, normalize, log10, invert).from_files(matrices)
         long_form.write_file(to)
-        logger.notice(f"Wrote {len(long_form)} rows to {to}")
+        logger.notice(f"Wrote {len(long_form):,} rows to {to}")
 
 
 __all__ = ["CalcCommands"]

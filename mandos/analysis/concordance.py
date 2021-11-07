@@ -32,7 +32,7 @@ class ConcordanceCalculator(metaclass=abc.ABCMeta):
             for psi in psis["psi"].unique():
                 phi_mx = phis[phis["phi"] == phi]
                 psi_mx = phis[phis["psi"] == psi]
-                self.calc(phi_mx, psi_mx, phi, psi)  # TODO
+                self.calc(phi_mx, psi_mx, phi, psi)
 
     def calc(
         self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm, phi_name: str, psi_name: str

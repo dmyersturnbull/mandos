@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from pocketutils.tools.filesys_tools import FilesysTools
+from typeddfs import Checksums
 
 from mandos.model.utils.setup import logger
 
@@ -18,6 +19,12 @@ def unlink(path: Path, *, missing_ok: bool = False) -> None:
         logger.trace(f"Deleted misc. path {path}")
     else:
         logger.trace(f"Did not delete {path} (did not exist)")
+    attrs_path = Path(str(path) + ".attrs.json")
+    if attrs_path.exists():
+        unlink(attrs_path)
+    checksum_path = Checksums.get_filesum_of_file(path)
+    if checksum_path.exists():
+        unlink(checksum_path)
 
 
 __all__ = ["unlink"]

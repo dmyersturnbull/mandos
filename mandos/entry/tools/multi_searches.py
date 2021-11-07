@@ -87,7 +87,7 @@ class MultiSearch:
 
     @property
     def doc_path(self) -> Path:
-        return Path(str(self.final_path.with_suffix("")) + ".doc.tsv")
+        return Path(str(self.final_path.with_suffix("")) + ".tex")
 
     def test(self) -> None:
         self._build_and_test()
@@ -104,10 +104,10 @@ class MultiSearch:
 
     def _write_final(self, commands: Sequence[CmdRunner]):
         # write the final file
-        df = HitDf(pd.concat([HitDf.read_file(cmd.output_path) for cmd in commands]))
+        df = HitDf.of([HitDf.read_file(cmd.output_path) for cmd in commands])
         now = datetime.now().isoformat(timespec="milliseconds")
         docs = self.get_docs(commands)
-        SearchExplainDf([pd.Series(x) for x in docs]).write_file(self.doc_path)
+        SearchExplainDf([pd.Series(x) for x in docs]).pretty_print(to=self.doc_path)
         df = df.set_attrs(commands=docs, written=now)
         df.write_file(
             self.final_path,

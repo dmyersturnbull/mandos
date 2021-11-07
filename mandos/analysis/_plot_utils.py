@@ -103,7 +103,7 @@ class MandosPlotStyling:
                 raise LookupFailedError(f"{palette} is not a valid choice for {dtype}")
             if len(unique) > len(palette.colors):
                 raise LengthError(
-                    f"Palette (N={len(palette.colors)}) too small for {len(unique)} items"
+                    f"Palette (N={len(palette.colors):,}) too small for {len(unique):,} items"
                 )
             return {i: j for i, j in CommonTools.zip_strict(unique, map(to_hex, palette.colors))}
         return palette

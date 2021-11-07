@@ -7,11 +7,10 @@ import math
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Collection, Sequence, Type, Union
+from typing import Collection, Mapping, Optional, Sequence, Type, Union
 
 import decorateme
 import numpy as np
-import pandas as pd
 from pocketutils.core.chars import Chars
 from pocketutils.core.enums import CleverEnum
 from pocketutils.tools.unit_tools import UnitTools
@@ -30,17 +29,6 @@ from mandos.model.utils import unlink
 from mandos.model.utils.setup import logger
 
 
-@decorateme.auto_repr_str()
-class MatrixCalculator(metaclass=abc.ABCMeta):
-    def __init__(self, *, min_compounds: int, min_nonzero: int, min_hits: int):
-        self.min_compounds = min_compounds
-        self.min_nonzero = min_nonzero
-        self.min_hits = min_hits
-
-    def calc_all(self, hits: Path, to: Path, *, keep_temp: bool = False) -> SimilarityDfLongForm:
-        raise NotImplemented()
-
-
 class _Inf:
     def __init__(self, n: int):
         self.n = n
@@ -52,7 +40,7 @@ class _Inf:
     def got(self, c1: str, c2: str, z: float) -> None:
         self.used.add((c1, c2))
         self.nonzeros += int(c1 != c2 and not np.isnan(z) and 0 < z < 1)
-        if self.i % 20000 == 0:
+        if self.i % 100 == 0:
             self.log("info")
 
     @property
@@ -74,90 +62,104 @@ class _Inf:
         return repr(self)
 
 
+@decorateme.auto_repr_str()
+class MatrixCalculator(metaclass=abc.ABCMeta):
+    def __init__(
+        self,
+        *,
+        min_compounds: int,
+        min_nonzero: int,
+        min_hits: int,
+        exclude: Optional[Collection[str]] = None,
+    ):
+        self.min_compounds = min_compounds
+        self.min_nonzero = min_nonzero
+        self.min_hits = min_hits
+        self.exclude = set() if exclude is None else exclude
+
+    def calc_all(self, hits: Path, to: Path, *, keep_temp: bool = False) -> SimilarityDfLongForm:
+        raise NotImplemented()
+
+
 class JPrimeMatrixCalculator(MatrixCalculator):
     def calc_all(self, path: Path, to: Path, *, keep_temp: bool = False) -> SimilarityDfLongForm:
         hits = HitDf.read_file(path).to_hits()
         key_to_hit = Au.hit_multidict(hits, "search_key")
         logger.notice(f"Calculating J on {len(key_to_hit):,} keys from {len(hits):,} hits")
-        deltas, files, good_keys = [], [], {}
+        good_keys = {}
         for key, key_hits in key_to_hit.items():
-            key: str = key
+            if key in self.exclude:
+                logger.caution(f"Excluding {key}")
+                continue
             key_hits: Sequence[AbstractHit] = key_hits
             n_compounds_0 = len({k.origin_inchikey for k in key_hits})
             part_path = self._path_of(path, key)
-            n_compounds_in_mx = None
-            n_nonzero = None
             df = None
             if part_path.exists():
-                try:
-                    df = SimilarityDfLongForm.read_file(
-                        part_path, file_hash=False
-                    )  # TODO: file_hash=True
-                    logger.warning(f"Results for key {key} already exist ({len(df):,} rows)")
-                    n_compounds_in_mx = len(df["inchikey_1"].unique())
-                except HashFileMissingError:
-                    logger.error(f"Extant results for key {key} appear incomplete; restarting")
-                    logger.opt(exception=True).debug(f"Hash error for {key}")
-                    unlink(part_path)
-                    # now let it go into the next block -- calculate from scratch
-            if n_compounds_0 >= self.min_compounds:
-                t1 = time.monotonic()
-                df: SimilarityDfShortForm = self.calc_one(key, key_hits)
-                t2 = time.monotonic()
-                deltas.append(t2 - t1)
-                df = df.to_long_form(kind="psi", key=key)
-                n_compounds_in_mx = len(df["inchikey_1"].unique())
-                df.write_file(part_path)
+                df = self._read_partial(key, part_path)
+            if df is None and n_compounds_0 >= self.min_compounds:
+                df = self._calc_partial(key, key_hits)
+                df.write_file(part_path, attrs=True, file_hash=True)
                 logger.debug(f"Wrote results for {key} to {part_path}")
+            if df is not None and self._should_include(df):
+                good_keys[key] = part_path
             if df is not None:
-                n_nonzero = len(df[df["value"] > 0])
-            if n_compounds_in_mx < self.min_compounds:
-                logger.warning(
-                    f"Key {key} has {n_compounds_in_mx:,} < {self.min_compounds:,} compounds; skipping"
-                )
-            elif len(key_hits) < self.min_hits:
-                logger.warning(
-                    f"Key {key} has {len(key_hits):,} < {self.min_hits:,} hits; skipping"
-                )
-            elif n_nonzero is not None and n_nonzero < self.min_nonzero:
-                logger.warning(
-                    f"Key {key} has {n_nonzero:,} < {self.min_nonzero:,} nonzero pairs; skipping"
-                )  # TODO: percent nonzero?
-            else:
-                files.append(part_path)
-                good_keys[key] = n_compounds_in_mx
-            del df
-        logger.debug(f"Concatenating {len(files):,} files")
-        df = SimilarityDfLongForm(
-            pd.concat(
-                [SimilarityDfLongForm.read_file(self._path_of(path, k)) for k in good_keys.keys()]
-            )
-        )
-        logger.notice(f"Included {len(good_keys):,} keys: {', '.join(good_keys.keys())}")
-        quartiles = {}
-        for k, v in good_keys.items():
-            vals = df[df["key"] == k]["value"]
-            qs = {x: vals.quantile(x) for x in [0, 0.25, 0.5, 0.75, 1]}
-            quartiles[k] = list(qs.values())
-            logger.info(f"Key {k} has {v:,} compounds and {len(key_to_hit[k]):,} hits")
-            logger.info(
-                f"    {k} {Chars.fatright} unique values = {len(vals.unique())} unique values"
-            )
-            logger.info(f"    {k} {Chars.fatright} quartiles: " + " | ".join(qs.values()))
-        df = df.set_attrs(
-            dict(
-                keys={
-                    k: dict(compounds=v, hits=len(key_to_hit[k]), quartiles=quartiles[k])
-                    for k, v in good_keys.items()
-                }
-            )
-        )
-        df.write_file(to, attrs=True, file_hash=True)
-        logger.notice(f"Wrote {len(df):,} rows to {to}")
+                del df
+        big_df = self._concat_parts(good_keys)
+        big_df.write_file(to, attrs=True, file_hash=True)
+        logger.notice(f"Wrote {len(big_df):,} rows to {to}")
+        logger.debug(f"Concatenating {len(big_df):,} files")
         if not keep_temp:
-            for k in key_to_hit.keys():
+            for k in good_keys:
                 unlink(self._path_of(path, k))
-        return df
+
+    def _calc_partial(self, key: str, key_hits: HitDf) -> SimilarityDfLongForm:
+        df = self.calc_one(key, key_hits).to_long_form(kind="psi", key=key)
+        return df.set_attrs(
+            key=key,
+            quartiles=[df["value"].quantile(x) for x in [0, 0.25, 0.5, 0.75, 1]],
+            n_hits=len(key_hits),
+            n_values=len(df["value"].unique()),
+            n_compounds=len(df["inchikey_1"].unique()),
+            n_real=len(df[0 < df["value"] < 1]),
+        )
+
+    def _should_include(self, df: SimilarityDfLongForm) -> bool:
+        key = df.attrs["key"]
+        reqs = dict(n_compounds=self.min_compounds, n_hits=self.min_hits, n_real=self.min_nonzero)
+        for a, mn in reqs.items():
+            v = df.attrs[a]
+            if v < mn:
+                logger.warning(f"Key {key}: {a} = {v:,} < {mn:,}")
+                return False
+        return True
+
+    def _read_part(self, key: str, part_path: Path) -> Optional[SimilarityDfLongForm]:
+        try:
+            df = SimilarityDfLongForm.read_file(part_path, file_hash=True)
+            logger.warning(f"Results for key {key} already exist ({len(df):,} rows)")
+            return df["inchikey_1"].unique()
+        except HashFileMissingError:
+            logger.error(f"Extant results for key {key} appear incomplete; restarting")
+            logger.opt(exception=True).debug(f"Hash error for {key}")
+            unlink(part_path)
+        return None  #  calculate from scratch
+
+    def _concat_parts(self, keys: Mapping[str, Path]):
+        logger.notice(f"Included {len(keys):,} keys: {', '.join(keys)}")
+        dfs = []
+        for key, pp in keys:
+            df = SimilarityDfLongForm.read_file(pp, attrs=True)
+            n_values = df.attrs["n_values"]
+            n_real = df.attrs["n_real"]
+            quartiles = df.attrs["quartiles"]
+            logger.info(f"Key {key}:")
+            prefix = f"    {key} {Chars.fatright}"
+            logger.info(f"{prefix} unique values = {n_values}")
+            logger.info(f"{prefix} values in (0, 1) = {n_real,}")
+            logger.info(f"{prefix} quartiles: " + " | ".join(quartiles))
+            dfs.append(df)
+        return SimilarityDfLongForm.of(dfs, keys=keys)
 
     def calc_one(self, key: str, hits: Sequence[AbstractHit]) -> SimilarityDfShortForm:
         ik2hits = Au.hit_multidict(hits, "origin_inchikey")
@@ -232,9 +234,13 @@ class MatrixCalculation:
         min_compounds: int,
         min_nonzero: int,
         min_hits: int,
+        exclude: Optional[Collection[str]] = None,
     ) -> MatrixCalculator:
         return MatrixAlg.of(algorithm).clazz(
-            min_compounds=min_compounds, min_nonzero=min_nonzero, min_hits=min_hits
+            min_compounds=min_compounds,
+            min_nonzero=min_nonzero,
+            min_hits=min_hits,
+            exclude=exclude,
         )
 
 

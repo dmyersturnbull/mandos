@@ -1,3 +1,5 @@
+import inspect
+
 import decorateme
 
 from mandos.model.apis.caching_pubchem_api import CachingPubchemApi
@@ -46,7 +48,8 @@ class Apis:
         cls.Hmdb = hmdb
         cls.ChemblScrape = chembl_scrape
         cls.Similarity = similarity
-        logger.debug(f"Set custom API singletons: {cls}")
+        logger.debug("Set custom API singletons")
+        cls.describe()
 
     @classmethod
     def set_default(
@@ -73,7 +76,17 @@ class Apis:
             cls.ChemblScrape = CachingChemblScrapeApi(QueryingChemblScrapeApi())
         if similarity:
             cls.Similarity = CachingPubchemSimilarityApi(QueryingPubchemSimilarityApi())
-        logger.debug(f"Set default singletons: {cls}")
+        logger.debug("Set default singletons")
+        cls.describe()
+
+    @classmethod
+    def describe(cls) -> None:
+        for v in [
+            f"    {m} = {getattr(cls, m)}"
+            for m in dir(cls)
+            if m[0].isupper() and not inspect.ismethod(m)
+        ]:
+            logger.debug(v)
 
 
 __all__ = ["Apis"]

@@ -9,6 +9,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional, Type
 
+import decorateme
 import pandas as pd
 from pocketutils.core.enums import CleverEnum
 from pocketutils.core.query_utils import QueryExecutor
@@ -71,6 +72,7 @@ class ChemblScrapePage(CleverEnum):
     target_predictions = enum.auto()
 
 
+@decorateme.auto_repr_str()
 class ChemblScrapeApi(Api, metaclass=abc.ABCMeta):
     def fetch_predictions(self, cid: str) -> ChemblTargetPredictionTable:
         return self._fetch_page(

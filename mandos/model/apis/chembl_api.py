@@ -204,10 +204,12 @@ class ChemblApi(metaclass=abc.ABCMeta):
 
     @classmethod
     def mock(cls, entrypoints: Mapping[str, ChemblEntrypoint]) -> ChemblApi:
+        @decorateme.auto_repr_str()
         class X(ChemblApi):
             def __getattribute__(self, item: str) -> ChemblEntrypoint:
                 return entrypoints[item]
 
+        X.__name__ = f"MockedChemblApi({entrypoints})"
         return X()
 
     @classmethod
@@ -216,13 +218,13 @@ class ChemblApi(metaclass=abc.ABCMeta):
             def __getattribute__(self, item: str) -> ChemblEntrypoint:
                 return ChemblEntrypoint.wrap(getattr(obj, item))
 
+            def __repr__(self):
+                return f"ChemblApi(Wrapped: {obj})"
+
+            def __str__(self):
+                return repr(self)
+
         return X()
-
-    def __repr__(self):
-        return self.__class__.__name__
-
-    def __str__(self):
-        return repr(self)
 
 
 __all__ = [

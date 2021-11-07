@@ -408,13 +408,11 @@ class MiscCommands:
         files_ = []
         for file in path.iterdir():
             ff = FileFormat.from_path_or_none(file)
-            if ff not in [None, FileFormat.json, FileFormat.toml] and not ff.name.endswith(
-                ".doc.tsv"
-            ):
+            if ff not in [None, FileFormat.json, FileFormat.toml]:
                 files_.append(file)
         logger.notice(f"Looking under {path} (NOT recursive)")
         logger.info(f"Found {len(files_)} potential input files: {[f.name for f in files_]}")
-        files, dfs = [], []
+        files, names, dfs = [], [], []
         for file in files_:
             try:
                 df: HitDf = HitDf.read_file(file, attrs=True)
@@ -422,24 +420,23 @@ class MiscCommands:
                 logger.warning(f"Skipping {file} {Chars.en} not a valid hit list")
                 logger.opt(exception=True).debug(f"Error reading {file}")
                 continue
-            df = df.set_attrs({file.name: df.attrs})
-            dfs.append(df)
             files.append(file)
-        names = [CompressionFormat.strip_suffix(f).name for f in files]
+            names.append(FileFormat.strip(file).name)
+            dfs.append(df)
         default = path / (",".join(names) + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
-        logger.notice(f"Concatenated {len(files)} files")
+        logger.notice(f"Concatenated {len(files):,} files")
         for f_, df_ in zip(files, dfs):
-            logger.success(f"Included: {f_.name} with {len(df_)} rows")
-        df = HitDf.of(pd.concat(dfs))
+            logger.success(f"Included: {f_.name} with {len(df_):,} rows")
+        df = HitDf.of(dfs, keys=names)
         counts = {k: v for k, v in df.group_by("universal_id").count().to_dict() if v > 0}
         if len(counts) > 0:
             logger.error(
-                f"There are {len(counts)} universal IDs with duplicates!"
+                f"There are {len(counts):,} universal IDs with duplicates!"
                 + f": {StringTools.join_kv(counts)}"
             )
-        logger.notice(f"Wrote {len(df)} rows to {to}")
-        df.write_file(to)
+        logger.notice(f"Wrote {len(df):,} rows to {to}")
+        df.write_file(to, mkdirs=True, attrs=True, file_hash=True)
 
     @staticmethod
     @entry()

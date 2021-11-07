@@ -2,7 +2,6 @@
 Calculations of overlap (similarity) between annotation sets.
 """
 import abc
-import enum
 import math
 import time
 from collections import defaultdict
@@ -13,6 +12,7 @@ import decorateme
 import numpy as np
 from pocketutils.core.chars import Chars
 from pocketutils.core.enums import CleverEnum
+from pocketutils.core.exceptions import XValueError
 from pocketutils.tools.unit_tools import UnitTools
 from typeddfs.df_errors import HashFileMissingError
 
@@ -40,7 +40,7 @@ class _Inf:
     def got(self, c1: str, c2: str, z: float) -> None:
         self.used.add((c1, c2))
         self.nonzeros += int(c1 != c2 and not np.isnan(z) and 0 < z < 1)
-        if self.i % 100 == 0:
+        if self.i % 1000 == 0:
             self.log("info")
 
     @property
@@ -83,14 +83,11 @@ class MatrixCalculator(metaclass=abc.ABCMeta):
 
 class JPrimeMatrixCalculator(MatrixCalculator):
     def calc_all(self, path: Path, to: Path, *, keep_temp: bool = False) -> SimilarityDfLongForm:
-        hits = HitDf.read_file(path).to_hits()
+        hits = self._read_hits(path)
         key_to_hit = Au.hit_multidict(hits, "search_key")
         logger.notice(f"Calculating J on {len(key_to_hit):,} keys from {len(hits):,} hits")
         good_keys = {}
         for key, key_hits in key_to_hit.items():
-            if key in self.exclude:
-                logger.caution(f"Excluding {key}")
-                continue
             key_hits: Sequence[AbstractHit] = key_hits
             n_compounds_0 = len({k.origin_inchikey for k in key_hits})
             part_path = self._path_of(path, key)
@@ -99,19 +96,32 @@ class JPrimeMatrixCalculator(MatrixCalculator):
                 df = self._read_part(key, part_path)
             if df is None and n_compounds_0 >= self.min_compounds:
                 df = self._calc_partial(key, key_hits)
-                df.write_file(part_path, attrs=True, file_hash=True)
+                df.write_file(part_path, attrs=True, file_hash=True, mkdirs=True)
                 logger.debug(f"Wrote results for {key} to {part_path}")
             if df is not None and self._should_include(df):
                 good_keys[key] = part_path
             if df is not None:
                 del df
         big_df = self._concat_parts(good_keys)
-        big_df.write_file(to, attrs=True, file_hash=True)
+        big_df.write_file(to, attrs=True, file_hash=True, mkdirs=True)
         logger.notice(f"Wrote {len(big_df):,} rows to {to}")
-        logger.debug(f"Concatenating {len(big_df):,} files")
         if not keep_temp:
             for k in good_keys:
                 unlink(self._path_of(path, k))
+
+    def _read_hits(self, path: Path) -> Sequence[AbstractHit]:
+        hits = HitDf.read_file(path)
+        keys = hits["search_key"].unique()
+        bad_excludes = [e for e in self.exclude if e not in keys]
+        if len(bad_excludes) > 0:
+            logger.error(f"Keys to exclude are not in the input file: {', '.join(bad_excludes)}")
+        for key in keys:
+            if key not in self.exclude:
+                dfx = hits[hits["search_key"] == key]
+                negatives = dfx[dfx["weight"] <= 0]
+                if len(negatives) > 0:
+                    logger.error(f"{len(negatives)} / {len(dfx):,} hits for {key} are nonpositive")
+        return [h for h in hits.to_hits() if h.search_key not in self.exclude and h.weight > 0]
 
     def _calc_partial(self, key: str, key_hits: HitDf) -> SimilarityDfLongForm:
         df = self.calc_one(key, key_hits).to_long_form(kind="psi", key=key)
@@ -136,7 +146,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
 
     def _read_part(self, key: str, part_path: Path) -> Optional[SimilarityDfLongForm]:
         try:
-            df = SimilarityDfLongForm.read_file(part_path, file_hash=True)
+            df = SimilarityDfLongForm.read_file(part_path, file_hash=True, attrs=True)
             logger.warning(f"Results for key {key} already exist ({len(df):,} rows)")
             return df
         except HashFileMissingError:
@@ -148,7 +158,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
     def _concat_parts(self, keys: Mapping[str, Path]):
         logger.notice(f"Included {len(keys):,} keys: {', '.join(keys)}")
         dfs = []
-        for key, pp in keys:
+        for key, pp in keys.items():
             df = SimilarityDfLongForm.read_file(pp, attrs=True)
             n_values = df.attrs["n_values"]
             n_real = df.attrs["n_real"]
@@ -156,8 +166,8 @@ class JPrimeMatrixCalculator(MatrixCalculator):
             logger.info(f"Key {key}:")
             prefix = f"    {key} {Chars.fatright}"
             logger.info(f"{prefix} unique values = {n_values}")
-            logger.info(f"{prefix} values in (0, 1) = {n_real,}")
-            logger.info(f"{prefix} quartiles: " + " | ".join(quartiles))
+            logger.info(f"{prefix} values in (0, 1) = {n_real:,}")
+            logger.info(f"{prefix} quartiles: " + " | ".join([str(s) for s in quartiles]))
             dfs.append(df)
         return SimilarityDfLongForm.of(dfs, keys=keys)
 
@@ -200,13 +210,17 @@ class JPrimeMatrixCalculator(MatrixCalculator):
     def _jx(
         self, key: str, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]
     ) -> float:
-        # TODO -- for testing only
-        # TODO: REMOVE ME!
-        if key in ["core.chemidplus.effects", "extra.chemidplus.specific-effects"]:
-            hits1 = [h.copy(weight=math.pow(10, -h.weight)) for h in hits1]
-            hits2 = [h.copy(weight=math.pow(10, -h.weight)) for h in hits2]
+        if len(hits1) == len(hits2) == 0:
+            return float("NaN")
+        elif len(hits1) == 0 or len(hits2) == 0:
+            return 0
         pair_to_weights = Au.weights_of_pairs(hits1, hits2)
-        values = [self._wedge(ca, cb) / self._vee(ca, cb) for ca, cb in pair_to_weights.values()]
+        values = []
+        for ca, cb in pair_to_weights.values():
+            wedge = self._wedge(ca, cb)
+            vee = self._vee(ca, cb)
+            if vee > 0:
+                values.append(wedge / vee)
         return float(math.fsum(values) / len(values))
 
     def _wedge(self, ca: float, cb: float) -> float:

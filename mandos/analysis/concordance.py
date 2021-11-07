@@ -42,7 +42,6 @@ class ConcordanceCalculator(metaclass=abc.ABCMeta):
         if phi_cols != psi_cols:
             raise MismatchedDataError(f"Mismatched compounds: {phi_cols} != {psi_cols}")
         df = pd.DataFrame(data=self.generate(phi, psi), columns=["score"])
-        df = df.reset_index()
         df["phi"] = phi_name
         df["psi"] = psi_name
         df.columns = ["sample", "tau", "phi", "psi"]
@@ -51,13 +50,11 @@ class ConcordanceCalculator(metaclass=abc.ABCMeta):
     def generate(
         self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm
     ) -> Generator[float, None, None]:
-        if self.n_samples == 1:
-            yield self._calc(phi, psi)
-        else:
-            for b in range(self.n_samples):
-                phi_b = self.rand.choice(phi, replace=True)
-                psi_b = self.rand.choice(psi, replace=True)
-                yield self._calc(phi_b, psi_b)
+        yield self._calc(phi, psi)
+        for b in range(self.n_samples):
+            phi_b = self.rand.choice(phi, replace=True)
+            psi_b = self.rand.choice(psi, replace=True)
+            yield self._calc(phi_b, psi_b)
 
     def _calc(self, phi: SimilarityDfShortForm, psi: SimilarityDfShortForm) -> float:
         raise NotImplemented()
@@ -80,7 +77,7 @@ class TauConcordanceCalculator(ConcordanceCalculator):
 
 
 class ConcordanceAlg(CleverEnum):
-    tau = enum.auto()
+    tau = ()
 
     @property
     def clazz(self) -> Type[ConcordanceCalculator]:

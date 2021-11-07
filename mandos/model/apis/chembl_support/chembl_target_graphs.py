@@ -147,12 +147,12 @@ class TargetRelType(CleverEnum):
         - self_link is an implicit link from any target to itself
     """
 
-    subset_of = enum.auto()
-    superset_of = enum.auto()
-    overlaps_with = enum.auto()
-    equivalent_to = enum.auto()
-    any_link = enum.auto()
-    self_link = enum.auto()
+    subset_of = ()
+    superset_of = ()
+    overlaps_with = ()
+    equivalent_to = ()
+    any_link = ()
+    self_link = ()
 
     @classmethod
     def of(cls, s: str) -> TargetRelType:

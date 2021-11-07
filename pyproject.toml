@@ -73,7 +73,7 @@ regex                          = ">=2021.11"
 requests                       = "^2.26"
 suretime                       = ">=0.1.1, <1.0"
 tomlkit                        = ">=0.7, <1.0"
-typeddfs                       = {version=">=0.16.3, <1.0", extras=["feather", "parquet", "excel", "xml"]}
+typeddfs                       = {version=">=0.16.4, <1.0", extras=["feather", "parquet", "excel", "xml"]}
 typer                          = ">=0.4, <1.0"
 tzdata                         = ">=2021.5"
 joblib                         = {version="^1.1", optional=true}

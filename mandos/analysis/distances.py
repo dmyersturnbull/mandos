@@ -96,7 +96,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
             part_path = self._path_of(path, key)
             df = None
             if part_path.exists():
-                df = self._read_partial(key, part_path)
+                df = self._read_part(key, part_path)
             if df is None and n_compounds_0 >= self.min_compounds:
                 df = self._calc_partial(key, key_hits)
                 df.write_file(part_path, attrs=True, file_hash=True)
@@ -117,11 +117,11 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         df = self.calc_one(key, key_hits).to_long_form(kind="psi", key=key)
         return df.set_attrs(
             key=key,
-            quartiles=[df["value"].quantile(x) for x in [0, 0.25, 0.5, 0.75, 1]],
+            quartiles=[float(df["value"].quantile(x)) for x in [0, 0.25, 0.5, 0.75, 1]],
             n_hits=len(key_hits),
             n_values=len(df["value"].unique()),
             n_compounds=len(df["inchikey_1"].unique()),
-            n_real=len(df[0 < df["value"] < 1]),
+            n_real=len(df[(df["value"] > 0) & (df["value"] < 1)]),
         )
 
     def _should_include(self, df: SimilarityDfLongForm) -> bool:
@@ -138,7 +138,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         try:
             df = SimilarityDfLongForm.read_file(part_path, file_hash=True)
             logger.warning(f"Results for key {key} already exist ({len(df):,} rows)")
-            return df["inchikey_1"].unique()
+            return df
         except HashFileMissingError:
             logger.error(f"Extant results for key {key} appear incomplete; restarting")
             logger.opt(exception=True).debug(f"Hash error for {key}")
@@ -217,7 +217,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
 
 
 class MatrixAlg(CleverEnum):
-    j = enum.auto()
+    j = ()
 
     @property
     def clazz(self) -> Type[MatrixCalculator]:

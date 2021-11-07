@@ -36,9 +36,9 @@ except ImportError:
 
 
 class DataType(CleverEnum):
-    qualitative = enum.auto()
-    sequential = enum.auto()
-    divergent = enum.auto()
+    qualitative = ()
+    sequential = ()
+    divergent = ()
 
 
 class WidthAndHeight(NamedTuple):

@@ -17,9 +17,9 @@ from mandos.model.utils.setup import logger
 
 
 class MolStructureType(CleverEnum):
-    mol = enum.auto()
-    both = enum.auto()
-    none = enum.auto()
+    mol = ()
+    both = ()
+    none = ()
 
 
 @decorateme.auto_obj()

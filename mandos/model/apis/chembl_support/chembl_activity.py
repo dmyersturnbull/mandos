@@ -7,12 +7,12 @@ from pocketutils.core.enums import CleverEnum
 
 
 class ActivityRelation(CleverEnum):
-    lt = enum.auto()
-    gt = enum.auto()
-    le = enum.auto()
-    ge = enum.auto()
-    eq = enum.auto()
-    approx = enum.auto()
+    lt = ()
+    gt = ()
+    le = ()
+    ge = ()
+    eq = ()
+    approx = ()
 
     @classmethod
     def of(cls, name: Union[int, str]) -> CleverEnum:
@@ -29,13 +29,13 @@ class ActivityRelation(CleverEnum):
 
 
 class DataValidityComment(CleverEnum):
-    potential_missing_data = enum.auto()
-    potential_transcription_error = enum.auto()
-    potential_author_error = enum.auto()
-    manually_validated = enum.auto()
-    outside_typical_range = enum.auto()
-    non_standard_unit_for_type = enum.auto()
-    author_confirmed_error = enum.auto()
+    potential_missing_data = ()
+    potential_transcription_error = ()
+    potential_author_error = ()
+    manually_validated = ()
+    outside_typical_range = ()
+    non_standard_unit_for_type = ()
+    author_confirmed_error = ()
 
     @property
     def is_positive(self) -> bool:
@@ -62,10 +62,10 @@ class DataValidityComment(CleverEnum):
 
 
 class AssayType(CleverEnum):
-    binding = enum.auto()
-    functional = enum.auto()
-    adme = enum.auto()
-    physicochemical = enum.auto()
+    binding = ()
+    functional = ()
+    adme = ()
+    physicochemical = ()
 
     @property
     def character(self) -> str:

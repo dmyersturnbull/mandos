@@ -134,9 +134,9 @@ class _Alg(CleverEnum):
 
 
 class RealAlg(_Alg):
-    alpha = enum.auto()
-    weighted = enum.auto()
-    unweighted = enum.auto()
+    alpha = ()
+    weighted = ()
+    unweighted = ()
 
     @classmethod
     def dtype(cls) -> Type[Any]:
@@ -152,8 +152,8 @@ class RealAlg(_Alg):
 
 
 class BoolAlg(_Alg):
-    weighted = enum.auto()
-    unweighted = enum.auto()
+    weighted = ()
+    unweighted = ()
 
     @classmethod
     def dtype(cls) -> Type[Any]:

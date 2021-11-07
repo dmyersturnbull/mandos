@@ -53,9 +53,9 @@ class NameType(CleverEnum):
     Scientific name, common name, or mnemonic.
     """
 
-    scientific = enum.auto()
-    common = enum.auto()
-    mnemonic = enum.auto()
+    scientific = ()
+    common = ()
+    mnemonic = ()
 
 
 TaxonomyDf = (

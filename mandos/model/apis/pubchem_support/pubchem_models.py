@@ -165,9 +165,9 @@ class Codes:
 
 
 class CoOccurrenceType(CleverEnum):
-    chemical = enum.auto()
-    gene = enum.auto()
-    disease = enum.auto()
+    chemical = ()
+    gene = ()
+    disease = ()
 
     @property
     def x_name(self) -> str:
@@ -419,10 +419,10 @@ class AtcCode:
 
 
 class DrugbankTargetType(CleverEnum):
-    target = enum.auto()
-    carrier = enum.auto()
-    transporter = enum.auto()
-    enzyme = enum.auto()
+    target = ()
+    carrier = ()
+    transporter = ()
+    enzyme = ()
 
 
 @dataclass(frozen=True, repr=True, eq=True)
@@ -448,10 +448,10 @@ class DrugbankDdi:
 
 
 class Activity(CleverEnum):
-    active = enum.auto()
-    inactive = enum.auto()
-    inconclusive = enum.auto()
-    unspecified = enum.auto()
+    active = ()
+    inactive = ()
+    inconclusive = ()
+    unspecified = ()
 
 
 @dataclass(frozen=True, repr=True, eq=True)

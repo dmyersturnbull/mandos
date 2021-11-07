@@ -21,10 +21,10 @@ from mandos.model.utils.setup import logger
 
 
 class SarPredictionResult(CleverEnum):
-    active = enum.auto()
-    inactive = enum.auto()
-    empty = enum.auto()
-    both = enum.auto()
+    active = ()
+    inactive = ()
+    empty = ()
+    both = ()
 
     @property
     def yes_no_mixed(self) -> str:
@@ -69,7 +69,7 @@ ChemblTargetPredictionTable = (
 
 
 class ChemblScrapePage(CleverEnum):
-    target_predictions = enum.auto()
+    target_predictions = ()
 
 
 @decorateme.auto_repr_str()

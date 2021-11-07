@@ -26,10 +26,10 @@ from mandos.model.utils.setup import MandosResources, logger
 
 
 class Acceptance(CleverEnum):
-    always = enum.auto()
-    never = enum.auto()
-    at_start = enum.auto()
-    at_end = enum.auto()
+    always = ()
+    never = ()
+    at_start = ()
+    at_end = ()
 
 
 class TargetTraversalStrategy(metaclass=abc.ABCMeta):

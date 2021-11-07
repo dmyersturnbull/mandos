@@ -65,9 +65,9 @@ class FunctionalHit(_ActivityHit):
 
 
 class GoType(CleverEnum):
-    component = enum.auto()
-    function = enum.auto()
-    process = enum.auto()
+    component = ()
+    function = ()
+    process = ()
 
 
 @dataclass(frozen=True, order=True, repr=True)

@@ -14,12 +14,21 @@ import typer
 from pocketutils.core.chars import Chars
 from pocketutils.core.exceptions import XValueError
 from pocketutils.tools.string_tools import StringTools
-from typeddfs import CompressionFormat, FileFormat
+from typeddfs import Checksums, CompressionFormat, FileFormat
 from typeddfs.df_errors import InvalidDfError
+from typeddfs.typed_dfs import PlainTypedDf, TypedDf
 from typeddfs.utils import Utils as TdfUtils
 from typeddfs.utils.cli_help import DfCliHelp
 
 from mandos.analysis.filtration import Filtration
+from mandos.analysis.io_defns import (
+    ConcordanceDf,
+    EnrichmentDf,
+    PhiPsiSimilarityDfLongForm,
+    PsiProjectedDf,
+    ScoreDf,
+    SimilarityDfLongForm,
+)
 from mandos.analysis.reification import Reifier
 from mandos.entry import entry
 from mandos.entry.tools.docs import Documenter
@@ -368,19 +377,17 @@ class MiscCommands:
     def cache_clear(
         log: Optional[Path] = CommonArgs.log,
         stderr: str = CommonArgs.stderr,
-        yes: bool = CommonArgs.yes,
     ) -> None:
         """
         Deletes all cached data.
         """
         LOG_SETUP(log, stderr)
-        typer.echo(f"Will recursively delete all of these paths:")
+        paths = ", ".join(
+            [str(p.relative_to(SETTINGS.cache_path)) for p in SETTINGS.all_cache_paths]
+        )
+        logger.notice(f"Will recursively delete: {paths}")
         for p in SETTINGS.all_cache_paths:
-            typer.echo(f"    {p}")
-        if not yes:
-            typer.confirm("Delete?", abort=True)
-        for p in SETTINGS.all_cache_paths:
-            unlink(missing_ok=True)
+            unlink(p, missing_ok=True)
         logger.notice("Deleted all cached data")
 
     @staticmethod
@@ -408,27 +415,22 @@ class MiscCommands:
         files_ = []
         for file in path.iterdir():
             ff = FileFormat.from_path_or_none(file)
-            if ff not in [None, FileFormat.json, FileFormat.toml]:
+            if ff not in [None, FileFormat.json, FileFormat.ini, FileFormat.toml]:
                 files_.append(file)
         logger.notice(f"Looking under {path} (NOT recursive)")
-        logger.info(f"Found {len(files_)} potential input files: {[f.name for f in files_]}")
+        logger.info(f"Found {len(files_):,} potential input files: {[f.name for f in files_]}")
         files, names, dfs = [], [], []
         for file in files_:
-            try:
-                df: HitDf = HitDf.read_file(file, attrs=True)
-            except InvalidDfError:
-                logger.warning(f"Skipping {file} {Chars.en} not a valid hit list")
-                logger.opt(exception=True).debug(f"Error reading {file}")
-                continue
+            df: HitDf = HitDf.read_file(file, attrs=True)
             files.append(file)
             names.append(FileFormat.strip(file).name)
             dfs.append(df)
         default = path / (",".join(names) + DEF_SUFFIX)
         to = EntryUtils.adjust_filename(to, default, replace)
+        df = HitDf.of(dfs, keys=names)
         logger.notice(f"Concatenated {len(files):,} files")
         for f_, df_ in zip(files, dfs):
             logger.success(f"Included: {f_.name} with {len(df_):,} rows")
-        df = HitDf.of(dfs, keys=names)
         counts = {k: v for k, v in df.group_by("universal_id").count().to_dict() if v > 0}
         if len(counts) > 0:
             logger.error(
@@ -533,7 +535,23 @@ class MiscCommands:
     @staticmethod
     @entry()
     def export_copy(
-        path: Path = Ca.in_annotations_file,
+        path: Path = Opt.val(
+            rf"""
+            Path to a CSV-like file corresponding to --what.
+
+            {DfCliHelp.list_formats().get_short_text()}
+            """
+        ),
+        what: str = Opt.val(
+            r"""
+            The type of data.
+
+            Options: "hits", "compounds", "score", "enrichment",
+            "matrix" (long-form similarity), "concordance", "phi-psi",
+            "projection", or "data" (arbitrary data).
+            """,
+            default="hits",
+        ),
         to: Optional[Path] = Opt.out_path(
             rf"""
             Path to the output file.
@@ -554,9 +572,30 @@ class MiscCommands:
         """
         LOG_SETUP(log, stderr)
         default = path.parent / DEF_SUFFIX
+        what = dict(
+            compounds=InputCompoundsDf,
+            hits=HitDf,
+            matrix=SimilarityDfLongForm,
+            scores=ScoreDf,
+            enrichment=EnrichmentDf,
+            phi_psi=PhiPsiSimilarityDfLongForm,
+            concordance=ConcordanceDf,
+            projection=PsiProjectedDf,
+            data=PlainTypedDf,
+        )[what.lower().strip().replace("-", "_")]
         to = EntryUtils.adjust_filename(to, default, replace)
-        df = HitDf.read_file(path)
-        df.write_file(to)
+        attrs_path = path.parent / (path.name + ".attrs.json")
+        hash_path = Checksums().get_filesum_of_file(path)
+        attrs, file_hash = attrs_path.exists(), hash_path.exists()
+        logger.info(f"Reading attributes: {attrs}")
+        logger.info(f"Reading checksum file: {file_hash}")
+        df: TypedDf = what.read_file(path, attrs=attrs, file_hash=file_hash)
+        df.write_file(to, mkdirs=True, attrs=attrs, file_hash=file_hash)
+        logger.notice(f"Exported {path} to {path} ({len(df):,} rows")
+        if attrs:
+            logger.info(f"Wrote attributes to {attrs_path}")
+        if file_hash:
+            logger.info(f"Wrote single-file checksum to {hash_path}")
 
     @staticmethod
     @entry()

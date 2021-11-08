@@ -90,7 +90,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         for key, key_hits in key_to_hit.items():
             key_hits: Sequence[AbstractHit] = key_hits
             n_compounds_0 = len({k.origin_inchikey for k in key_hits})
-            part_path = self._path_of(path, key)
+            part_path = self._part_path(to, key)
             df = None
             if part_path.exists():
                 df = self._read_part(key, part_path)
@@ -105,9 +105,11 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         big_df = self._concat_parts(good_keys)
         big_df.write_file(to, attrs=True, file_hash=True, mkdirs=True)
         logger.notice(f"Wrote {len(big_df):,} rows to {to}")
+        attrs_path = to.parent / (to.name + ".attrs.json")
+        logger.sucess(f"Finished -- see {attrs_path} for statistics")
         if not keep_temp:
             for k in good_keys:
-                unlink(self._path_of(path, k))
+                unlink(self._part_path(to, k))
 
     def _read_hits(self, path: Path) -> Sequence[AbstractHit]:
         hits = HitDf.read_file(path)
@@ -131,7 +133,7 @@ class JPrimeMatrixCalculator(MatrixCalculator):
             n_hits=len(key_hits),
             n_values=len(df["value"].unique()),
             n_compounds=len(df["inchikey_1"].unique()),
-            n_real=len(df[(df["value"] > 0) & (df["value"] < 1)]),
+            n_real=len(df[(df["value"].notna()) & (df["value"] > 0) & (df["value"] < 1)]),
         )
 
     def _should_include(self, df: SimilarityDfLongForm) -> bool:
@@ -160,14 +162,6 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         dfs = []
         for key, pp in keys.items():
             df = SimilarityDfLongForm.read_file(pp, attrs=True)
-            n_values = df.attrs["n_values"]
-            n_real = df.attrs["n_real"]
-            quartiles = df.attrs["quartiles"]
-            logger.info(f"Key {key}:")
-            prefix = f"    {key} {Chars.fatright}"
-            logger.info(f"{prefix} unique values = {n_values}")
-            logger.info(f"{prefix} values in (0, 1) = {n_real:,}")
-            logger.info(f"{prefix} quartiles: " + " | ".join([str(s) for s in quartiles]))
             dfs.append(df)
         return SimilarityDfLongForm.of(dfs, keys=keys)
 
@@ -186,12 +180,14 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         inf.log("success")
         return SimilarityDfShortForm.from_dict(data)
 
-    def _path_of(self, path: Path, key: str):
+    def _part_path(self, path: Path, key: str):
         return path.parent / f".{path.name}-{key}.tmp.feather"
 
     def _j_prime(
         self, key: str, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]
     ) -> float:
+        if len(hits1) == len(hits2) == 0:
+            return float("NaN")  # TODO: Can this even happen?
         if len(hits1) == 0 or len(hits2) == 0:
             return 0
         sources = {h.data_source for h in hits1}.intersection({h.data_source for h in hits2})
@@ -211,8 +207,8 @@ class JPrimeMatrixCalculator(MatrixCalculator):
         self, key: str, hits1: Collection[AbstractHit], hits2: Collection[AbstractHit]
     ) -> float:
         if len(hits1) == len(hits2) == 0:
-            return float("NaN")
-        elif len(hits1) == 0 or len(hits2) == 0:
+            return float("NaN")  # TODO: impossible, right?
+        if len(hits1) == 0 or len(hits2) == 0:
             return 0
         pair_to_weights = Au.weights_of_pairs(hits1, hits2)
         values = []

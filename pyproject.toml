@@ -101,7 +101,7 @@ nbqa                     = "^1.1"
 pytest                   = "^6"
 coverage                 = {extras = ["toml"], version = "^6"}
 pytest-cov               = "^3"
-Sphinx                   = "^4.2"
+Sphinx                   = "^5.0"
 sphinx-autoapi           = "^1.5"
 sphinx-copybutton        = ">=0.4, <1.0"
 sphinx-rtd-theme         = "^1"

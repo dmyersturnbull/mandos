@@ -18,6 +18,8 @@
 The “kitchen sink” preprocessing tool for chemical screens:  
 **Fetch knowledge on compounds from public databases, squeezing it all into a consistent form.**
 
+**Note:** This repo is a testbed and will eventually be dramatically simplified.
+
 Mandos extracts ~30 annotation types, including:
 
 - mechanisms of action (MOAs), binding activity, classifications, pathways involved, gene expression effects,
